@@ -74,3 +74,6 @@
 - Parsed the workflow YAML, passed `git diff --check`, built the exact static
   server input, and successfully built the resulting local Docker image
   `networkgames-host:workflow-test`.
+- The first corrected GitHub-hosted run passed all steps in 54 seconds. Updated
+  Checkout and Setup Go to their Node.js 24 action releases after that run
+  reported the older Node.js 20 action runtime as deprecated.
