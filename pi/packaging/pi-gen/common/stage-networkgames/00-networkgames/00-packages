@@ -1,0 +1,5 @@
+nbd-client
+libnbd-bin
+openssl
+kmod
+network-manager

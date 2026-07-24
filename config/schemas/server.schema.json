@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://networkgames.invalid/schema/server-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "library_root", "data_root", "https", "nbd"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "library_root": {"const": "/library"},
+    "data_root": {"const": "/data"},
+    "default_catalog": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$"},
+    "https": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["listen"],
+      "properties": {"listen": {"type": "string"}}
+    },
+    "nbd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["listen", "require_tls", "require_client_certificate", "export"],
+      "properties": {
+        "listen": {"type": "string"},
+        "require_tls": {"const": true},
+        "require_client_certificate": {"const": true},
+        "export": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$"},
+        "request_timeout": {"type": "string"},
+        "max_request_bytes": {"type": "integer", "minimum": 4096, "maximum": 1048576}
+      }
+    },
+    "cache": {"type": "object"}
+  }
+}

@@ -1,15 +1,40 @@
 {
-  "project": "networkgames-livebridge",
-  "phase": "not_started",
-  "git_commit": null,
-  "completed_gates": [],
-  "failed_gates": [],
-  "skipped_gates": [],
-  "external_blockers": [],
-  "artifacts": [],
-  "hardware_results": {
-    "pi_zero_w": "untested",
-    "pi_4": "untested",
-    "pi_5": "untested"
-  }
+  "schema_version": 1,
+  "project_version": "0.1.0-rc.1",
+  "prompt_version": 3,
+  "status": "software-complete-release-candidate",
+  "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
+  "application_commit": "83df1d8c9da0488f7b32a9311e763809a329ed89",
+  "build_host": {
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.12.96+deb13-amd64",
+    "architecture": "x86_64",
+    "available_bytes": 179314884608
+  },
+  "truenas_target": {
+    "version": null,
+    "apps_backend": null,
+    "architecture": null,
+    "pool_paths": [],
+    "dataset_paths": [],
+    "acls": null,
+    "ports": {
+      "https": 8443,
+      "nbd_tls": 10809,
+      "availability_verified_on_target": false
+    },
+    "state": "TARGET_NOT_CONNECTED"
+  },
+  "phases": {
+    "baseline": "complete",
+    "server": "server-package-verified",
+    "container": "verified",
+    "pi_bridge": "automated-tests-pass",
+    "firmware_zero_w": "firmware-offline-verified",
+    "firmware_pi4": "firmware-offline-verified",
+    "firmware_pi5": "firmware-offline-verified",
+    "release": "software-complete-release-candidate"
+  },
+  "physical_tests": "DEFERRED_HARDWARE_UNAVAILABLE",
+  "updated_utc": "2026-07-24T15:35:11Z"
 }

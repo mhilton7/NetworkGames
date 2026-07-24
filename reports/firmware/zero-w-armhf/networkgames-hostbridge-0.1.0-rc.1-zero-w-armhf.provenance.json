@@ -1,0 +1,54 @@
+{
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "subject": [
+    {
+      "name": "zero-w-armhf.img",
+      "digest": {
+        "sha256": "f9498354ec1433eca7075f219e0115b0cda79279c847da4b690270270f920016"
+      }
+    },
+    {
+      "name": "zero-w-armhf.img.xz",
+      "digest": {
+        "sha256": "28d6ba2ea87dea46a2319541141b2a5336361218f98e72684120bace9640bd7c"
+      }
+    }
+  ],
+  "buildDefinition": {
+    "buildType": "networkgames/pi-gen",
+    "externalParameters": {
+      "target": "zero-w-armhf"
+    },
+    "resolvedDependencies": [
+      {
+        "uri": "git+https://github.com/RPi-Distro/pi-gen@master",
+        "digest": {
+          "gitCommit": "314262cb286b8f33327a6f0cbabe14c625021ca0"
+        }
+      },
+      {
+        "uri": "git+https://github.com/RPi-Distro/pi-gen@arm64",
+        "digest": {
+          "gitCommit": "ca8aeed0ae300c2a89f55ce9617d5f96a27e99e5"
+        }
+      },
+      {
+        "uri": "git+local:networkgames",
+        "digest": {
+          "gitCommit": "83df1d8c9da0488f7b32a9311e763809a329ed89",
+          "sourceTreeSha256": "8779939bfda62c01af111f6be28badb4dc8873c13fb9cf3cb1cc61b365fcc470"
+        }
+      }
+    ]
+  },
+  "runDetails": {
+    "builder": {
+      "id": "networkgames-build-firmware.sh"
+    },
+    "metadata": {
+      "invocationId": "zero-w-armhf-20260724",
+      "finishedOn": "2026-07-24T14:19:12Z",
+      "sourceWorktreeDirty": true
+    }
+  }
+}

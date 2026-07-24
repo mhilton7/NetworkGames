@@ -1,0 +1,11 @@
+[Unit]
+Description=NetworkGames detach gadget after controller failure
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/networkgames-helper detach
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

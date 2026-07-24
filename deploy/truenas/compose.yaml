@@ -1,0 +1,74 @@
+services:
+  networkgames-host:
+    image: ${NETWORKGAMES_IMAGE:?set immutable image reference with sha256 digest}
+    user: "${NETWORKGAMES_UID:?set UID}:${NETWORKGAMES_GID:?set GID}"
+    restart: unless-stopped
+    read_only: true
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      NETWORKGAMES_LIBRARY: /library
+      NETWORKGAMES_DATA: /data
+      NETWORKGAMES_ADMIN_TOKEN: ${NETWORKGAMES_ADMIN_TOKEN:?set an admin token}
+      NETWORKGAMES_HTTPS_LISTEN: :8443
+      NETWORKGAMES_NBD_LISTEN: :10809
+      NETWORKGAMES_EXPORT: ${NETWORKGAMES_EXPORT:-all}
+      NETWORKGAMES_TLS_CERT: /certs/server.crt
+      NETWORKGAMES_TLS_KEY: /certs/server.key
+      NETWORKGAMES_TLS_CLIENT_CA: /certs/clients-ca.crt
+    ports:
+      - "${NETWORKGAMES_HTTPS_BIND:?set management bind IP}:${NETWORKGAMES_HTTPS_PORT:-8443}:8443/tcp"
+      - "${NETWORKGAMES_NBD_BIND:?set NBD bind IP}:${NETWORKGAMES_NBD_PORT:-10809}:10809/tcp"
+    volumes:
+      - type: bind
+        source: ${NETWORKGAMES_LIBRARY_PATH:?set WBFS dataset path}
+        target: /library
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NETWORKGAMES_CONFIG_PATH:?set config dataset path}
+        target: /config
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NETWORKGAMES_DATA_PATH:?set data dataset path}
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NETWORKGAMES_CERTS_PATH:?set certificate dataset path}
+        target: /certs
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NETWORKGAMES_LOGS_PATH:?set logs dataset path}
+        target: /logs
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NETWORKGAMES_BACKUPS_PATH:?set backups dataset path}
+        target: /backups
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:size=32m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "/networkgames-host", "healthcheck", "--url", "https://127.0.0.1:8443/healthz", "--ca", "/certs/ca.crt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    pids_limit: 256
+    mem_limit: ${NETWORKGAMES_MEMORY_LIMIT:-1g}
+    cpus: ${NETWORKGAMES_CPU_LIMIT:-2.0}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"

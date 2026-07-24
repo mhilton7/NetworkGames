@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+rm -f /etc/machine-id
+systemd-machine-id-setup
+rm -f /etc/ssh/ssh_host_*
+if systemctl is-enabled ssh.service >/dev/null 2>&1; then
+  ssh-keygen -A
+fi
+install -d -m 0700 /etc/networkgames
+umask 077
+openssl rand -hex 32 > /etc/networkgames/admin.token
+openssl req -x509 -newkey rsa:3072 -nodes -days 30 \
+  -subj "/CN=networkgames-setup" \
+  -keyout /etc/networkgames/device.key -out /etc/networkgames/device.crt
+chown root:networkgames /etc/networkgames/admin.token \
+  /etc/networkgames/device.key /etc/networkgames/device.crt
+chmod 0640 /etc/networkgames/admin.token \
+  /etc/networkgames/device.key /etc/networkgames/device.crt
+touch /etc/networkgames/identity-generated
+systemctl disable networkgames-firstboot.service

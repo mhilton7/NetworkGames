@@ -1,0 +1,20 @@
+{
+  "status": "firmware-offline-verified",
+  "target": "pi5-arm64",
+  "architecture": "/tmp/tmp.HanphWJNy3/root/usr/bin/networkgames-pi-controller: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, stripped",
+  "partition_table": "PASS",
+  "filesystems_non_destructive_fsck": "PASS",
+  "filesystems_read_only_inspection": "PASS",
+  "board_metadata": "PASS",
+  "boot_files": "PASS",
+  "usb_gadget_boot_config": "PASS",
+  "services": "PASS",
+  "qemu_application_smoke": "PASS",
+  "no_payloads": "PASS",
+  "no_embedded_identity": "PASS",
+  "kernel_versions": [
+    "6.18.34+rpt-rpi-2712",
+    "6.18.34+rpt-rpi-v8"
+  ],
+  "physical_tests": "DEFERRED_HARDWARE_UNAVAILABLE"
+}

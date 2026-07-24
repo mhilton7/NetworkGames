@@ -1,0 +1,183 @@
+package nbd_test
+
+import (
+	"bytes"
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/binary"
+	"math/big"
+	"net"
+	"sync"
+	"testing"
+	"time"
+
+	"networkgames/server/nbd-plugin"
+)
+
+const (
+	optMagic     = uint64(0x49484156454f5054)
+	repMagic     = uint64(0x0003e889045565a9)
+	requestMagic = uint32(0x25609513)
+	replyMagic   = uint32(0x67446698)
+)
+
+type memoryBackend []byte
+
+func (m memoryBackend) Size() int64                             { return int64(len(m)) }
+func (m memoryBackend) ReadAt(p []byte, off int64) (int, error) { return copy(p, m[off:]), nil }
+
+func TestMutualTLSReadOnlyProtocol(t *testing.T) {
+	serverTLS, clientTLS := certs(t)
+	payload := memoryBackend(make([]byte, 1<<20))
+	for i := range payload {
+		payload[i] = byte(i * 17)
+	}
+	serverConn, conn := net.Pipe()
+	listener := &oneConnListener{conn: serverConn}
+	var err error
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	server := &nbd.Server{Backend: payload, TLS: serverTLS, ExportName: "all", Deadline: 3 * time.Second}
+	done := make(chan error, 1)
+	go func() { done <- server.Serve(ctx, listener) }()
+	defer conn.Close()
+	var greeting [18]byte
+	readFull(t, conn, greeting[:])
+	if binary.BigEndian.Uint64(greeting[0:8]) != 0x4e42444d41474943 {
+		t.Fatal("bad greeting")
+	}
+	mustWrite(t, conn, uint32(3))
+	var reply [20]byte
+	writeOption(t, conn, 5, nil)
+	readFull(t, conn, reply[:])
+	if binary.BigEndian.Uint64(reply[0:8]) != repMagic ||
+		binary.BigEndian.Uint32(reply[12:16]) != 1 {
+		t.Fatal("STARTTLS was not acknowledged")
+	}
+	tlsConn := tls.Client(conn, clientTLS)
+	if err = tlsConn.Handshake(); err != nil {
+		t.Fatal(err)
+	}
+	writeOption(t, tlsConn, 1, []byte("all"))
+	var export [10]byte
+	readFull(t, tlsConn, export[:])
+	if binary.BigEndian.Uint64(export[:8]) != uint64(len(payload)) ||
+		binary.BigEndian.Uint16(export[8:10])&2 == 0 {
+		t.Fatal("export is not read-only")
+	}
+	handle := uint64(42)
+	writeRequest(t, tlsConn, 0, handle, 4096, 512, nil)
+	var transmission [16]byte
+	readFull(t, tlsConn, transmission[:])
+	if binary.BigEndian.Uint32(transmission[:4]) != replyMagic ||
+		binary.BigEndian.Uint32(transmission[4:8]) != 0 {
+		t.Fatal("read failed")
+	}
+	got := make([]byte, 512)
+	readFull(t, tlsConn, got)
+	for i := range got {
+		if got[i] != payload[4096+i] {
+			t.Fatal("read mismatch")
+		}
+	}
+	writeRequest(t, tlsConn, 1, handle+1, 4096, 512, make([]byte, 512))
+	readFull(t, tlsConn, transmission[:])
+	if binary.BigEndian.Uint32(transmission[4:8]) == 0 {
+		t.Fatal("write accepted")
+	}
+	cancel()
+}
+
+type oneConnListener struct {
+	conn net.Conn
+	once sync.Once
+}
+
+func (l *oneConnListener) Accept() (net.Conn, error) {
+	var result net.Conn
+	l.once.Do(func() { result = l.conn })
+	if result == nil {
+		return nil, net.ErrClosed
+	}
+	return result, nil
+}
+func (l *oneConnListener) Close() error   { return nil }
+func (l *oneConnListener) Addr() net.Addr { return l.conn.LocalAddr() }
+
+func writeOption(t *testing.T, c net.Conn, option uint32, payload []byte) {
+	t.Helper()
+	var frame bytes.Buffer
+	for _, v := range []any{optMagic, option, uint32(len(payload))} {
+		if err := binary.Write(&frame, binary.BigEndian, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	frame.Write(payload)
+	if _, err := c.Write(frame.Bytes()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeRequest(t *testing.T, c net.Conn, command uint16, handle, offset uint64, length uint32, data []byte) {
+	t.Helper()
+	for _, v := range []any{requestMagic, uint32(command), handle, offset, length} {
+		mustWrite(t, c, v)
+	}
+	if len(data) > 0 {
+		if _, err := c.Write(data); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func mustWrite(t *testing.T, c net.Conn, value any) {
+	t.Helper()
+	if err := binary.Write(c, binary.BigEndian, value); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func readFull(t *testing.T, c net.Conn, p []byte) {
+	t.Helper()
+	for len(p) > 0 {
+		n, err := c.Read(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p = p[n:]
+	}
+}
+
+func certs(t *testing.T) (*tls.Config, *tls.Config) {
+	t.Helper()
+	now := time.Now()
+	caKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	caTemplate := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "test-ca"},
+		NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour), IsCA: true,
+		KeyUsage: x509.KeyUsageCertSign, BasicConstraintsValid: true}
+	caDER, _ := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
+	ca, _ := x509.ParseCertificate(caDER)
+	makeLeaf := func(serial int64, name string, server bool) tls.Certificate {
+		key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		template := &x509.Certificate{SerialNumber: big.NewInt(serial), Subject: pkix.Name{CommonName: name},
+			NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour),
+			KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}}
+		if server {
+			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
+			template.DNSNames = []string{"localhost"}
+		}
+		der, _ := x509.CreateCertificate(rand.Reader, template, ca, &key.PublicKey, caKey)
+		return tls.Certificate{Certificate: [][]byte{der, caDER}, PrivateKey: key}
+	}
+	pool := x509.NewCertPool()
+	pool.AddCert(ca)
+	return &tls.Config{Certificates: []tls.Certificate{makeLeaf(2, "server", true)}, ClientCAs: pool,
+			ClientAuth: tls.RequireAndVerifyClientCert, MinVersion: tls.VersionTLS13},
+		&tls.Config{Certificates: []tls.Certificate{makeLeaf(3, "client", false)}, RootCAs: pool,
+			ServerName: "localhost", MinVersion: tls.VersionTLS13}
+}

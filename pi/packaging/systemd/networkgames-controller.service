@@ -1,0 +1,28 @@
+[Unit]
+Description=NetworkGames Pi bridge controller
+After=network-online.target networkgames-firstboot.service
+Wants=network-online.target
+
+[Service]
+User=networkgames
+Group=networkgames
+ExecStart=/usr/bin/networkgames-pi-controller
+Restart=on-failure
+RestartSec=5s
+# sudo is restricted to six exact helper invocations in /etc/sudoers.d/networkgames.
+NoNewPrivileges=no
+PrivateTmp=yes
+PrivateDevices=no
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=no
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+ReadWritePaths=/run/networkgames
+
+[Install]
+WantedBy=multi-user.target

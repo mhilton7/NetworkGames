@@ -1,0 +1,6 @@
+networkgames ALL=(root) NOPASSWD: /usr/libexec/networkgames-helper connect
+networkgames ALL=(root) NOPASSWD: /usr/libexec/networkgames-helper disconnect
+networkgames ALL=(root) NOPASSWD: /usr/libexec/networkgames-helper attach
+networkgames ALL=(root) NOPASSWD: /usr/libexec/networkgames-helper detach
+networkgames ALL=(root) NOPASSWD: /usr/libexec/networkgames-helper clear-cache
+networkgames ALL=(root) NOPASSWD: /usr/libexec/networkgames-helper test

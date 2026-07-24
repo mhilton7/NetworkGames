@@ -1,0 +1,64 @@
+#!/bin/sh
+set -eu
+
+action=${1:-}
+config=/etc/networkgames/bridge.env
+run=/run/networkgames
+mkdir -p "$run"
+board_target=$(cat /usr/share/networkgames/board-target)
+model=$(tr -d '\000' < /proc/device-tree/model 2>/dev/null || true)
+case "$board_target:$model" in
+  zero-w-armhf:*"Zero W"*) ;;
+  pi4-arm64:*"Raspberry Pi 4 Model B"*) ;;
+  pi5-arm64:*"Raspberry Pi 5"*) ;;
+  *) echo "wrong board; recovery state" >&2; exit 20 ;;
+esac
+test -r "$config" || {
+  echo "not provisioned" >&2
+  exit 21
+}
+# shellcheck disable=SC1090
+. "$config"
+: "${NBD_HOST:?missing NBD_HOST}"
+: "${NBD_PORT:=10809}"
+: "${NBD_EXPORT:?missing NBD_EXPORT}"
+: "${TLS_CA:?missing TLS_CA}"
+: "${TLS_CERT:?missing TLS_CERT}"
+: "${TLS_KEY:?missing TLS_KEY}"
+case "$NBD_HOST" in *[!A-Za-z0-9.:-]*) echo "invalid NBD host" >&2; exit 22;; esac
+case "$NBD_PORT" in *[!0-9]*) echo "invalid NBD port" >&2; exit 22;; esac
+case "$action" in
+  test)
+    nbd-client -x -F "$TLS_CERT" -K "$TLS_KEY" -A "$TLS_CA" \
+      -H "$NBD_HOST" -N "$NBD_EXPORT" -R "$NBD_HOST" "$NBD_PORT" /dev/nbd0
+    nbd-client -d /dev/nbd0
+    ;;
+  connect)
+    test ! -e "$run/usb-attached"
+    modprobe nbd nbds_max=1
+    nbd-client -x -F "$TLS_CERT" -K "$TLS_KEY" -A "$TLS_CA" \
+      -H "$NBD_HOST" -N "$NBD_EXPORT" -R "$NBD_HOST" "$NBD_PORT" /dev/nbd0
+    blockdev --setro /dev/nbd0
+    touch "$run/nbd-connected"
+    ;;
+  disconnect)
+    "$0" detach || true
+    nbd-client -d /dev/nbd0
+    rm -f "$run/nbd-connected"
+    ;;
+  attach)
+    test -e "$run/nbd-connected"
+    test "$(blockdev --getro /dev/nbd0)" = 1
+    /usr/libexec/networkgames-gadget start
+    touch "$run/usb-attached"
+    ;;
+  detach)
+    /usr/libexec/networkgames-gadget stop
+    rm -f "$run/usb-attached"
+    ;;
+  clear-cache)
+    test ! -e "$run/usb-attached"
+    find /var/cache/networkgames -xdev -type f -delete
+    ;;
+  *) echo "unsupported action" >&2; exit 64 ;;
+esac

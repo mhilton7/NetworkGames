@@ -1,0 +1,40 @@
+#!/bin/sh
+set -eu
+
+g=/sys/kernel/config/usb_gadget/networkgames
+action=${1:-}
+case "$action" in
+  start)
+    test "$(blockdev --getro /dev/nbd0)" = 1
+    test -n "${NETWORKGAMES_USB_VID:-}" -a -n "${NETWORKGAMES_USB_PID:-}" || {
+      echo "authorized USB VID/PID not provisioned" >&2
+      exit 30
+    }
+    modprobe libcomposite
+    mkdir -p "$g"
+    printf '%s' "$NETWORKGAMES_USB_VID" > "$g/idVendor"
+    printf '%s' "$NETWORKGAMES_USB_PID" > "$g/idProduct"
+    mkdir -p "$g/strings/0x409"
+    machine=$(cat /etc/machine-id)
+    printf 'NetworkGames' > "$g/strings/0x409/manufacturer"
+    printf 'Read-only Wii Library' > "$g/strings/0x409/product"
+    printf 'NG-%s' "$(printf '%s' "$machine" | cut -c1-16)" > "$g/strings/0x409/serialnumber"
+    mkdir -p "$g/configs/c.1/strings/0x409" "$g/functions/mass_storage.0"
+    printf 'NetworkGames read-only' > "$g/configs/c.1/strings/0x409/configuration"
+    printf '1' > "$g/functions/mass_storage.0/lun.0/ro"
+    printf '0' > "$g/functions/mass_storage.0/lun.0/removable"
+    printf '/dev/nbd0' > "$g/functions/mass_storage.0/lun.0/file"
+    ln -s "$g/functions/mass_storage.0" "$g/configs/c.1/mass_storage.0"
+    udc=$(find /sys/class/udc -mindepth 1 -maxdepth 1 -printf '%f\n' | head -n1)
+    test -n "$udc"
+    printf '%s' "$udc" > "$g/UDC"
+    ;;
+  stop)
+    test -d "$g" || exit 0
+    printf '' > "$g/UDC"
+    rm -f "$g/configs/c.1/mass_storage.0"
+    rmdir "$g/functions/mass_storage.0" "$g/configs/c.1/strings/0x409" \
+      "$g/configs/c.1" "$g/strings/0x409" "$g"
+    ;;
+  *) exit 64 ;;
+esac

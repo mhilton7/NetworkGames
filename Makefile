@@ -1,0 +1,48 @@
+SHELL := /bin/bash
+VERSION := 0.1.0-rc.1
+export GOCACHE ?= /tmp/networkgames-go-cache
+export GOPATH ?= /tmp/networkgames-gopath
+
+.PHONY: all test static server oci compose firmware-zero-w firmware-pi4 firmware-pi5 firmware-all validate-firmware release
+
+all: test server
+
+test:
+	go test ./server/... ./pi/... ./shared/... ./tests/... ./scripts/synthetic-wbfs
+
+static:
+	go vet ./server/... ./pi/... ./shared/... ./tests/... ./scripts/synthetic-wbfs
+	shellcheck scripts/*.sh deploy/truenas/*.sh tests/truenas/*.sh tests/firmware/offline/*.sh
+	./scripts/validate-pi-static.sh
+
+server:
+	mkdir -p build/bin
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -buildid=" -o build/bin/networkgames-host ./server/host-daemon
+
+oci:
+	./scripts/build-oci.sh
+	./scripts/package-server.sh
+
+compose:
+	./deploy/truenas/validate-compose.sh
+
+firmware-zero-w:
+	./scripts/build-firmware.sh zero-w-armhf
+	./scripts/package-firmware.sh zero-w-armhf
+
+firmware-pi4:
+	./scripts/build-firmware.sh pi4-arm64
+	./scripts/package-firmware.sh pi4-arm64
+
+firmware-pi5:
+	./scripts/build-firmware.sh pi5-arm64
+	./scripts/package-firmware.sh pi5-arm64
+
+firmware-all: firmware-zero-w firmware-pi4 firmware-pi5
+
+validate-firmware:
+	./tests/firmware/offline/validate.sh zero-w-armhf
+	./tests/firmware/offline/validate.sh pi4-arm64
+	./tests/firmware/offline/validate.sh pi5-arm64
+
+release: test static server oci compose firmware-all validate-firmware

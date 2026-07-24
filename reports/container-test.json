@@ -1,0 +1,64 @@
+{
+  "image": "sha256:20d1e3c8ae8bcded98663b03651a219b7fe881353491213e1ab54bd76dc1f4c6",
+  "user": "568:568",
+  "health": null,
+  "readonly_root": true,
+  "privileged": false,
+  "cap_drop": [
+    "ALL"
+  ],
+  "security_opt": [
+    "no-new-privileges:true"
+  ],
+  "devices": [],
+  "mounts": [
+    {
+      "Type": "bind",
+      "Source": "/media/tvos/8fe1920a-9d7c-4d69-a22e-6fe7c41e1faa/networkgames-livebridge/build/container-test-1218029/certs",
+      "Destination": "/certs",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/media/tvos/8fe1920a-9d7c-4d69-a22e-6fe7c41e1faa/networkgames-livebridge/build/container-test-1218029/logs",
+      "Destination": "/logs",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/media/tvos/8fe1920a-9d7c-4d69-a22e-6fe7c41e1faa/networkgames-livebridge/build/container-test-1218029/backups",
+      "Destination": "/backups",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/media/tvos/8fe1920a-9d7c-4d69-a22e-6fe7c41e1faa/networkgames-livebridge/build/container-test-1218029/library",
+      "Destination": "/library",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/media/tvos/8fe1920a-9d7c-4d69-a22e-6fe7c41e1faa/networkgames-livebridge/build/container-test-1218029/config",
+      "Destination": "/config",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/media/tvos/8fe1920a-9d7c-4d69-a22e-6fe7c41e1faa/networkgames-livebridge/build/container-test-1218029/data",
+      "Destination": "/data",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    }
+  ]
+}
