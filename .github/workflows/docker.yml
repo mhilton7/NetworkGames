@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: docker-${{ github.workflow }}-${{ github.ref }}
@@ -46,3 +47,22 @@ jobs:
           docker build . \
             --file server/packaging/container/Dockerfile \
             --tag "networkgames-host:${GITHUB_SHA}"
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ghcr.io/mhilton7/networkgames-host
+          VERSION: 0.1.0-rc.1
+        run: |
+          docker tag "networkgames-host:${GITHUB_SHA}" "${IMAGE}:${VERSION}"
+          docker tag "networkgames-host:${GITHUB_SHA}" "${IMAGE}:sha-${GITHUB_SHA}"
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:sha-${GITHUB_SHA}"

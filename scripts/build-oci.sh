@@ -20,7 +20,7 @@ tar --sort=name --mtime='UTC 2026-07-24' --owner=568 --group=568 \
 layer_digest=$(sha256sum "$layer_tmp" | cut -d' ' -f1)
 layer_size=$(wc -c < "$layer_tmp")
 mv "$layer_tmp" "$out/blobs/sha256/$layer_digest"
-printf '{"architecture":"amd64","os":"linux","config":{"User":"568:568","Entrypoint":["/networkgames-host"],"ExposedPorts":{"8443/tcp":{},"10809/tcp":{}},"Env":["PATH=/"]},"rootfs":{"type":"layers","diff_ids":["sha256:%s"]},"history":[{"created":"2026-07-24T00:00:00Z","created_by":"networkgames reproducible OCI builder"}]}' "$layer_digest" > "$config_tmp"
+printf '{"architecture":"amd64","os":"linux","config":{"User":"568:568","Entrypoint":["/networkgames-host"],"ExposedPorts":{"8445/tcp":{},"10809/tcp":{}},"Env":["PATH=/"]},"rootfs":{"type":"layers","diff_ids":["sha256:%s"]},"history":[{"created":"2026-07-24T00:00:00Z","created_by":"networkgames reproducible OCI builder"}]}' "$layer_digest" > "$config_tmp"
 config_digest=$(sha256sum "$config_tmp" | cut -d' ' -f1)
 config_size=$(wc -c < "$config_tmp")
 mv "$config_tmp" "$out/blobs/sha256/$config_digest"

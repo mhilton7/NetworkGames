@@ -77,3 +77,14 @@
 - The first corrected GitHub-hosted run passed all steps in 54 seconds. Updated
   Checkout and Setup Go to their Node.js 24 action releases after that run
   reported the older Node.js 20 action runtime as deprecated.
+
+## 2026-07-24 — GHCR publishing and HTTPS port migration
+
+- Added authenticated GHCR publishing for main-branch builds using the
+  repository-scoped `GITHUB_TOKEN` and `packages: write`; no credential is
+  recorded in the workflow.
+- Migrated the server's internal HTTPS listener, container exposure, TrueNAS
+  mapping, health check, examples, and operational documentation from TCP 8443
+  to TCP 8445 because 8443 conflicts with an existing service.
+- Passed server tests, static Compose policy validation, Docker Compose parsing,
+  YAML parsing, formatting, and whitespace validation before publication.

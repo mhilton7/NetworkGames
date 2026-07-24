@@ -83,7 +83,7 @@ func scanCLI(args []string) {
 
 func healthCLI(args []string) {
 	fs := flag.NewFlagSet("healthcheck", flag.ExitOnError)
-	url := fs.String("url", "https://127.0.0.1:8443/healthz", "health URL")
+	url := fs.String("url", "https://127.0.0.1:8445/healthz", "health URL")
 	caPath := fs.String("ca", "/certs/ca.crt", "CA certificate")
 	_ = fs.Parse(args)
 	pem, err := os.ReadFile(*caPath)
@@ -169,7 +169,7 @@ func serve() error {
 	mux.HandleFunc("GET /metrics", a.auth(a.metrics))
 	mux.HandleFunc("GET /", a.auth(a.dashboard))
 	web := &http.Server{
-		Addr: env("NETWORKGAMES_HTTPS_LISTEN", ":8443"), Handler: securityHeaders(mux),
+		Addr: env("NETWORKGAMES_HTTPS_LISTEN", ":8445"), Handler: securityHeaders(mux),
 		TLSConfig: tlsConfig.Clone(), ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second,
 		IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10,

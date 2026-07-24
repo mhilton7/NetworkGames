@@ -13,14 +13,14 @@ services:
       NETWORKGAMES_LIBRARY: /library
       NETWORKGAMES_DATA: /data
       NETWORKGAMES_ADMIN_TOKEN: ${NETWORKGAMES_ADMIN_TOKEN:?set an admin token}
-      NETWORKGAMES_HTTPS_LISTEN: :8443
+      NETWORKGAMES_HTTPS_LISTEN: :8445
       NETWORKGAMES_NBD_LISTEN: :10809
       NETWORKGAMES_EXPORT: ${NETWORKGAMES_EXPORT:-all}
       NETWORKGAMES_TLS_CERT: /certs/server.crt
       NETWORKGAMES_TLS_KEY: /certs/server.key
       NETWORKGAMES_TLS_CLIENT_CA: /certs/clients-ca.crt
     ports:
-      - "${NETWORKGAMES_HTTPS_BIND:?set management bind IP}:${NETWORKGAMES_HTTPS_PORT:-8443}:8443/tcp"
+      - "${NETWORKGAMES_HTTPS_BIND:?set management bind IP}:${NETWORKGAMES_HTTPS_PORT:-8445}:8445/tcp"
       - "${NETWORKGAMES_NBD_BIND:?set NBD bind IP}:${NETWORKGAMES_NBD_PORT:-10809}:10809/tcp"
     volumes:
       - type: bind
@@ -58,7 +58,7 @@ services:
     tmpfs:
       - /tmp:size=32m,mode=1777,noexec,nosuid,nodev
     healthcheck:
-      test: ["CMD", "/networkgames-host", "healthcheck", "--url", "https://127.0.0.1:8443/healthz", "--ca", "/certs/ca.crt"]
+      test: ["CMD", "/networkgames-host", "healthcheck", "--url", "https://127.0.0.1:8445/healthz", "--ca", "/certs/ca.crt"]
       interval: 30s
       timeout: 5s
       retries: 3

@@ -13,14 +13,14 @@ services:
       NETWORKGAMES_LIBRARY: /library
       NETWORKGAMES_DATA: /data
       NETWORKGAMES_ADMIN_TOKEN: CHANGE_ME_USE_UI_SECRET_VALUE
-      NETWORKGAMES_HTTPS_LISTEN: :8443
+      NETWORKGAMES_HTTPS_LISTEN: :8445
       NETWORKGAMES_NBD_LISTEN: :10809
       NETWORKGAMES_EXPORT: all
       NETWORKGAMES_TLS_CERT: /certs/server.crt
       NETWORKGAMES_TLS_KEY: /certs/server.key
       NETWORKGAMES_TLS_CLIENT_CA: /certs/clients-ca.crt
     ports:
-      - "CHANGE_ME_TRUENAS_LAN_IP:8443:8443/tcp"
+      - "CHANGE_ME_TRUENAS_LAN_IP:8445:8445/tcp"
       - "CHANGE_ME_TRUENAS_PI_IP:10809:10809/tcp"
     volumes:
       - {type: bind, source: /mnt/CHANGE_ME/WII_DATASET, target: /library, read_only: true, bind: {create_host_path: false}}
@@ -31,7 +31,7 @@ services:
       - {type: bind, source: /mnt/CHANGE_ME/apps/networkgames/backups, target: /backups, bind: {create_host_path: false}}
     tmpfs: [/tmp:size=32m,mode=1777,noexec,nosuid,nodev]
     healthcheck:
-      test: [CMD, /networkgames-host, healthcheck, --url, "https://127.0.0.1:8443/healthz", --ca, /certs/ca.crt]
+      test: [CMD, /networkgames-host, healthcheck, --url, "https://127.0.0.1:8445/healthz", --ca, /certs/ca.crt]
       interval: 30s
       timeout: 5s
       retries: 3

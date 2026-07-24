@@ -22,7 +22,7 @@ Replace these placeholders:
 - `/mnt/<POOL>/apps/networkgames/backups`: read/write backups.
 - UID/GID: a dedicated non-root account (example 568:568), configured rather
   than assumed.
-- Management port 8443: bind only to the management LAN address.
+- Management port 8445: bind only to the management LAN address.
 - NBD/TLS port 10809: bind only to the Pi-facing trusted address.
 
 Create each child dataset in the TrueNAS UI. Grant the configured UID/GID
@@ -37,7 +37,7 @@ provision a private CA, server certificate, and a unique client certificate per
 Pi. Files expected in the certificate dataset are `ca.crt`, `server.crt`,
 `server.key`, and `clients-ca.crt`. Never paste private keys into Compose.
 
-At upstream and TrueNAS firewalls, allow TCP 8443 only from the management CIDR
+At upstream and TrueNAS firewalls, allow TCP 8445 only from the management CIDR
 and TCP 10809 only from explicit Pi IPs or their dedicated CIDR. Deny both from
 WAN networks. Compose port publishing does not replace firewall policy.
 
