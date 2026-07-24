@@ -22,3 +22,6 @@
 - Release provenance identifies the committed base and a source-tree digest,
   and explicitly records `sourceWorktreeDirty: true` because this implementation
   has not been committed.
+- GitHub publication is currently blocked by an invalid GitHub CLI token for
+  the active `mhilton7` account. Run `gh auth login -h github.com` before
+  retrying the publisher; no release upload has been recorded as passed.

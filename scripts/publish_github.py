@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 VERSION = "0.1.0-rc.1"
@@ -69,7 +70,14 @@ def run(
 
 
 def output(command: list[str], root: Path) -> str:
-    return run(command, cwd=root, capture=True).stdout.strip()
+    completed = run(command, cwd=root, capture=True, check=False)
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout or "").strip()
+        message = f"command failed ({completed.returncode}): {' '.join(command)}"
+        if detail:
+            message += f"\n{detail}"
+        raise RuntimeError(message)
+    return completed.stdout.strip()
 
 
 def append_ignore_rules(root: Path) -> None:
@@ -146,6 +154,28 @@ def remote_exists(root: Path, remote: str) -> bool:
     return run(["git", "remote", "get-url", remote], cwd=root, capture=True, check=False).returncode == 0
 
 
+def repository_from_remote(root: Path, remote: str) -> str:
+    """Return the OWNER/REPO identifier encoded in a GitHub remote URL."""
+    remote_url = output(["git", "remote", "get-url", remote], root)
+    if "://" in remote_url:
+        parsed = urlparse(remote_url)
+        host = parsed.hostname
+        path = parsed.path
+    else:
+        # Git's SCP-like SSH syntax: git@github.com:OWNER/REPO.git
+        host_path = remote_url.split(":", 1)
+        if len(host_path) != 2:
+            raise RuntimeError(f"cannot determine GitHub repository from {remote} remote: {remote_url}")
+        host = host_path[0].rsplit("@", 1)[-1]
+        path = host_path[1]
+    repository = path.strip("/")
+    if repository.endswith(".git"):
+        repository = repository[:-4]
+    if not host or repository.count("/") != 1:
+        raise RuntimeError(f"cannot determine GitHub repository from {remote} remote: {remote_url}")
+    return repository if host == "github.com" else f"{host}/{repository}"
+
+
 def create_or_push_repository(
     root: Path,
     repository: str,
@@ -179,11 +209,10 @@ def release_assets(root: Path) -> list[Path]:
     return sorted(assets)
 
 
-def publish_release(root: Path, tag: str) -> None:
+def publish_release(root: Path, tag: str, owner_repo: str) -> None:
     assets = release_assets(root)
     if not assets:
         raise RuntimeError("no release assets found under dist/")
-    owner_repo = output(["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"], root)
     existing = run(
         ["gh", "release", "view", tag, "--repo", owner_repo],
         cwd=root,
@@ -240,9 +269,13 @@ def main() -> int:
         commit_changes(root, args.message)
         ensure_authentication(root)
         create_or_push_repository(root, args.repo, args.visibility, args.remote)
+        owner_repo = repository_from_remote(root, args.remote)
         if not args.no_release:
-            publish_release(root, args.tag)
-        url = output(["gh", "repo", "view", "--json", "url", "--jq", ".url"], root)
+            publish_release(root, args.tag, owner_repo)
+        url = output(
+            ["gh", "repo", "view", "--repo", owner_repo, "--json", "url", "--jq", ".url"],
+            root,
+        )
         print(f"\nPublished successfully: {url}")
         return 0
     except (RuntimeError, subprocess.CalledProcessError) as error:

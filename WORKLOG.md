@@ -52,3 +52,13 @@
 - Final local status is `SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE
   UNVERIFIED`. Live TrueNAS deployment is still `BLOCKED_EXTERNAL` because no
   target is connected; full-build byte reproducibility remains `PENDING`.
+
+## 2026-07-24 — GitHub publisher diagnostics
+
+- Diagnosed a failed publication as an invalid active GitHub CLI token for
+  `mhilton7`; no upload was claimed.
+- Updated `scripts/publish_github.py` to retain command stderr in failures and
+  derive an explicit `OWNER/REPO` selector from the configured Git remote.
+- Passed Python bytecode compilation and verified that the current `origin`
+  resolves to `mhilton7/NetworkGames`. A live upload was not attempted because
+  GitHub CLI authentication must first be renewed.
