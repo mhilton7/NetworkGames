@@ -62,3 +62,15 @@
 - Passed Python bytecode compilation and verified that the current `origin`
   resolves to `mhilton7/NetworkGames`. A live upload was not attempted because
   GitHub CLI authentication must first be renewed.
+
+## 2026-07-24 — GitHub Docker workflow
+
+- Replaced two duplicate GitHub Docker workflow templates with one bounded
+  workflow using `ubuntu-latest`, read-only repository permissions, concurrency
+  cancellation, and a 20-minute timeout.
+- Corrected the build to install the Go version declared by `go.mod`, create
+  the required static amd64 server binary, and use
+  `server/packaging/container/Dockerfile`.
+- Parsed the workflow YAML, passed `git diff --check`, built the exact static
+  server input, and successfully built the resulting local Docker image
+  `networkgames-host:workflow-test`.
