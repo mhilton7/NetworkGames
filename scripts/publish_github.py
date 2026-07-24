@@ -273,7 +273,7 @@ def main() -> int:
         if not args.no_release:
             publish_release(root, args.tag, owner_repo)
         url = output(
-            ["gh", "repo", "view", "--repo", owner_repo, "--json", "url", "--jq", ".url"],
+            ["gh", "repo", "view", owner_repo, "--json", "url", "--jq", ".url"],
             root,
         )
         print(f"\nPublished successfully: {url}")
