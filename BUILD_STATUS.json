@@ -1,0 +1,15 @@
+{
+  "project": "networkgames-livebridge",
+  "phase": "not_started",
+  "git_commit": null,
+  "completed_gates": [],
+  "failed_gates": [],
+  "skipped_gates": [],
+  "external_blockers": [],
+  "artifacts": [],
+  "hardware_results": {
+    "pi_zero_w": "untested",
+    "pi_4": "untested",
+    "pi_5": "untested"
+  }
+}

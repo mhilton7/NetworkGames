@@ -1,0 +1,44 @@
+# Private game and image data
+testdata/private/*
+!testdata/private/.gitkeep
+
+# Generated builds and releases
+build/*
+dist/*
+!build/.gitkeep
+!dist/.gitkeep
+
+# Test and diagnostic artifacts
+reports/**/*.log
+reports/**/*.bin
+reports/**/*.img
+reports/**/*.img.xz
+reports/**/*.pcap
+
+# Credentials and provisioning data
+*.credentials
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+networkgames-seed.toml
+
+# Go and Rust outputs
+bin/
+target/
+coverage.out
+*.test
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
