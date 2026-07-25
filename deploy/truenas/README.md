@@ -36,6 +36,9 @@ Generate a random administrator bearer token of at least 20 characters and
 provision a private CA, server certificate, and a unique client certificate per
 Pi. Files expected in the certificate dataset are `ca.crt`, `server.crt`,
 `server.key`, and `clients-ca.crt`. Never paste private keys into Compose.
+The server certificate must cover the address used by Pi clients and
+`127.0.0.1` for the container health check; `scripts/tls-provision.sh`
+generates both identities.
 
 At upstream and TrueNAS firewalls, allow TCP 8445 only from the management CIDR
 and TCP 10809 only from explicit Pi IPs or their dedicated CIDR. Deny both from

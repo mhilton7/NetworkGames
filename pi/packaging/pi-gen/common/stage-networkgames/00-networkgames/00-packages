@@ -3,3 +3,9 @@ libnbd-bin
 openssl
 kmod
 network-manager
+iw
+rfkill
+wireless-regdb
+wpasupplicant
+hostapd
+dnsmasq-base

@@ -104,15 +104,18 @@ Run these commands on a secure administration machine with OpenSSL:
   ./scripts/tls-provision.sh \
     issue-server \
     networkgames-certs \
-    truenas-hostname
+    truenas-hostname-or-ip
 
   ./scripts/tls-provision.sh \
     issue-client \
     networkgames-certs \
     pi-01
 
-The server certificate's hostname must match the hostname the Pi uses for
-NBD_HOST.
+The server certificate's DNS name or IP address must match exactly what the Pi
+uses for NBD_HOST. The provisioning helper emits a DNS subject-alternative-name
+for a hostname and an IP subject-alternative-name for an IPv4 address. It also
+adds IP `127.0.0.1`, which is required by the container's internal HTTPS health
+check.
 
 For TrueNAS, copy:
 

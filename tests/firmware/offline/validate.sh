@@ -27,7 +27,26 @@ sudo mount -o ro "${loop}p2" "$tmp/root"
 sudo mount -o ro "${loop}p1" "$tmp/boot"
 test -x "$tmp/root/usr/bin/networkgames-pi-controller"
 test -f "$tmp/root/etc/systemd/system/networkgames-controller.service"
+test -f "$tmp/root/etc/systemd/system/networkgames-auto-attach.service"
+test -L "$tmp/root/etc/systemd/system/multi-user.target.wants/networkgames-auto-attach.service"
+test -f "$tmp/root/etc/systemd/system/networkgames-setup-ap.service"
+test -f "$tmp/root/etc/systemd/system/networkgames-setup-hostapd.service"
+test -f "$tmp/root/etc/systemd/system/networkgames-setup-dnsmasq.service"
 test -f "$tmp/root/usr/libexec/networkgames-gadget"
+test -x "$tmp/root/usr/libexec/networkgames-setup-ap"
+test -x "$tmp/root/usr/libexec/networkgames-provision"
+test -x "$tmp/root/usr/sbin/hostapd"
+test -x "$tmp/root/usr/sbin/dnsmasq"
+test -f "$tmp/root/etc/networkgames-dnsmasq.conf"
+test -f "$tmp/root/etc/systemd/journald.conf.d/networkgames.conf"
+test -f "$tmp/root/etc/modules-load.d/networkgames.conf"
+test -f "$tmp/root/etc/modprobe.d/networkgames-nbd.conf"
+grep -qx 'nbd' "$tmp/root/etc/modules-load.d/networkgames.conf"
+grep -qx 'options nbd nbds_max=1' \
+  "$tmp/root/etc/modprobe.d/networkgames-nbd.conf"
+grep -q '^Storage=persistent$' \
+  "$tmp/root/etc/systemd/journald.conf.d/networkgames.conf"
+grep -q '^US$' "$tmp/boot/networkgames-country"
 test "$(cat "$tmp/root/usr/share/networkgames/board-target")" = "$target"
 test ! -s "$tmp/root/etc/machine-id"
 test ! -e "$tmp/root/etc/networkgames/device.key"
@@ -60,7 +79,17 @@ packages="${prefix}.packages.txt"
 cp "$tmp/root/var/lib/dpkg/status" "${packages}.status"
 awk '/^Package:/{p=$2}/^Version:/{print p"="$2}' "${packages}.status" | sort > "$packages"
 rm "${packages}.status"
-kernel_versions=$(find "$tmp/root/lib/modules" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort | jq -Rsc 'split("\n")[:-1]')
+kernel_versions_text=$(find "$tmp/root/lib/modules" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+test -n "$kernel_versions_text"
+while IFS= read -r kernel_version; do
+  test -n "$kernel_version"
+  test -f "$tmp/root/lib/modules/$kernel_version/modules.dep"
+  grep -q 'kernel/drivers/block/nbd\.ko' \
+    "$tmp/root/lib/modules/$kernel_version/modules.dep"
+  find "$tmp/root/lib/modules/$kernel_version" -type f -name 'nbd.ko*' \
+    -print -quit | grep -q .
+done <<< "$kernel_versions_text"
+kernel_versions=$(printf '%s\n' "$kernel_versions_text" | jq -Rsc 'split("\n")[:-1]')
 sudo umount "$tmp/root" "$tmp/boot"
 sudo losetup -d "$loop"
 loop=
@@ -71,6 +100,7 @@ jq -n --arg target "$target" --arg architecture "$arch" \
     filesystems_read_only_inspection:"PASS",
     board_metadata:"PASS",boot_files:"PASS",usb_gadget_boot_config:"PASS",
     services:"PASS",
+    nbd_kernel_modules:"PASS",nbd_boot_preload:"PASS",
     qemu_application_smoke:"PASS",
     no_payloads:"PASS",no_embedded_identity:"PASS",
     kernel_versions:$kernel_versions,

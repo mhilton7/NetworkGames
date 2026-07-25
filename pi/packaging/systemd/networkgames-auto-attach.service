@@ -1,0 +1,25 @@
+[Unit]
+Description=NetworkGames validated automatic server and USB attachment
+After=systemd-modules-load.service network-online.target networkgames-recover.service networkgames-setup-ap.service
+Wants=network-online.target
+ConditionPathExists=/etc/networkgames/provisioned
+ConditionPathExists=/etc/networkgames/auto-attach
+ConditionPathExists=!/boot/firmware/networkgames-recovery
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/libexec/networkgames-helper auto-attach-ready
+ExecStart=/usr/libexec/networkgames-helper auto-attach
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=30s
+PrivateTmp=yes
+PrivateDevices=no
+ProtectSystem=strict
+ReadWritePaths=/run/networkgames
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

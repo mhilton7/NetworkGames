@@ -6,6 +6,9 @@ getent group networkgames >/dev/null || groupadd --system networkgames
 id networkgames >/dev/null 2>&1 || useradd --system --gid networkgames \
   --home-dir /var/lib/networkgames --create-home --shell /usr/sbin/nologin networkgames
 install -d -o networkgames -g networkgames -m 0750 /run/networkgames /var/lib/networkgames
+install -d -o root -g systemd-journal -m 2755 /var/log/journal
 systemctl disable ssh.service 2>/dev/null || true
+systemctl disable hostapd.service 2>/dev/null || true
+systemctl mask hostapd.service 2>/dev/null || true
 passwd --lock networkgames-setup
 CHROOT

@@ -1029,6 +1029,15 @@
       "licenseDeclared": "NOASSERTION"
     },
     {
+      "SPDXID": "SPDXRef-Package-hostapd",
+      "name": "hostapd",
+      "versionInfo": "2:2.10-24",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
       "SPDXID": "SPDXRef-Package-hostname",
       "name": "hostname",
       "versionInfo": "3.25",

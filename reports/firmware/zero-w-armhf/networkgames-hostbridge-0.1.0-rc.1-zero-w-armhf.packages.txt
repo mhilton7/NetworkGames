@@ -111,6 +111,7 @@ gpiod=2.2.1-2+rpi1+deb13u1
 grep=3.11-4
 groff-base=1.23.0-9
 gzip=1.13-1
+hostapd=2:2.10-24
 hostname=3.25
 htop=3.4.1-5
 init-system-helpers=1.69~deb13u1

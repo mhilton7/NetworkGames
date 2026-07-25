@@ -1,7 +1,7 @@
 {
   "status": "firmware-offline-verified",
   "target": "zero-w-armhf",
-  "architecture": "/tmp/tmp.LXmt1IydXV/root/usr/bin/networkgames-pi-controller: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, stripped",
+  "architecture": "/tmp/tmp.4hYeypNTpi/root/usr/bin/networkgames-pi-controller: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, stripped",
   "partition_table": "PASS",
   "filesystems_non_destructive_fsck": "PASS",
   "filesystems_read_only_inspection": "PASS",

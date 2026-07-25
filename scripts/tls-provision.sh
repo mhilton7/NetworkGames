@@ -16,11 +16,30 @@ case "$command" in
     ;;
   issue-server)
     test -n "$name"
+    server_san_type=DNS
+    if [[ "$name" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+      IFS=. read -r octet1 octet2 octet3 octet4 <<< "$name"
+      for octet in "$octet1" "$octet2" "$octet3" "$octet4"; do
+        ((10#$octet <= 255)) || exit 64
+      done
+      server_san_type=IP
+    elif [[ "$name" =~ ^[0-9.]+$ ]]; then
+      exit 64
+    else
+      case "$name" in
+        *[!A-Za-z0-9.-]*|.*|*.) exit 64 ;;
+      esac
+    fi
+    server_sans=$server_san_type:$name
+    if test "$name" != 127.0.0.1; then
+      server_sans=$server_sans,IP:127.0.0.1
+    fi
     openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 \
       -out "$directory/server.key.new"
     openssl req -new -key "$directory/server.key.new" -subj "/CN=$name" \
       -out "$directory/server.csr"
-    printf 'subjectAltName=DNS:%s\nextendedKeyUsage=serverAuth\n' "$name" \
+    printf 'subjectAltName=%s\nextendedKeyUsage=serverAuth\n' \
+      "$server_sans" \
       > "$directory/server.ext"
     openssl x509 -req -sha256 -days 397 -in "$directory/server.csr" \
       -CA "$directory/ca.crt" -CAkey "$directory/ca.key" -CAcreateserial \

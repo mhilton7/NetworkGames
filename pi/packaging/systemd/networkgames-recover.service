@@ -1,5 +1,5 @@
 [Unit]
-Description=NetworkGames detach gadget after controller failure
+Description=NetworkGames ensure USB gadget is detached during recovery
 After=local-fs.target
 
 [Service]

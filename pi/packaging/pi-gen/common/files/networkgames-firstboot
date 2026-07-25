@@ -7,9 +7,11 @@ rm -f /etc/ssh/ssh_host_*
 if systemctl is-enabled ssh.service >/dev/null 2>&1; then
   ssh-keygen -A
 fi
-install -d -m 0700 /etc/networkgames
+install -d -o root -g networkgames -m 0750 /etc/networkgames
+install -d -o root -g root -m 0700 /etc/NetworkManager/system-connections
 umask 077
-openssl rand -hex 32 > /etc/networkgames/admin.token
+admin_token=$(openssl rand -hex 6)
+printf '%s\n' "$admin_token" > /etc/networkgames/admin.token
 openssl req -x509 -newkey rsa:3072 -nodes -days 30 \
   -subj "/CN=networkgames-setup" \
   -keyout /etc/networkgames/device.key -out /etc/networkgames/device.crt
@@ -17,5 +19,52 @@ chown root:networkgames /etc/networkgames/admin.token \
   /etc/networkgames/device.key /etc/networkgames/device.crt
 chmod 0640 /etc/networkgames/admin.token \
   /etc/networkgames/device.key /etc/networkgames/device.crt
+
+country=US
+if test -r /boot/firmware/networkgames-country; then
+  country=$(tr -d '[:space:]' < /boot/firmware/networkgames-country)
+fi
+case "$country" in
+  [A-Z][A-Z]) ;;
+  *) echo "invalid Wi-Fi country in networkgames-country" >&2; exit 1 ;;
+esac
+machine=$(tr -d '[:space:]' < /etc/machine-id)
+suffix=$(printf '%s' "$machine" | cut -c1-8)
+setup_ssid="NetworkGames-$suffix"
+setup_passphrase=$(openssl rand -hex 16)
+hostapd_config=/etc/networkgames/hostapd.conf
+{
+  printf '%s\n' \
+    'interface=wlan0' \
+    'driver=nl80211' \
+    "ssid=$setup_ssid" \
+    "country_code=$country" \
+    'ieee80211d=1' \
+    'hw_mode=g' \
+    'channel=6' \
+    'wmm_enabled=0' \
+    'auth_algs=1' \
+    'wpa=2' \
+    'wpa_key_mgmt=WPA-PSK' \
+    'rsn_pairwise=CCMP'
+  printf 'wpa_passphrase=%s\n' "$setup_passphrase"
+} > "$hostapd_config"
+chown root:networkgames "$hostapd_config"
+chmod 0640 "$hostapd_config"
+{
+  printf '%s\n' \
+    'NetworkGames secure setup credentials' \
+    '' \
+    "Setup Wi-Fi SSID: $setup_ssid" \
+    "Setup Wi-Fi password: $setup_passphrase" \
+    'Management URL: https://10.77.0.1:9443/' \
+    'Management username: admin' \
+    "Management password: $admin_token" \
+    '' \
+    'Your browser will warn about the device-unique setup certificate.' \
+    'Verify and accept it only while connected to the setup Wi-Fi.' \
+    'To force recovery mode, create an empty file named' \
+    'networkgames-recovery on this boot partition and reboot.'
+} > /boot/firmware/NETWORKGAMES-SETUP.txt
 touch /etc/networkgames/identity-generated
 systemctl disable networkgames-firstboot.service

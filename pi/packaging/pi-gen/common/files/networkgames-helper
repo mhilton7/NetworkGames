@@ -5,6 +5,41 @@ action=${1:-}
 config=/etc/networkgames/bridge.env
 run=/run/networkgames
 mkdir -p "$run"
+
+require_nbd() {
+  if ! test -d /sys/module/nbd || ! test -b /dev/nbd0; then
+    echo "NBD kernel module is not preloaded; install the NetworkGames NBD boot configuration and reboot" >&2
+    exit 23
+  fi
+}
+
+# These cleanup operations must remain available before initial provisioning
+# and while recovering from a damaged or incomplete configuration.
+case "$action" in
+  detach)
+    /usr/libexec/networkgames-gadget stop
+    rm -f "$run/usb-attached"
+    exit 0
+    ;;
+  disconnect)
+    "$0" detach || true
+    nbd-client -d /dev/nbd0 2>/dev/null || true
+    rm -f "$run/nbd-connected"
+    exit 0
+    ;;
+  poweroff)
+    "$0" disconnect || true
+    sync
+    systemctl poweroff --no-block
+    exit 0
+    ;;
+  clear-cache)
+    test ! -e "$run/usb-attached"
+    find /var/cache/networkgames -xdev -type f -delete
+    exit 0
+    ;;
+esac
+
 board_target=$(cat /usr/share/networkgames/board-target)
 model=$(tr -d '\000' < /proc/device-tree/model 2>/dev/null || true)
 case "$board_target:$model" in
@@ -19,6 +54,7 @@ test -r "$config" || {
 }
 # shellcheck disable=SC1090
 . "$config"
+export NETWORKGAMES_USB_VID NETWORKGAMES_USB_PID
 : "${NBD_HOST:?missing NBD_HOST}"
 : "${NBD_PORT:=10809}"
 : "${NBD_EXPORT:?missing NBD_EXPORT}"
@@ -28,23 +64,40 @@ test -r "$config" || {
 case "$NBD_HOST" in *[!A-Za-z0-9.:-]*) echo "invalid NBD host" >&2; exit 22;; esac
 case "$NBD_PORT" in *[!0-9]*) echo "invalid NBD port" >&2; exit 22;; esac
 case "$action" in
+  auto-attach-ready)
+    test -e /etc/networkgames/auto-attach
+    case "${NETWORKGAMES_USB_VID:-}:${NETWORKGAMES_USB_PID:-}" in
+      0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]:0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) ;;
+      *) exit 1 ;;
+    esac
+    exit 0
+    ;;
   test)
+    test ! -e "$run/usb-attached"
+    test ! -e "$run/nbd-connected"
+    require_nbd
     nbd-client -x -F "$TLS_CERT" -K "$TLS_KEY" -A "$TLS_CA" \
       -H "$NBD_HOST" -N "$NBD_EXPORT" -R "$NBD_HOST" "$NBD_PORT" /dev/nbd0
+    if ! udevadm settle --timeout=5 ||
+      ! dd if=/dev/nbd0 of=/dev/null bs=512 count=1 status=none; then
+      nbd-client -d /dev/nbd0 2>/dev/null || true
+      exit 1
+    fi
     nbd-client -d /dev/nbd0
     ;;
   connect)
     test ! -e "$run/usb-attached"
-    modprobe nbd nbds_max=1
+    test ! -e "$run/nbd-connected"
+    require_nbd
+    if nbd-client -c /dev/nbd0 >/dev/null 2>&1; then
+      echo "NBD device is already connected; disconnect it before reconnecting" >&2
+      exit 24
+    fi
+    nbd-client -d /dev/nbd0 2>/dev/null || true
     nbd-client -x -F "$TLS_CERT" -K "$TLS_KEY" -A "$TLS_CA" \
       -H "$NBD_HOST" -N "$NBD_EXPORT" -R "$NBD_HOST" "$NBD_PORT" /dev/nbd0
     blockdev --setro /dev/nbd0
     touch "$run/nbd-connected"
-    ;;
-  disconnect)
-    "$0" detach || true
-    nbd-client -d /dev/nbd0
-    rm -f "$run/nbd-connected"
     ;;
   attach)
     test -e "$run/nbd-connected"
@@ -52,13 +105,15 @@ case "$action" in
     /usr/libexec/networkgames-gadget start
     touch "$run/usb-attached"
     ;;
-  detach)
-    /usr/libexec/networkgames-gadget stop
-    rm -f "$run/usb-attached"
-    ;;
-  clear-cache)
-    test ! -e "$run/usb-attached"
-    find /var/cache/networkgames -xdev -type f -delete
+  auto-attach)
+    test -e /etc/networkgames/auto-attach
+    "$0" auto-attach-ready
+    "$0" test
+    "$0" connect
+    if ! "$0" attach; then
+      "$0" disconnect
+      exit 1
+    fi
     ;;
   *) echo "unsupported action" >&2; exit 64 ;;
 esac

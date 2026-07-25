@@ -1,0 +1,20 @@
+[Unit]
+Description=NetworkGames secure setup and recovery network
+After=NetworkManager.service networkgames-firstboot.service
+Wants=NetworkManager.service
+Before=networkgames-controller.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/networkgames-setup-ap
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=10s
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

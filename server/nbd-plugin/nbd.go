@@ -255,8 +255,14 @@ func writeOptionReply(w io.Writer, option, reply uint32, payload []byte) error {
 }
 
 func (s *Server) transmission(conn net.Conn, backend Backend) error {
+	// A connected block device may legitimately be idle for an arbitrary
+	// period. The negotiation deadline protects the unauthenticated and TLS
+	// setup phases, but carrying it into transmission tears down healthy
+	// mounted devices when no read arrives before the deadline.
+	if err := conn.SetDeadline(time.Time{}); err != nil {
+		return err
+	}
 	for {
-		conn.SetDeadline(time.Now().Add(s.Deadline))
 		var magic, flagsType uint32
 		var handle, offset uint64
 		var length uint32

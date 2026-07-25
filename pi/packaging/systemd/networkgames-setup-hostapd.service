@@ -1,0 +1,14 @@
+[Unit]
+Description=NetworkGames setup access point radio
+After=NetworkManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/hostapd /etc/networkgames/hostapd.conf
+Restart=on-failure
+RestartSec=2s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_PACKET AF_INET AF_INET6

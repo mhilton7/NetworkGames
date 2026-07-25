@@ -42,7 +42,11 @@ func TestMutualTLSReadOnlyProtocol(t *testing.T) {
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	server := &nbd.Server{Backend: payload, TLS: serverTLS, ExportName: "all", Deadline: 3 * time.Second}
+	negotiationDeadline := 250 * time.Millisecond
+	server := &nbd.Server{
+		Backend: payload, TLS: serverTLS, ExportName: "all",
+		Deadline: negotiationDeadline,
+	}
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(ctx, listener) }()
 	defer conn.Close()
@@ -70,6 +74,10 @@ func TestMutualTLSReadOnlyProtocol(t *testing.T) {
 		binary.BigEndian.Uint16(export[8:10])&2 == 0 {
 		t.Fatal("export is not read-only")
 	}
+	// A block device must survive periods with no requests. This exceeds the
+	// negotiation deadline and would fail if that deadline leaked into the
+	// transmission phase.
+	time.Sleep(2 * negotiationDeadline)
 	handle := uint64(42)
 	writeRequest(t, tlsConn, 0, handle, 4096, 512, nil)
 	var transmission [16]byte

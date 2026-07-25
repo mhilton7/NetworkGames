@@ -4,13 +4,13 @@
     {
       "name": "zero-w-armhf.img",
       "digest": {
-        "sha256": "f9498354ec1433eca7075f219e0115b0cda79279c847da4b690270270f920016"
+        "sha256": "3666b075a243b5f19881b24d74215f88eb9398a8e468f98c741bc3a81b4e80c8"
       }
     },
     {
       "name": "zero-w-armhf.img.xz",
       "digest": {
-        "sha256": "28d6ba2ea87dea46a2319541141b2a5336361218f98e72684120bace9640bd7c"
+        "sha256": "a0c7c0fac86a7ef568ca876e1d7cf0390f6f6f07eb74542570a4989b89e8b9ce"
       }
     }
   ],
@@ -35,8 +35,8 @@
       {
         "uri": "git+local:networkgames",
         "digest": {
-          "gitCommit": "83df1d8c9da0488f7b32a9311e763809a329ed89",
-          "sourceTreeSha256": "8779939bfda62c01af111f6be28badb4dc8873c13fb9cf3cb1cc61b365fcc470"
+          "gitCommit": "653a1a7e104b1051d3b194bd1de2f1179be11b17",
+          "sourceTreeSha256": "dc851f725e74dff8c80c2eddb85cb049f57e23fc21ec163648bbb0e4216cc419"
         }
       }
     ]
@@ -47,7 +47,7 @@
     },
     "metadata": {
       "invocationId": "zero-w-armhf-20260724",
-      "finishedOn": "2026-07-24T14:19:12Z",
+      "finishedOn": "2026-07-25T02:33:35Z",
       "sourceWorktreeDirty": true
     }
   }

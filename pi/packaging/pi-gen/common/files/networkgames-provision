@@ -1,0 +1,187 @@
+#!/bin/sh
+set -eu
+
+stage=/run/networkgames/provision
+network_dir=/etc/networkgames
+connection_dir=/etc/NetworkManager/system-connections
+client_profile=$connection_dir/networkgames-client.nmconnection
+umask 077
+
+cleanup() {
+  for name in wifi-update wifi-country wifi-ssid wifi-password bridge \
+    auto-attach nbd-host nbd-port nbd-export tls-ca tls-cert tls-key usb-vid \
+    usb-pid; do
+    rm -f "$stage/$name"
+  done
+  rmdir "$stage" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+test -d "$stage"
+test ! -L "$stage"
+test "$(stat -c %U "$stage")" = networkgames
+if find "$stage" -mindepth 1 -maxdepth 1 -type l -print -quit | grep -q .; then
+  echo "setup staging directory contains a symbolic link" >&2
+  exit 65
+fi
+
+wifi_update=$(cat "$stage/wifi-update")
+bridge=$(cat "$stage/bridge")
+auto_attach=$(cat "$stage/auto-attach")
+case "$wifi_update" in 0|1) ;; *) echo "invalid Wi-Fi update selection" >&2; exit 65;; esac
+case "$bridge" in 0|1) ;; *) echo "invalid bridge selection" >&2; exit 65;; esac
+case "$auto_attach" in 0|1) ;; *) echo "invalid automatic attachment selection" >&2; exit 65;; esac
+
+if test "$wifi_update" = 1; then
+  country=$(cat "$stage/wifi-country")
+  ssid=$(cat "$stage/wifi-ssid")
+  wifi_passphrase=$(cat "$stage/wifi-password")
+  case "$country" in [A-Z][A-Z]) ;; *) echo "invalid Wi-Fi country" >&2; exit 65;; esac
+  case "$ssid" in
+    ''|*[!A-Za-z0-9_.\ -]*) echo "invalid Wi-Fi SSID" >&2; exit 65 ;;
+  esac
+  test "${#ssid}" -le 32
+  test "${#wifi_passphrase}" -ge 8
+  test "${#wifi_passphrase}" -le 63
+  if printf '%s' "$wifi_passphrase" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+    echo "invalid Wi-Fi password" >&2
+    exit 65
+  fi
+else
+  test -s "$client_profile"
+  test -e "$network_dir/wifi-provisioned"
+fi
+
+if test "$bridge" = 1; then
+  nbd_host=$(cat "$stage/nbd-host")
+  nbd_port=$(cat "$stage/nbd-port")
+  nbd_export=$(cat "$stage/nbd-export")
+  usb_vid=$(cat "$stage/usb-vid")
+  usb_pid=$(cat "$stage/usb-pid")
+  case "$nbd_host" in
+    ''|*[!A-Za-z0-9.:-]*) echo "invalid NBD host" >&2; exit 65 ;;
+  esac
+  case "$nbd_port" in
+    ''|*[!0-9]*) echo "invalid NBD port" >&2; exit 65 ;;
+  esac
+  test "$nbd_port" -ge 1
+  test "$nbd_port" -le 65535
+  case "$nbd_export" in
+    ''|*[!A-Za-z0-9._:-]*) echo "invalid NBD export" >&2; exit 65 ;;
+  esac
+  case "$usb_vid:$usb_pid" in
+    :) ;;
+    0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]:0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) ;;
+    *) echo "invalid USB VID/PID" >&2; exit 65 ;;
+  esac
+  openssl x509 -in "$stage/tls-ca" -noout
+  openssl x509 -in "$stage/tls-cert" -noout
+  openssl pkey -in "$stage/tls-key" -noout
+  openssl verify -purpose sslclient -CAfile "$stage/tls-ca" \
+    "$stage/tls-cert" >/dev/null
+  cert_public=$(
+    openssl x509 -in "$stage/tls-cert" -pubkey -noout |
+      openssl pkey -pubin -outform DER |
+      sha256sum | cut -d ' ' -f 1
+  )
+  key_public=$(
+    openssl pkey -in "$stage/tls-key" -pubout |
+      openssl pkey -pubin -outform DER |
+      sha256sum | cut -d ' ' -f 1
+  )
+  test "$cert_public" = "$key_public"
+fi
+
+if test "$auto_attach" = 1; then
+  if test "$bridge" = 1; then
+    test -n "$usb_vid" -a -n "$usb_pid"
+  else
+    grep -Eq '^NETWORKGAMES_USB_VID=0x[0-9A-Fa-f]{4}$' \
+      "$network_dir/bridge.env"
+    grep -Eq '^NETWORKGAMES_USB_PID=0x[0-9A-Fa-f]{4}$' \
+      "$network_dir/bridge.env"
+  fi
+fi
+
+if test "$wifi_update" = 1; then
+  wifi_key=$(
+    wpa_passphrase "$ssid" < "$stage/wifi-password" |
+      awk '/^[[:space:]]+psk/ && $0 !~ /#/ {split($0, value, "="); print value[2]}'
+  )
+  test "${#wifi_key}" -eq 64
+  client_uuid=$(cat /proc/sys/kernel/random/uuid)
+  profile_tmp=$(mktemp "$connection_dir/.networkgames-client.XXXXXX")
+  {
+    printf '%s\n' \
+      '[connection]' \
+      'id=networkgames-client' \
+      "uuid=$client_uuid" \
+      'type=wifi' \
+      'interface-name=wlan0' \
+      'autoconnect=true' \
+      'autoconnect-priority=100' \
+      '' \
+      '[wifi]' \
+      'band=bg' \
+      'mode=infrastructure' \
+      "ssid=$ssid" \
+      '' \
+      '[wifi-security]' \
+      'key-mgmt=wpa-psk'
+    printf 'psk%s%s\n' '=' "$wifi_key"
+    printf '%s\n' \
+      '' \
+      '[ipv4]' \
+      'method=auto' \
+      '' \
+      '[ipv6]' \
+      'method=auto'
+  } > "$profile_tmp"
+  chmod 0600 "$profile_tmp"
+  mv -f "$profile_tmp" "$client_profile"
+  printf '%s\n' "$country" > /boot/firmware/networkgames-country
+  touch "$network_dir/wifi-provisioned"
+fi
+
+if test "$bridge" = 1; then
+  install -o root -g networkgames -m 0640 "$stage/tls-ca" "$network_dir/ca.crt"
+  install -o root -g networkgames -m 0640 "$stage/tls-cert" "$network_dir/client.crt"
+  install -o root -g networkgames -m 0640 "$stage/tls-key" "$network_dir/client.key"
+  bridge_tmp=$(mktemp "$network_dir/.bridge.env.XXXXXX")
+  {
+    printf 'NBD_HOST=%s\n' "$nbd_host"
+    printf 'NBD_PORT=%s\n' "$nbd_port"
+    printf 'NBD_EXPORT=%s\n' "$nbd_export"
+    printf '%s\n' \
+      'TLS_CA=/etc/networkgames/ca.crt' \
+      'TLS_CERT=/etc/networkgames/client.crt' \
+      'TLS_KEY=/etc/networkgames/client.key'
+    if test -n "$usb_vid"; then
+      printf 'NETWORKGAMES_USB_VID=%s\n' "$usb_vid"
+      printf 'NETWORKGAMES_USB_PID=%s\n' "$usb_pid"
+    fi
+  } > "$bridge_tmp"
+  chown root:networkgames "$bridge_tmp"
+  chmod 0640 "$bridge_tmp"
+  mv -f "$bridge_tmp" "$network_dir/bridge.env"
+  touch "$network_dir/provisioned"
+fi
+
+if test "$auto_attach" = 1; then
+  test -e "$network_dir/provisioned"
+  touch "$network_dir/auto-attach"
+else
+  rm -f "$network_dir/auto-attach"
+fi
+
+chown root:networkgames "$network_dir"
+chmod 0750 "$network_dir"
+for marker in wifi-provisioned provisioned auto-attach; do
+  if test -e "$network_dir/$marker"; then
+    chown root:networkgames "$network_dir/$marker"
+    chmod 0640 "$network_dir/$marker"
+  fi
+done
+if test "$wifi_update" = 1; then
+  nmcli connection reload
+fi
