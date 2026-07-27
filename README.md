@@ -151,6 +151,7 @@ Authenticate with the configured administrator token. The dashboard provides:
 - All, Wii, and GameCube library views.
 - title and game-ID search.
 - active export and snapshot status.
+- optional authenticated one-button Wii/GameCube platform switching.
 - validated GameCube import and selection actions.
 - per-title Nintendont compatibility settings.
 - memory-card backup health and restore actions.
@@ -192,6 +193,11 @@ Detach USB → disconnect NBD → select/validate profile
 For exact commands, use
 [GameCube deployment](docs/gamecube-deployment.md). Returning to Wii mode
 restores the normal read-only Wii export.
+
+The Host can perform this sequence automatically when explicitly configured
+with the Pi's pinned public management certificate and independent management
+token. See
+[automatic platform switching](docs/automatic-platform-switching.md).
 
 ## Build and test
 
@@ -256,6 +262,7 @@ Read [the security model](docs/security.md) before deployment.
 | TrueNAS installation | [deploy/truenas/README.md](deploy/truenas/README.md) |
 | Upgrade and rollback | [upgrade](deploy/truenas/upgrade.md) · [rollback](deploy/truenas/rollback.md) |
 | Raspberry Pi setup | [docs/pi-first-run.md](docs/pi-first-run.md) |
+| Automatic switching | [docs/automatic-platform-switching.md](docs/automatic-platform-switching.md) |
 | Safe flashing | [docs/flashing.md](docs/flashing.md) |
 | USB Loader GX | [docs/usb-loader-gx.md](docs/usb-loader-gx.md) |
 | GameCube mode | [support](docs/gamecube-support.md) · [deployment](docs/gamecube-deployment.md) · [rollback](docs/gamecube-rollback.md) |
