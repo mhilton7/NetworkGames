@@ -96,7 +96,7 @@ func TestConfigurationIsOptionalButNeverPartial(t *testing.T) {
 
 func TestActionRejectsUnlistedHelper(t *testing.T) {
 	client := &Client{}
-	if err := client.Action(context.Background(), "poweroff"); err == nil {
+	if err := client.Action(context.Background(), "clear-cache"); err == nil {
 		t.Fatal("unsafe helper action was accepted")
 	}
 }

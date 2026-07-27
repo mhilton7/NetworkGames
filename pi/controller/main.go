@@ -108,7 +108,7 @@ func main() {
 			switch name {
 			case "connect", "connect-wii", "connect-gamecube-physical",
 				"connect-gamecube-emulated", "disconnect", "attach", "detach",
-				"clear-cache", "test", "poweroff":
+				"clear-cache", "test", "poweroff", "reboot":
 				return exec.CommandContext(ctx, "/usr/bin/sudo", "-n",
 					"/usr/libexec/wiibridge-helper", name).CombinedOutput()
 			case "provision":
@@ -184,7 +184,7 @@ func validAction(action string) bool {
 	switch action {
 	case "connect", "connect-wii", "connect-gamecube-physical",
 		"connect-gamecube-emulated", "disconnect", "attach", "detach",
-		"clear-cache", "test", "poweroff":
+		"clear-cache", "test", "poweroff", "reboot":
 		return true
 	default:
 		return false
@@ -229,6 +229,7 @@ func (c *controller) dashboard(w http.ResponseWriter, _ *http.Request) {
 			{Name: "attach", Label: "Attach USB"},
 			{Name: "detach", Label: "Detach USB"},
 			{Name: "disconnect", Label: "Disconnect server"},
+			{Name: "reboot", Label: "Reboot Pi"},
 			{Name: "poweroff", Label: "Safely power off Pi"},
 		},
 	}); err != nil {

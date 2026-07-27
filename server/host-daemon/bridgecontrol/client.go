@@ -23,7 +23,7 @@ const csrfPrefix = "wiibridge-setup-csrf\x00"
 var allowedActions = map[string]bool{
 	"detach": true, "disconnect": true, "connect-wii": true,
 	"connect-gamecube-physical": true, "connect-gamecube-emulated": true,
-	"attach": true,
+	"attach": true, "poweroff": true, "reboot": true,
 }
 
 // Client authenticates the Pi by an exact certificate pin and authenticates
