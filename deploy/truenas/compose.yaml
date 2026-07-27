@@ -19,6 +19,9 @@ services:
       WIIBRIDGE_TLS_CERT: /certs/server.crt
       WIIBRIDGE_TLS_KEY: /certs/server.key
       WIIBRIDGE_TLS_CLIENT_CA: /certs/clients-ca.crt
+      WIIBRIDGE_PI_URL: ${WIIBRIDGE_PI_URL:-}
+      WIIBRIDGE_PI_ADMIN_TOKEN: ${WIIBRIDGE_PI_ADMIN_TOKEN:-}
+      WIIBRIDGE_PI_CERT: ${WIIBRIDGE_PI_CERT:-}
     ports:
       - "${WIIBRIDGE_HTTPS_BIND:?set management bind IP}:${WIIBRIDGE_HTTPS_PORT:-8445}:8445/tcp"
       - "${WIIBRIDGE_NBD_BIND:?set NBD bind IP}:${WIIBRIDGE_NBD_PORT:-10809}:10809/tcp"

@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"wiibridge/server/host-daemon/bridgecontrol"
 	"wiibridge/server/host-daemon/exportprofile"
 	"wiibridge/server/host-daemon/gamecube"
 	"wiibridge/server/host-daemon/scanner"
@@ -39,6 +40,7 @@ const version = "0.1.0-rc.1"
 
 type app struct {
 	mu       sync.RWMutex
+	switchMu sync.Mutex
 	root     string
 	dataDir  string
 	disk     *vdisk.Disk
@@ -54,6 +56,11 @@ type app struct {
 	activeGC *gamecube.VolumeManifest
 	authMu   sync.Mutex
 	failures map[string]authFailure
+	pi       piController
+}
+
+type piController interface {
+	Action(context.Context, string) error
 }
 
 type authFailure struct {
@@ -174,6 +181,14 @@ func serve() error {
 		tokenSum: sha256.Sum256([]byte(token)), started: time.Now(), store: database,
 		failures: make(map[string]authFailure), csrf: hex.EncodeToString(csrfSum[:]),
 		imports: make(map[string]importJob)}
+	a.pi, err = bridgecontrol.New(
+		os.Getenv("WIIBRIDGE_PI_URL"),
+		os.Getenv("WIIBRIDGE_PI_ADMIN_TOKEN"),
+		os.Getenv("WIIBRIDGE_PI_CERT"),
+	)
+	if err != nil {
+		return fmt.Errorf("automatic Pi switching configuration: %w", err)
+	}
 	a.wii = &wiiExportProfile{app: a}
 	a.exports, err = exportprofile.New(a.wii)
 	if err != nil {
@@ -219,7 +234,7 @@ func serve() error {
 	web := &http.Server{
 		Addr: env("WIIBRIDGE_HTTPS_LISTEN", ":8445"), Handler: securityHeaders(mux),
 		TLSConfig: tlsConfig.Clone(), ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second,
+		ReadTimeout: 15 * time.Second, WriteTimeout: 60 * time.Second,
 		IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10,
 	}
 	web.TLSConfig.ClientAuth = tls.NoClientCert
@@ -363,7 +378,8 @@ func (a *app) status(w http.ResponseWriter, _ *http.Request) {
 		"version": version, "snapshot": snapshot, "games": wiiGames,
 		"rejected": wiiRejected, "gamecube_games": gameCubeGames,
 		"gamecube_rejected": gameCubeRejected, "platform": a.exports.Platform(),
-		"export_state": a.exports.State(), "uptime_seconds": int(time.Since(started).Seconds()),
+		"export_state": a.exports.State(), "automatic_switching": a.pi != nil,
+		"uptime_seconds": int(time.Since(started).Seconds()),
 	})
 }
 
@@ -521,6 +537,8 @@ func (a *app) saveGameCubeSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
+	a.switchMu.Lock()
+	defer a.switchMu.Unlock()
 	platform := r.PathValue("platform")
 	if platform != "wii" && platform != "gamecube" {
 		http.Error(w, "unsupported platform", http.StatusBadRequest)
@@ -528,6 +546,7 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 	}
 	var next exportprofile.Profile = a.wii
 	var selectedManifest *gamecube.VolumeManifest
+	connectAction := "connect-wii"
 	if platform == "gamecube" {
 		id := strings.ToUpper(strings.TrimSpace(r.FormValue("id")))
 		revision64, err := strconv.ParseUint(r.FormValue("revision"), 10, 8)
@@ -568,15 +587,41 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 			CloseProfile: backend.Close,
 		}
 		selectedManifest = &manifest
+		if settings.MemoryCard == gamecube.MemoryCardEmulated {
+			connectAction = "connect-gamecube-emulated"
+		} else {
+			connectAction = "connect-gamecube-physical"
+		}
 	}
 	a.mu.RLock()
 	previousManifest := a.activeGC
 	a.mu.RUnlock()
-	if err := a.exports.Disconnect(); err != nil {
+	automatic := a.pi != nil
+	if automatic {
+		if err := a.pi.Action(r.Context(), "detach"); err != nil {
+			_ = next.Close()
+			http.Error(w, "automatic switch stopped before changing the host export: "+err.Error(),
+				http.StatusBadGateway)
+			return
+		}
+		if err := a.pi.Action(r.Context(), "disconnect"); err != nil {
+			_ = next.Close()
+			http.Error(w, "automatic switch left USB detached: "+err.Error(),
+				http.StatusBadGateway)
+			return
+		}
+	}
+	if err := a.waitForExportDisconnect(r.Context()); err != nil {
 		if next != a.wii {
 			_ = next.Close()
 		}
-		http.Error(w, "disconnect Pi NBD session before switching: "+err.Error(), http.StatusConflict)
+		if automatic {
+			http.Error(w, "Pi disconnected but the host still has active I/O; USB remains detached: "+
+				err.Error(), http.StatusConflict)
+		} else {
+			http.Error(w, "disconnect Pi NBD session before switching: "+err.Error(),
+				http.StatusConflict)
+		}
 		return
 	}
 	if err := a.exports.Select(next); err != nil {
@@ -596,9 +641,52 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if automatic {
+		if err := a.pi.Action(r.Context(), connectAction); err != nil {
+			a.safePiDisconnect()
+			http.Error(w, "host export selected, but Pi reconnect failed; USB remains detached: "+
+				err.Error(), http.StatusBadGateway)
+			return
+		}
+		if err := a.pi.Action(r.Context(), "attach"); err != nil {
+			a.safePiDisconnect()
+			http.Error(w, "Pi connected, but USB attach failed and was rolled back: "+
+				err.Error(), http.StatusBadGateway)
+			return
+		}
+	}
+	notice := "Host export switched to " + platform + "."
+	if automatic {
+		notice = "Pi safely detached, switched to " + platform + ", reconnected, and reattached USB."
+	}
 	respondAction(w, r, http.StatusOK,
 		map[string]any{"platform": a.exports.Platform(), "state": a.exports.State()},
-		"Host export switched to "+platform+".", platform)
+		notice, platform)
+}
+
+func (a *app) waitForExportDisconnect(ctx context.Context) error {
+	var err error
+	for attempt := 0; attempt < 50; attempt++ {
+		if err = a.exports.Disconnect(); err == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	return err
+}
+
+func (a *app) safePiDisconnect() {
+	if a.pi == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = a.pi.Action(ctx, "detach")
+	_ = a.pi.Action(ctx, "disconnect")
 }
 
 func (a *app) restoreGameCubeSave(w http.ResponseWriter, r *http.Request) {
@@ -785,11 +873,12 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"CSRF": csrf, "Platform": a.exports.Platform(), "State": a.exports.State(),
 		"Query": query, "Notice": strings.TrimSpace(r.URL.Query().Get("notice")),
 		"TotalWii": totalWii, "TotalGameCube": totalGameCube,
-		"Rejected":     wiiRejected + gameCubeRejected,
-		"WiiRejected":  wiiRejected,
-		"GCRejected":   gameCubeRejected,
-		"Review":       review,
-		"ImportActive": importActive, "ImportReady": importReady, "ImportFailed": importFailed,
+		"Rejected":        wiiRejected + gameCubeRejected,
+		"WiiRejected":     wiiRejected,
+		"GCRejected":      gameCubeRejected,
+		"Review":          review,
+		"AutomaticSwitch": a.pi != nil,
+		"ImportActive":    importActive, "ImportReady": importReady, "ImportFailed": importFailed,
 	}
 	if err := hostDashboard.Execute(w, data); err != nil {
 		slog.Warn("dashboard render failed", "error", err)
@@ -839,7 +928,7 @@ var hostDashboard = template.Must(template.New("host").Funcs(template.FuncMap{
 <label>Controller<select name=controller_mode><option {{if eq .Settings.ControllerMode "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.ControllerMode "native"}}selected{{end}}>native</option><option {{if eq .Settings.ControllerMode "hid"}}selected{{end}}>hid</option></select></label>
 <label>Disc speed<select name=disc_speed><option {{if eq .Settings.DiscSpeed "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.DiscSpeed "original"}}selected{{end}}>original</option></select></label><input type=hidden name=return_to_loader value=1><button>Save settings</button></form></details></article>{{else}}<div class="card empty">No GameCube titles match this view.</div>{{end}}</div></section>{{end}}
 <details class="card review" id="library-review" {{if .Rejected}}open{{end}}><summary>Library review — {{.Rejected}} item{{if ne .Rejected 1}}s{{end}}</summary><div class=review-help><p>{{.WiiRejected}} Wii · {{.GCRejected}} GameCube. Rejected files are never modified or exported.</p><form method=post action=/api/v1/scan><input type=hidden name=csrf value="{{.CSRF}}"><button class=secondary>Rescan library</button></form></div>{{if .Review}}<div class=table-wrap><table class=library><thead><tr><th>Scanner</th><th>Source path</th><th>Reason</th></tr></thead><tbody>{{range .Review}}<tr><td><span class=tag>{{.Platform}}</span></td><td class=path><code>{{.Path}}</code></td><td class=reason>{{.Reason}}</td></tr>{{end}}</tbody></table></div>{{else}}<div class=empty>No rejected library entries.</div>{{end}}</details>
-<section class="card switcher"><div><h2>Return to Wii mode</h2><p>Detach USB and disconnect Pi NBD before switching the host export.</p></div><form method=post action=/api/v1/export/wii><input type=hidden name=csrf value="{{.CSRF}}"><button>Use Wii export</button></form></section>
+<section class="card switcher"><div><h2>Platform switching</h2>{{if .AutomaticSwitch}}<p>Automatic safety sequence enabled: detach USB → disconnect NBD → switch export → reconnect → attach.</p>{{else}}<p>Manual mode: detach USB and disconnect Pi NBD before switching the host export.</p>{{end}}</div><form method=post action=/api/v1/export/wii><input type=hidden name=csrf value="{{.CSRF}}"><button>Use Wii export</button></form></section>
 <footer>WiiBridge keeps source libraries immutable. Hardware deployment and write-enabled GameCube saves remain explicit operator actions.</footer>
 </main></body></html>`))
 
