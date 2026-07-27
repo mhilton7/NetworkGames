@@ -54,6 +54,13 @@ the extent map, manifests, checksums, and optional saves. ISO, GCM, CISO, and FS
 payload bytes remain only under the read-only `/library` mount. Retained
 schema-2 generations therefore do not multiply payload storage.
 
+Runtime extent lookup uses virtual-offset-sorted mappings and binary search.
+The Host retains at most 32 read-only source handles in an LRU cache, rechecks
+bounded file identity before source reads, coalesces reads within one extent,
+and closes every cached handle when the export profile closes. It does not hash
+whole games, walk source directories, or parse generation JSON on the NBD read
+path.
+
 Schema-1 generations containing `library.img` are detected but never removed
 automatically. After a schema-2 generation is built and validated, return to
 Wii mode, detach USB, disconnect NBD, stop the Host, and remove only the

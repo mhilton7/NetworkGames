@@ -44,7 +44,7 @@
       const value = await response.json();
       text("gc-build-state", value.progress.state);
       text("gc-current", value.progress.current_title || "Finalizing");
-      text("gc-count", `${value.progress.titles_processed} / ${value.progress.total_titles} titles · ${value.progress.files_mapped} files mapped · ${value.progress.metadata_generation}`);
+      text("gc-count", `${value.progress.titles_processed} / ${value.progress.total_titles} titles · ${value.progress.files_mapped} files · ${value.progress.extent_count} extents · ${value.progress.metadata_bytes_generated} metadata bytes · ${value.progress.current_phase}`);
       const progress = document.getElementById("gc-progress");
       if (progress) {
         progress.max = value.progress.total_titles || 1;

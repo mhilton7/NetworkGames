@@ -27,8 +27,9 @@ control selects the current complete validated generation and is disabled until
 one exists. Building and updating are separate background operations; opening
 the page never starts a build.
 
-GameCube builds report titles, discs, mapped files, metadata generation, and
-validation rather than payload-copy bytes. The generated FAT32 disk reads game
+GameCube builds report titles, discs, mapped files, current phase, generated
+metadata bytes, extent count, and validation rather than payload-copy bytes.
+The generated FAT32 disk reads game
 payloads through to `/library`; `/data` contains compact metadata only. The
 dashboard reports **Legacy copied GameCube generation detected** when an older
 schema-1 `library.img` remains, but it does not delete it automatically.

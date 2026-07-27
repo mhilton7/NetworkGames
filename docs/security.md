@@ -7,6 +7,9 @@ GameCube sources are fully validated during build and activation. Bounded
 device/inode/size/mtime identity checks occur during payload reads, and a
 changed active source fails closed. Payload bytes are read directly from
 read-only source extents and are never mirrored into `/data`.
+The active read path uses binary-search extent resolution and a bounded
+32-handle read-only LRU. Complete hashing, directory walks, manifest parsing,
+and catalog validation occur before activation rather than during block reads.
 
 The container is non-root with a read-only root, all capabilities dropped,
 no-new-privileges, bounded PIDs/logs/tmpfs, no devices, and no Docker

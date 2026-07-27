@@ -117,6 +117,12 @@ func TestCompleteLibraryIsNoCopyAndReadsEveryDisc(t *testing.T) {
 	}
 	reportData, _ := json.Marshal(report)
 	t.Logf("no-copy storage report: %s", reportData)
+	if report["mapped_title_count"] != 2 || report["mapped_disc_count"] != 3 ||
+		report["mapped_virtual_file_count"] != 3 || report["mapped_extent_count"] != 3 ||
+		report["overlay_apparent_bytes"] != 0 || report["overlay_allocated_bytes"] != 0 ||
+		report["generated_metadata_allocated_bytes"] >= sourceBytes/2 {
+		t.Fatalf("incomplete or payload-sized storage report: %#v", report)
+	}
 	backend, err := OpenLibraryBackend(manager.Root(), manifest)
 	if err != nil {
 		t.Fatal(err)
@@ -460,6 +466,25 @@ func TestInvalidAndCanceledGenerationDoNotReplaceActive(t *testing.T) {
 	active, err := manager.Active()
 	if err != nil || active.GenerationID != first.GenerationID {
 		t.Fatalf("active generation lost: %#v err=%v", active, err)
+	}
+}
+
+func TestIncompleteOrInconsistentDiscSetRejected(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	incomplete := games[1]
+	incomplete.Discs = incomplete.Discs[:1]
+	if _, err := manager.Build(context.Background(), []Game{incomplete}); err == nil ||
+		!strings.Contains(err.Error(), "incomplete disc set") {
+		t.Fatalf("incomplete two-disc set error=%v", err)
+	}
+	inconsistent := games[0]
+	inconsistent.Discs[0].Number = 1
+	if _, err := manager.Build(context.Background(), []Game{inconsistent}); err == nil ||
+		!strings.Contains(err.Error(), "inconsistent disc metadata") {
+		t.Fatalf("inconsistent disc metadata error=%v", err)
 	}
 }
 
