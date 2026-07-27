@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"wiibridge/server/host-daemon/bridgecontrol"
 	"wiibridge/server/host-daemon/exportprofile"
 	"wiibridge/server/host-daemon/gamecube"
 	"wiibridge/server/host-daemon/scanner"
@@ -16,8 +17,10 @@ import (
 )
 
 type fakePiController struct {
-	actions []string
-	fail    string
+	actions   []string
+	fail      string
+	status    bridgecontrol.Status
+	statusErr error
 }
 
 func (f *fakePiController) Action(_ context.Context, action string) error {
@@ -26,6 +29,10 @@ func (f *fakePiController) Action(_ context.Context, action string) error {
 		return errors.New("synthetic Pi failure")
 	}
 	return nil
+}
+
+func (f *fakePiController) Status(_ context.Context) (bridgecontrol.Status, error) {
+	return f.status, f.statusErr
 }
 
 func testApp(t *testing.T) *app {
@@ -220,5 +227,64 @@ func TestPiPowerControlsAreUnavailableWithoutCoordinator(t *testing.T) {
 	a.piPowerAction(response, request)
 	if response.Code != 503 {
 		t.Fatalf("unconfigured Pi control status=%d, want 503", response.Code)
+	}
+}
+
+func TestPiStatusReturnsLiveOperationalState(t *testing.T) {
+	a := testApp(t)
+	a.pi = &fakePiController{status: bridgecontrol.Status{
+		Target: "zero-w-armhf", Board: "Raspberry Pi Zero W Rev 1.1",
+		BoardOK: true, Provisioned: true, WiFiReady: true, AutoAttach: true,
+		NBDConnected: true, USBAttached: true, ExportMode: "wii",
+		USBController: "20980000.usb", USBState: "configured",
+		Addresses: []string{"192.0.2.10/24"}, State: "ready",
+	}}
+	request := httptest.NewRequest("GET", "/api/v1/pi/status", nil)
+	response := httptest.NewRecorder()
+	a.piStatus(response, request)
+	if response.Code != 200 {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	for _, expected := range []string{
+		`"connected":true`, `"export_mode":"wii"`,
+		`"nbd_connected":true`, `"usb_attached":true`,
+	} {
+		if !strings.Contains(response.Body.String(), expected) {
+			t.Errorf("live status missing %q", expected)
+		}
+	}
+}
+
+func TestPiStatusFailureDoesNotLeakConnectionDetails(t *testing.T) {
+	a := testApp(t)
+	a.pi = &fakePiController{statusErr: errors.New("dial 192.0.2.1: secret failure")}
+	request := httptest.NewRequest("GET", "/api/v1/pi/status", nil)
+	response := httptest.NewRecorder()
+	a.piStatus(response, request)
+	if response.Code != 502 || strings.Contains(response.Body.String(), "192.0.2.1") {
+		t.Fatalf("unsafe failure response: status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+}
+
+func TestDashboardShowsLivePiStatusPanel(t *testing.T) {
+	a := testApp(t)
+	a.pi = &fakePiController{status: bridgecontrol.Status{
+		Board: "Raspberry Pi Zero W Rev 1.1", Provisioned: true,
+		AutoAttach: true, NBDConnected: true, USBAttached: true,
+		ExportMode: "wii", USBController: "20980000.usb",
+		USBState: "configured", State: "ready",
+	}}
+	request := httptest.NewRequest("GET", "/", nil)
+	response := httptest.NewRecorder()
+	a.dashboard(response, request)
+	body := response.Body.String()
+	for _, expected := range []string{
+		"Live Raspberry Pi connection", "Raspberry Pi Zero W Rev 1.1",
+		"NBD connected", "USB attached", "/assets/pi-status.js",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("dashboard missing %q", expected)
+		}
 	}
 }
