@@ -184,11 +184,9 @@ func inspectImage(root, path, ext string) (Disc, error) {
 	if err = validateFST(reader, header, logicalSize); err != nil {
 		return Disc{}, err
 	}
-	sum, err := hashFile(path)
-	if err != nil {
-		return Disc{}, err
-	}
-	return discFromHeader(header, path, format, logicalSize, info.Size(), sum), nil
+	// Full-image hashing is intentionally deferred until Prepare export.
+	// Catalog startup must not synchronously read every byte of every disc.
+	return discFromHeader(header, path, format, logicalSize, info.Size(), ""), nil
 }
 
 func inspectFST(root, path string) (Disc, error) {

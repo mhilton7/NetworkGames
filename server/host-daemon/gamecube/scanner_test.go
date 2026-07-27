@@ -29,7 +29,7 @@ func TestScanISOAndGCMMetadataRegionsAndUnicodePaths(t *testing.T) {
 	}
 	if result.Games[0].ID != "GTEE01" || result.Games[0].Region != "NTSC-U" ||
 		result.Games[0].Revision != 2 || result.Games[0].Format != "iso" ||
-		len(result.Games[0].Discs[0].SHA256) != 64 {
+		result.Games[0].Discs[0].SHA256 != "" {
 		t.Fatalf("unexpected first game metadata: %#v", result.Games[0])
 	}
 	if result.Games[1].Region != "PAL" || result.Games[1].Format != "gcm" {

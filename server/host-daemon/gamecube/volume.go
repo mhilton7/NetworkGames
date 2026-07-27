@@ -67,6 +67,11 @@ func BuildVolume(ctx context.Context, cacheRoot string, game Game, mode MemoryCa
 	if mode != MemoryCardPhysical && mode != MemoryCardEmulated {
 		return VolumeManifest{}, errors.New("invalid memory-card mode")
 	}
+	var err error
+	game, err = hashGameSources(game)
+	if err != nil {
+		return VolumeManifest{}, err
+	}
 	key := CacheKey(game, mode)
 	ready := filepath.Join(cacheRoot, "ready", key)
 	manifestPath := filepath.Join(ready, "manifest.json")
@@ -124,6 +129,28 @@ func BuildVolume(ctx context.Context, cacheRoot string, game Game, mode MemoryCa
 	}
 	committed = true
 	return manifest, nil
+}
+
+func hashGameSources(game Game) (Game, error) {
+	for index := range game.Discs {
+		if game.Discs[index].SHA256 != "" {
+			continue
+		}
+		var (
+			sum string
+			err error
+		)
+		if game.Discs[index].Format == "fst" {
+			sum, _, err = hashTree(game.Discs[index].SourcePath)
+		} else {
+			sum, err = hashFile(game.Discs[index].SourcePath)
+		}
+		if err != nil {
+			return Game{}, fmt.Errorf("hash disc %d: %w", game.Discs[index].Number+1, err)
+		}
+		game.Discs[index].SHA256 = sum
+	}
+	return game, nil
 }
 
 func createVolumeImage(ctx context.Context, path string, game Game) error {
