@@ -37,6 +37,13 @@ grep -q 'gamecube-emulated:0' pi/packaging/pi-gen/common/files/wiibridge-gadget
 grep -q 'connect-gamecube-physical' pi/packaging/pi-gen/common/files/wiibridge-helper
 grep -q 'connect-gamecube-emulated' pi/packaging/pi-gen/common/files/wiibridge-helper
 grep -q 'blockdev --setrw' pi/packaging/pi-gen/common/files/wiibridge-helper
+for action in connect connect-wii connect-gamecube-physical \
+  connect-gamecube-emulated disconnect attach detach clear-cache test \
+  poweroff reboot; do
+  grep -Fqx \
+    "wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper $action" \
+    pi/packaging/pi-gen/common/files/wiibridge-sudoers
+done
 grep -q 'nbd-client -x' pi/packaging/pi-gen/common/files/wiibridge-helper
 if grep -q 'modprobe nbd' pi/packaging/pi-gen/common/files/wiibridge-helper; then
   echo "the sandboxed helper must not load kernel modules" >&2
