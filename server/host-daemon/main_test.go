@@ -21,6 +21,7 @@ type fakePiController struct {
 	fail      string
 	status    bridgecontrol.Status
 	statusErr error
+	address   string
 }
 
 func (f *fakePiController) Action(_ context.Context, action string) error {
@@ -33,6 +34,16 @@ func (f *fakePiController) Action(_ context.Context, action string) error {
 
 func (f *fakePiController) Status(_ context.Context) (bridgecontrol.Status, error) {
 	return f.status, f.statusErr
+}
+
+func (f *fakePiController) Address() string { return f.address }
+
+func (f *fakePiController) SetAddress(_ context.Context, address string) error {
+	if f.fail == "address" {
+		return errors.New("synthetic address failure")
+	}
+	f.address = address
+	return nil
 }
 
 func testApp(t *testing.T) *app {
@@ -274,17 +285,43 @@ func TestDashboardShowsLivePiStatusPanel(t *testing.T) {
 		AutoAttach: true, NBDConnected: true, USBAttached: true,
 		ExportMode: "wii", USBController: "20980000.usb",
 		USBState: "configured", State: "ready",
-	}}
+	}, address: "192.0.2.10"}
 	request := httptest.NewRequest("GET", "/", nil)
 	response := httptest.NewRecorder()
 	a.dashboard(response, request)
 	body := response.Body.String()
 	for _, expected := range []string{
-		"Live Raspberry Pi connection", "Raspberry Pi Zero W Rev 1.1",
-		"NBD connected", "USB attached", "/assets/pi-status.js",
+		"Live Raspberry Pi connection", `value="192.0.2.10"`,
+		"once every 10 seconds", "/assets/pi-status.js",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("dashboard missing %q", expected)
 		}
+	}
+}
+
+func TestPiAddressControlUsesConfiguredManager(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{address: "192.0.2.10"}
+	a.pi = pi
+	request := httptest.NewRequest("POST", "/api/v1/pi/address?address=192.0.2.20", nil)
+	response := httptest.NewRecorder()
+	a.setPiAddress(response, request)
+	if response.Code != 200 || pi.address != "192.0.2.20" {
+		t.Fatalf("address update status=%d address=%q body=%s",
+			response.Code, pi.address, response.Body.String())
+	}
+}
+
+func TestPiAddressControlRejectsURLs(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{address: "192.0.2.10"}
+	a.pi = pi
+	request := httptest.NewRequest(
+		"POST", "/api/v1/pi/address?address=https://attacker.invalid", nil)
+	response := httptest.NewRecorder()
+	a.setPiAddress(response, request)
+	if response.Code != 400 || pi.address != "192.0.2.10" {
+		t.Fatalf("unsafe address status=%d address=%q", response.Code, pi.address)
 	}
 }
