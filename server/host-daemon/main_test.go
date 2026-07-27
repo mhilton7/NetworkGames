@@ -183,3 +183,42 @@ func TestAutomaticAttachFailureLeavesPiDisconnected(t *testing.T) {
 		t.Fatalf("failed switch did not return to safe detached state: %s", got)
 	}
 }
+
+func TestPiPowerControlsRequireConfirmation(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{}
+	a.pi = pi
+	request := httptest.NewRequest("POST", "/api/v1/pi/reboot", nil)
+	request.SetPathValue("action", "reboot")
+	response := httptest.NewRecorder()
+	a.piPowerAction(response, request)
+	if response.Code != 400 || len(pi.actions) != 0 {
+		t.Fatalf("unconfirmed reboot was not rejected: status=%d actions=%v",
+			response.Code, pi.actions)
+	}
+}
+
+func TestConfirmedShutdownUsesFixedPoweroffAction(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{}
+	a.pi = pi
+	request := httptest.NewRequest("POST", "/api/v1/pi/shutdown?confirm=shutdown", nil)
+	request.SetPathValue("action", "shutdown")
+	response := httptest.NewRecorder()
+	a.piPowerAction(response, request)
+	if response.Code != 200 || strings.Join(pi.actions, ",") != "poweroff" {
+		t.Fatalf("shutdown status=%d actions=%v body=%s",
+			response.Code, pi.actions, response.Body.String())
+	}
+}
+
+func TestPiPowerControlsAreUnavailableWithoutCoordinator(t *testing.T) {
+	a := testApp(t)
+	request := httptest.NewRequest("POST", "/api/v1/pi/reboot?confirm=reboot", nil)
+	request.SetPathValue("action", "reboot")
+	response := httptest.NewRecorder()
+	a.piPowerAction(response, request)
+	if response.Code != 503 {
+		t.Fatalf("unconfigured Pi control status=%d, want 503", response.Code)
+	}
+}

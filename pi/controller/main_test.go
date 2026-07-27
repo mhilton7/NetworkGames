@@ -180,12 +180,11 @@ func TestBrowserActionUsesCSRFAndInvokesTypedHelper(t *testing.T) {
 	}
 }
 
-func TestPoweroffIsAnExplicitTypedAction(t *testing.T) {
-	if !validAction("poweroff") {
-		t.Fatal("safe poweroff action was rejected")
-	}
-	if validAction("reboot") {
-		t.Fatal("unapproved reboot action was accepted")
+func TestPowerControlsAreExplicitTypedActions(t *testing.T) {
+	for _, action := range []string{"poweroff", "reboot"} {
+		if !validAction(action) {
+			t.Fatalf("safe %s action was rejected", action)
+		}
 	}
 }
 
@@ -202,20 +201,25 @@ func TestGameCubeConnectionModesAreApprovedButRemainExplicit(t *testing.T) {
 	}
 }
 
-func TestDashboardIncludesSafePoweroff(t *testing.T) {
+func TestDashboardIncludesSafePowerControls(t *testing.T) {
 	var output strings.Builder
 	err := dashboardTemplate.Execute(&output, map[string]any{
-		"Status":  status{},
-		"CSRF":    "csrf",
-		"Actions": []actionButton{{Name: "poweroff", Label: "Safely power off Pi"}},
+		"Status": status{},
+		"CSRF":   "csrf",
+		"Actions": []actionButton{
+			{Name: "reboot", Label: "Reboot Pi"},
+			{Name: "poweroff", Label: "Safely power off Pi"},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	body := output.String()
 	if !strings.Contains(body, `action="/action/poweroff"`) ||
-		!strings.Contains(body, "Safely power off Pi") {
-		t.Fatal("safe poweroff action is missing from dashboard")
+		!strings.Contains(body, `action="/action/reboot"`) ||
+		!strings.Contains(body, "Safely power off Pi") ||
+		!strings.Contains(body, "Reboot Pi") {
+		t.Fatal("safe power controls are missing from dashboard")
 	}
 }
 

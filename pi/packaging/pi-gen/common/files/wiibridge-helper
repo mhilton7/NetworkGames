@@ -33,6 +33,12 @@ case "$action" in
     systemctl poweroff --no-block
     exit 0
     ;;
+  reboot)
+    "$0" disconnect || true
+    sync
+    systemctl reboot --no-block
+    exit 0
+    ;;
   clear-cache)
     test ! -e "$run/usb-attached"
     find /var/cache/wiibridge -xdev -type f -delete

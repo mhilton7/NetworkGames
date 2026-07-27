@@ -5,4 +5,5 @@ wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper detach
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper clear-cache
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper test
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper poweroff
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper reboot
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-provision
