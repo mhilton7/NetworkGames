@@ -25,8 +25,11 @@ func TestSyntheticGameCubeISOContainsOnlyMinimalFixtureMetadata(t *testing.T) {
 		t.Fatalf("unexpected synthetic identity: %q disc=%d revision=%d",
 			header[:6], header[6], header[7])
 	}
-	if binary.BigEndian.Uint32(header[0x18:0x1c]) != GameCubeMagic {
+	if binary.BigEndian.Uint32(header[0x1c:0x20]) != GameCubeMagic {
 		t.Fatal("synthetic fixture lacks GameCube magic")
+	}
+	if binary.BigEndian.Uint32(header[0x18:0x1c]) == GameCubeMagic {
+		t.Fatal("synthetic fixture placed GameCube magic in the Wii magic field")
 	}
 	if info, err := f.Stat(); err != nil || info.Size() != 2<<20 {
 		t.Fatalf("unexpected synthetic fixture size: info=%v err=%v", info, err)

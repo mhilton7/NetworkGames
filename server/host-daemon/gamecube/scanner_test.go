@@ -161,7 +161,7 @@ func TestScanRejectsInvalidTruncatedUnsupportedAndSymlinkSources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = f.WriteAt(make([]byte, 4), 0x18); err != nil {
+	if _, err = f.WriteAt(make([]byte, 4), 0x1c); err != nil {
 		t.Fatal(err)
 	}
 	f.Close()
