@@ -84,6 +84,23 @@ func TestDisabledPiManagerProducesNilController(t *testing.T) {
 	}
 }
 
+func TestDashboardKeepsPiIndicatorsVisibleWhenUnconfigured(t *testing.T) {
+	a := testApp(t)
+	request := httptest.NewRequest("GET", "/", nil)
+	response := httptest.NewRecorder()
+	a.dashboard(response, request)
+	body := response.Body.String()
+	for _, expected := range []string{
+		"Live Raspberry Pi connection", "Raspberry Pi IP address",
+		"Host credentials required", "WIIBRIDGE_PI_ADMIN_TOKEN",
+		"Controller state", "NBD / USB", "/assets/pi-status.js",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("unconfigured dashboard missing %q", expected)
+		}
+	}
+}
+
 func TestWiiProfileRemainsDefaultAndUsesCurrentSnapshot(t *testing.T) {
 	a := testApp(t)
 	if got := a.exports.Platform(); got != "wii" {
