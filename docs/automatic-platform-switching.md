@@ -94,6 +94,21 @@ These controls require a Pi firmware/controller package containing the typed
 `reboot` helper and its exact sudoers rule. Shutdown uses the existing typed
 poweroff helper. No arbitrary action name or command text is accepted.
 
+## Live Pi status
+
+When automatic coordination is configured, the Host dashboard requests
+`GET /api/v1/pi/status` every three seconds. The Host retrieves each fresh
+result through the same certificate-pinned HTTPS connection and independent Pi
+administrator token used for switching. The browser never receives that token
+or the pinned certificate.
+
+The panel reports controller and provisioning state, export mode, NBD
+connection, USB attachment and controller state, detected board, network
+addresses, and automatic-attach state. If the Pi is offline, authentication
+fails, its certificate does not match, or the request times out, the panel
+changes to `Unavailable` and retries. The dashboard receives a deliberately
+generic error instead of transport or credential details.
+
 ## Disable or recover
 
 To return to manual operation, clear all three `WIIBRIDGE_PI_*` values and

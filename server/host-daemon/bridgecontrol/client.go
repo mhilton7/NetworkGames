@@ -9,8 +9,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +21,7 @@ import (
 )
 
 const csrfPrefix = "wiibridge-setup-csrf\x00"
+const maxStatusResponse = 64 << 10
 
 var allowedActions = map[string]bool{
 	"detach": true, "disconnect": true, "connect-wii": true,
@@ -33,6 +36,25 @@ type Client struct {
 	token   string
 	csrf    string
 	http    *http.Client
+}
+
+// Status is the live, non-secret operational state returned by the Pi
+// controller. It intentionally mirrors only the controller's public status
+// document and never exposes provisioning values or credentials.
+type Status struct {
+	Target        string   `json:"target"`
+	Board         string   `json:"detected_board"`
+	BoardOK       bool     `json:"board_compatible"`
+	Provisioned   bool     `json:"provisioned"`
+	WiFiReady     bool     `json:"wifi_provisioned"`
+	AutoAttach    bool     `json:"auto_attach"`
+	NBDConnected  bool     `json:"nbd_connected"`
+	USBAttached   bool     `json:"usb_attached"`
+	ExportMode    string   `json:"export_mode"`
+	USBController string   `json:"usb_controller"`
+	USBState      string   `json:"usb_state"`
+	Addresses     []string `json:"addresses"`
+	State         string   `json:"state"`
 }
 
 func New(baseURL, token, certificatePath string) (*Client, error) {
@@ -125,4 +147,32 @@ func (c *Client) Action(ctx context.Context, action string) error {
 		return fmt.Errorf("Pi %s returned HTTP %d", action, response.StatusCode)
 	}
 	return nil
+}
+
+// Status retrieves a fresh controller status using the same certificate pin
+// and independent Pi credentials as privileged actions.
+func (c *Client) Status(ctx context.Context) (Status, error) {
+	var status Status
+	if c == nil {
+		return status, errors.New("Pi switching is not configured")
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		c.baseURL+"/api/v1/status", nil)
+	if err != nil {
+		return status, err
+	}
+	request.SetBasicAuth("admin", c.token)
+	response, err := c.http.Do(request)
+	if err != nil {
+		return status, fmt.Errorf("Pi status request: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return status, fmt.Errorf("Pi status returned HTTP %d", response.StatusCode)
+	}
+	decoder := json.NewDecoder(io.LimitReader(response.Body, maxStatusResponse))
+	if err := decoder.Decode(&status); err != nil {
+		return status, fmt.Errorf("decode Pi status: %w", err)
+	}
+	return status, nil
 }

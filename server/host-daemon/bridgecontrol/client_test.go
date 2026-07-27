@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"math/big"
 	"net/http"
@@ -98,6 +99,42 @@ func TestActionRejectsUnlistedHelper(t *testing.T) {
 	client := &Client{}
 	if err := client.Action(context.Background(), "clear-cache"); err == nil {
 		t.Fatal("unsafe helper action was accepted")
+	}
+}
+
+func TestStatusUsesPinnedAuthenticatedConnection(t *testing.T) {
+	const token = "independent-pi-token"
+	certPEM, keyPEM := certificate(t, "device")
+	certPath := filepath.Join(t.TempDir(), "device.crt")
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, password, ok := r.BasicAuth()
+		if r.URL.Path != "/api/v1/status" || !ok || user != "admin" || password != token {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(Status{
+			Target: "zero-w-armhf", BoardOK: true, NBDConnected: true,
+			USBAttached: true, ExportMode: "wii", State: "ready",
+		})
+	}))
+	server.TLS = serverTLS(t, certPEM, keyPEM)
+	server.StartTLS()
+	defer server.Close()
+
+	client, err := New(server.URL, token, certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, err := client.Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Target != "zero-w-armhf" || status.ExportMode != "wii" ||
+		!status.NBDConnected || !status.USBAttached {
+		t.Fatalf("unexpected status: %#v", status)
 	}
 }
 
