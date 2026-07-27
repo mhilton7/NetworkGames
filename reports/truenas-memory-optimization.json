@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "fixture_payload_bytes": 8589934592,
+  "virtual_fat_sectors_per_copy": 16385,
+  "fat_copies": 2,
+  "previous_resident_raw_fat_bytes": 16778240,
+  "new_compact_chain_descriptors": 5,
+  "new_resident_non_fat_metadata_sectors": 21,
+  "new_resident_non_fat_metadata_bytes": 10752,
+  "test_process_inuse_profile_bytes": 1051136,
+  "container_memory_limit": "512m",
+  "go_memory_limit": "384MiB",
+  "measurement_command": "go test -count=1 -run TestLargeVirtualFATIsSynthesizedInsteadOfResident -memprofile=/tmp/wiibridge-vdisk-memory.pprof ./server/host-daemon/vdisk",
+  "result": "PASS",
+  "note": "The old raw FAT figure excludes Go map and per-sector allocation overhead. The new FAT is generated per requested sector and is not retained on the heap."
+}

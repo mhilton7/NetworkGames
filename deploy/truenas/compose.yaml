@@ -30,6 +30,7 @@ services:
       WIIBRIDGE_PI_URL: ${WIIBRIDGE_PI_URL:-}
       WIIBRIDGE_PI_ADMIN_TOKEN: ${WIIBRIDGE_PI_ADMIN_TOKEN:-}
       WIIBRIDGE_PI_CERT: ${WIIBRIDGE_PI_CERT:-}
+      GOMEMLIMIT: ${WIIBRIDGE_GO_MEMORY_LIMIT:-384MiB}
     ports:
       - "${WIIBRIDGE_HTTPS_BIND:?set management bind IP}:${WIIBRIDGE_HTTPS_PORT:-8445}:8445/tcp"
       - "${WIIBRIDGE_NBD_BIND:?set NBD bind IP}:${WIIBRIDGE_NBD_PORT:-10809}:10809/tcp"
@@ -76,7 +77,7 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     pids_limit: 256
-    mem_limit: ${WIIBRIDGE_MEMORY_LIMIT:-1g}
+    mem_limit: ${WIIBRIDGE_MEMORY_LIMIT:-512m}
     cpus: ${WIIBRIDGE_CPU_LIMIT:-2.0}
     logging:
       driver: json-file

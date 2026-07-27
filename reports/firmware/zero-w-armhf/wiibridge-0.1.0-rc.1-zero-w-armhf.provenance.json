@@ -4,18 +4,18 @@
     {
       "name": "zero-w-armhf.img",
       "digest": {
-        "sha256": "347fa1624913268417fce466c32acf7a6cda04e5e8ad3d8e19a97f4c795afce9"
+        "sha256": "8ebd370e874eba9d5598bb80bf26201aaf2d1b132b4967e964539de416a987c8"
       }
     },
     {
       "name": "zero-w-armhf.img.xz",
       "digest": {
-        "sha256": "a3028cd3bc05349a366bff76d5f970d8f9a2e8836cc8495a6bda64edfda69640"
+        "sha256": "6fcb9a4bbe27523269ea91916b5ea51958f54aa7f85314fb49441ca4360d5ff2"
       }
     }
   ],
   "buildDefinition": {
-    "buildType": "networkgames/pi-gen",
+    "buildType": "wiibridge/pi-gen",
     "externalParameters": {
       "target": "zero-w-armhf"
     },
@@ -33,21 +33,21 @@
         }
       },
       {
-        "uri": "git+local:networkgames",
+        "uri": "git+local:wiibridge",
         "digest": {
-          "gitCommit": "f3a2cb2158819b640936d050ba3529bad4ddb7c1",
-          "sourceTreeSha256": "b77a1ed43a9765c08f2f53c6bcc31e44237b136a1c4500a88c2d4033ca45736f"
+          "gitCommit": "d727bdd11ba582b63a5127d8b7ad84910525065a",
+          "sourceTreeSha256": "de1bd3657fcb5bce748ef31f152b16334f60e8424aa9eb33b4795953ea3f7d22"
         }
       }
     ]
   },
   "runDetails": {
     "builder": {
-      "id": "networkgames-build-firmware.sh"
+      "id": "wiibridge-build-firmware.sh"
     },
     "metadata": {
       "invocationId": "zero-w-armhf-20260724",
-      "finishedOn": "2026-07-26T23:26:07Z",
+      "finishedOn": "2026-07-27T06:51:36Z",
       "sourceWorktreeDirty": true
     }
   }

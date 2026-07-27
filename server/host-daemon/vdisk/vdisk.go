@@ -37,11 +37,18 @@ type extent struct {
 	zero          bool
 }
 
+type clusterChain struct {
+	first, count uint32
+}
+
 type Disk struct {
-	size     int64
-	metadata map[int64][]byte
-	extents  []extent
-	snapshot model.Snapshot
+	size       int64
+	metadata   map[int64][]byte
+	fatStart   int64
+	fatSectors int64
+	fatChains  []clusterChain
+	extents    []extent
+	snapshot   model.Snapshot
 }
 
 func Build(catalog string, games []model.Game, appVersion string) (*Disk, error) {
@@ -113,32 +120,23 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 	d.metadata[partitionStart+6] = append([]byte(nil), boot...)
 	d.metadata[partitionStart+1] = fsInfo()
 	d.metadata[partitionStart+7] = fsInfo()
-	fat := make([]byte, fatSectors*sectorSize)
-	binary.LittleEndian.PutUint32(fat[0:4], 0x0ffffff8)
-	binary.LittleEndian.PutUint32(fat[4:8], 0xffffffff)
 	nextCluster := uint32(2)
 	chain := func(count int64) uint32 {
 		first := nextCluster
-		for i := int64(0); i < count; i++ {
-			value := uint32(0x0fffffff)
-			if i+1 < count {
-				value = nextCluster + 1
-			}
-			binary.LittleEndian.PutUint32(fat[int(nextCluster)*4:], value)
-			nextCluster++
+		if count > 0 {
+			d.fatChains = append(d.fatChains, clusterChain{
+				first: first, count: uint32(count),
+			})
 		}
+		nextCluster += uint32(count)
 		return first
 	}
+	d.fatStart = partitionStart + reservedSectors
+	d.fatSectors = fatSectors
 	chain(rootClusters) // FAT32 root is fixed at cluster 2.
 	wbfsCluster := chain(wbfsDirClusters)
 	for i := range files {
 		files[i].first = chain((files[i].length + clusterSize - 1) / clusterSize)
-	}
-	for copyNo := int64(0); copyNo < numFATs; copyNo++ {
-		base := partitionStart + reservedSectors + copyNo*fatSectors
-		for i := int64(0); i < fatSectors; i++ {
-			d.metadata[base+i] = append([]byte(nil), fat[i*sectorSize:(i+1)*sectorSize]...)
-		}
 	}
 	dataStartSector := partitionStart + firstData
 	rootDir := make([]byte, rootClusters*clusterSize)
@@ -191,13 +189,11 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 		cursor += ((vf.length + clusterSize - 1) / clusterSize) * sectorsPerCluster
 	}
 	hash := sha256.New()
-	keys := make([]int64, 0, len(d.metadata))
-	for k := range d.metadata {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-	for _, k := range keys {
-		hash.Write(d.metadata[k])
+	if err := d.forEachMetadataSector(func(_ int64, data []byte) error {
+		_, err := hash.Write(data)
+		return err
+	}); err != nil {
+		return nil, err
 	}
 	metaHash := hex.EncodeToString(hash.Sum(nil))
 	var virtualFiles []model.VirtualFile
@@ -236,6 +232,94 @@ func locate(sources []model.Source, logical int64) (*model.Source, int64, error)
 func (d *Disk) Size() int64              { return d.size }
 func (d *Disk) Snapshot() model.Snapshot { return d.snapshot }
 
+func (d *Disk) fatSectorIndex(sector int64) (int64, bool) {
+	relative := sector - d.fatStart
+	if relative >= 0 && relative < d.fatSectors {
+		return relative, true
+	}
+	relative -= d.fatSectors
+	return relative, relative >= 0 && relative < d.fatSectors
+}
+
+func (d *Disk) fatValue(cluster uint32) uint32 {
+	switch cluster {
+	case 0:
+		return 0x0ffffff8
+	case 1:
+		return 0xffffffff
+	}
+	index := sort.Search(len(d.fatChains), func(index int) bool {
+		chain := d.fatChains[index]
+		return chain.first+chain.count > cluster
+	})
+	if index == len(d.fatChains) {
+		return 0
+	}
+	chain := d.fatChains[index]
+	if cluster < chain.first {
+		return 0
+	}
+	if cluster+1 == chain.first+chain.count {
+		return 0x0fffffff
+	}
+	return cluster + 1
+}
+
+func (d *Disk) fillFATSector(target []byte, fatSector int64) {
+	clear(target)
+	firstCluster := uint32(fatSector * (sectorSize / 4))
+	for offset := 0; offset < len(target); offset += 4 {
+		binary.LittleEndian.PutUint32(target[offset:offset+4],
+			d.fatValue(firstCluster+uint32(offset/4)))
+	}
+}
+
+func (d *Disk) metadataSector(sector int64) ([]byte, bool) {
+	if data, ok := d.metadata[sector]; ok {
+		return data, true
+	}
+	fatSector, ok := d.fatSectorIndex(sector)
+	if !ok {
+		return nil, false
+	}
+	data := make([]byte, sectorSize)
+	d.fillFATSector(data, fatSector)
+	return data, true
+}
+
+func (d *Disk) forEachMetadataSector(visit func(int64, []byte) error) error {
+	type region struct {
+		start, count int64
+		fat          bool
+		data         []byte
+	}
+	regions := make([]region, 0, len(d.metadata)+int(numFATs))
+	for sector, data := range d.metadata {
+		regions = append(regions, region{start: sector, count: 1, data: data})
+	}
+	for copyNumber := int64(0); copyNumber < numFATs; copyNumber++ {
+		regions = append(regions, region{
+			start: d.fatStart + copyNumber*d.fatSectors,
+			count: d.fatSectors, fat: true,
+		})
+	}
+	sort.Slice(regions, func(i, j int) bool { return regions[i].start < regions[j].start })
+	buffer := make([]byte, sectorSize)
+	for _, item := range regions {
+		for index := int64(0); index < item.count; index++ {
+			data := item.data
+			if item.fat {
+				d.fillFATSector(buffer, index)
+				data = buffer
+			}
+			if err := visit(item.start+index, data); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (d *Disk) ReadAt(p []byte, off int64) (int, error) {
 	if off < 0 || int64(len(p)) > d.size-off {
 		return 0, io.EOF
@@ -245,7 +329,7 @@ func (d *Disk) ReadAt(p []byte, off int64) (int, error) {
 		sector := pos / sectorSize
 		inSector := pos % sectorSize
 		n := len(p) - done
-		if data, ok := d.metadata[sector]; ok {
+		if data, ok := d.metadataSector(sector); ok {
 			if max := int(sectorSize - inSector); n > max {
 				n = max
 			}
@@ -415,13 +499,9 @@ func writeLFN(dst []byte, name string, checksum byte) {
 
 func (d *Disk) MetadataBytes() []byte {
 	var out bytes.Buffer
-	keys := make([]int64, 0, len(d.metadata))
-	for k := range d.metadata {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-	for _, k := range keys {
-		out.Write(d.metadata[k])
-	}
+	_ = d.forEachMetadataSector(func(_ int64, data []byte) error {
+		_, _ = out.Write(data)
+		return nil
+	})
 	return out.Bytes()
 }

@@ -1,0 +1,5802 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "wiibridge-zero-w-armhf",
+  "documentNamespace": "https://wiibridge.invalid/spdx/0.1.0-rc.1/zero-w-armhf",
+  "creationInfo": {
+    "created": "2026-07-24T00:00:00Z",
+    "creators": [
+      "Tool: wiibridge-package-firmware"
+    ]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-7zip",
+      "name": "7zip",
+      "versionInfo": "25.01+dfsg-1~deb13u2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-adduser",
+      "name": "adduser",
+      "versionInfo": "3.152",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-alsa-topology-conf",
+      "name": "alsa-topology-conf",
+      "versionInfo": "1.2.5.1-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-alsa-ucm-conf",
+      "name": "alsa-ucm-conf",
+      "versionInfo": "1.2.14-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-alsa-utils",
+      "name": "alsa-utils",
+      "versionInfo": "1.2.14-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-apparmor",
+      "name": "apparmor",
+      "versionInfo": "4.1.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-apt-listchanges",
+      "name": "apt-listchanges",
+      "versionInfo": "4.8",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-apt-utils",
+      "name": "apt-utils",
+      "versionInfo": "3.0.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-apt",
+      "name": "apt",
+      "versionInfo": "3.0.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-avahi-daemon",
+      "name": "avahi-daemon",
+      "versionInfo": "0.8-16",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-base-files",
+      "name": "base-files",
+      "versionInfo": "13.8+rpi1+deb13u6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-base-passwd",
+      "name": "base-passwd",
+      "versionInfo": "3.6.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bash-completion",
+      "name": "bash-completion",
+      "versionInfo": "1:2.16.0-7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bash",
+      "name": "bash",
+      "versionInfo": "5.2.37-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-binutils-arm-linux-gnueabihf",
+      "name": "binutils-arm-linux-gnueabihf",
+      "versionInfo": "2.44-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-binutils-common",
+      "name": "binutils-common",
+      "versionInfo": "2.44-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-binutils",
+      "name": "binutils",
+      "versionInfo": "2.44-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bluez-firmware",
+      "name": "bluez-firmware",
+      "versionInfo": "1.2-13+rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bluez",
+      "name": "bluez",
+      "versionInfo": "5.82-1.1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bsdextrautils",
+      "name": "bsdextrautils",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bsdutils",
+      "name": "bsdutils",
+      "versionInfo": "1:2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-build-essential",
+      "name": "build-essential",
+      "versionInfo": "12.12",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-busybox",
+      "name": "busybox",
+      "versionInfo": "1:1.37.0-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bzip2",
+      "name": "bzip2",
+      "versionInfo": "1.0.8-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ca-certificates",
+      "name": "ca-certificates",
+      "versionInfo": "20250419",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cifs-utils",
+      "name": "cifs-utils",
+      "versionInfo": "2:7.4-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cloud-guest-utils",
+      "name": "cloud-guest-utils",
+      "versionInfo": "0.33-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cloud-init",
+      "name": "cloud-init",
+      "versionInfo": "25.2-1~bpo13+1+rpt20",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-console-setup-linux",
+      "name": "console-setup-linux",
+      "versionInfo": "1.242~deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-console-setup",
+      "name": "console-setup",
+      "versionInfo": "1.242~deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-coreutils",
+      "name": "coreutils",
+      "versionInfo": "9.7-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cpio",
+      "name": "cpio",
+      "versionInfo": "2.15+dfsg-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cpp-14-arm-linux-gnueabihf",
+      "name": "cpp-14-arm-linux-gnueabihf",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cpp-14-for-host",
+      "name": "cpp-14-for-host",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cpp-14",
+      "name": "cpp-14",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cpp-arm-linux-gnueabihf",
+      "name": "cpp-arm-linux-gnueabihf",
+      "versionInfo": "4:14.2.0-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cpp",
+      "name": "cpp",
+      "versionInfo": "4:14.2.0-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cron-daemon-common",
+      "name": "cron-daemon-common",
+      "versionInfo": "3.0pl1-197",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cron",
+      "name": "cron",
+      "versionInfo": "3.0pl1-197",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-curl",
+      "name": "curl",
+      "versionInfo": "8.14.1-2+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dash",
+      "name": "dash",
+      "versionInfo": "0.5.12-12",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dbus-bin",
+      "name": "dbus-bin",
+      "versionInfo": "1.16.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dbus-daemon",
+      "name": "dbus-daemon",
+      "versionInfo": "1.16.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dbus-session-bus-common",
+      "name": "dbus-session-bus-common",
+      "versionInfo": "1.16.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dbus-system-bus-common",
+      "name": "dbus-system-bus-common",
+      "versionInfo": "1.16.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dbus-user-session",
+      "name": "dbus-user-session",
+      "versionInfo": "1.16.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dbus",
+      "name": "dbus",
+      "versionInfo": "1.16.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dconf-cli",
+      "name": "dconf-cli",
+      "versionInfo": "0.40.0-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-debconf-i18n",
+      "name": "debconf-i18n",
+      "versionInfo": "1.5.91",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-debconf-utils",
+      "name": "debconf-utils",
+      "versionInfo": "1.5.91",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-debconf",
+      "name": "debconf",
+      "versionInfo": "1.5.91",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-debianutils",
+      "name": "debianutils",
+      "versionInfo": "5.23.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-device-tree-compiler",
+      "name": "device-tree-compiler",
+      "versionInfo": "1.7.2-2+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dhcpcd-base",
+      "name": "dhcpcd-base",
+      "versionInfo": "1:10.1.0-11+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-diffutils",
+      "name": "diffutils",
+      "versionInfo": "1:3.10-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dirmngr",
+      "name": "dirmngr",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-distro-info-data",
+      "name": "distro-info-data",
+      "versionInfo": "0.66+deb13u2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dmidecode",
+      "name": "dmidecode",
+      "versionInfo": "3.6-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dmsetup",
+      "name": "dmsetup",
+      "versionInfo": "2:1.02.205-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dns-root-data",
+      "name": "dns-root-data",
+      "versionInfo": "2025080400~deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dnsmasq-base",
+      "name": "dnsmasq-base",
+      "versionInfo": "2.91-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dos2unix",
+      "name": "dos2unix",
+      "versionInfo": "7.5.2-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dosfstools",
+      "name": "dosfstools",
+      "versionInfo": "4.2-1.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dpkg-dev",
+      "name": "dpkg-dev",
+      "versionInfo": "1.22.22+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dpkg",
+      "name": "dpkg",
+      "versionInfo": "1.22.22+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dracut-install",
+      "name": "dracut-install",
+      "versionInfo": "106-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e2fsprogs",
+      "name": "e2fsprogs",
+      "versionInfo": "1.47.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-eatmydata",
+      "name": "eatmydata",
+      "versionInfo": "131-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ed",
+      "name": "ed",
+      "versionInfo": "1.21.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-eject",
+      "name": "eject",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ethtool",
+      "name": "ethtool",
+      "versionInfo": "1:6.14.2-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-exfatprogs",
+      "name": "exfatprogs",
+      "versionInfo": "1.2.9-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-fakeroot",
+      "name": "fakeroot",
+      "versionInfo": "1.37.1.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-fbset",
+      "name": "fbset",
+      "versionInfo": "2.1-34",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-fdisk",
+      "name": "fdisk",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-file",
+      "name": "file",
+      "versionInfo": "1:5.46-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-findutils",
+      "name": "findutils",
+      "versionInfo": "4.10.0-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-firmware-atheros",
+      "name": "firmware-atheros",
+      "versionInfo": "1:20260519-1~bpo13+1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-firmware-brcm80211",
+      "name": "firmware-brcm80211",
+      "versionInfo": "1:20260519-1~bpo13+1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-firmware-libertas",
+      "name": "firmware-libertas",
+      "versionInfo": "1:20260519-1~bpo13+1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-firmware-mediatek",
+      "name": "firmware-mediatek",
+      "versionInfo": "1:20260519-1~bpo13+1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-firmware-realtek",
+      "name": "firmware-realtek",
+      "versionInfo": "1:20260519-1~bpo13+1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-flashrom",
+      "name": "flashrom",
+      "versionInfo": "1.4.0-3+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-fuse3",
+      "name": "fuse3",
+      "versionInfo": "3.17.2-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-g---14-arm-linux-gnueabihf",
+      "name": "g++-14-arm-linux-gnueabihf",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-g---14",
+      "name": "g++-14",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-g---arm-linux-gnueabihf",
+      "name": "g++-arm-linux-gnueabihf",
+      "versionInfo": "4:14.2.0-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-g--",
+      "name": "g++",
+      "versionInfo": "4:14.2.0-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-10-base",
+      "name": "gcc-10-base",
+      "versionInfo": "10.4.0-7+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-14-arm-linux-gnueabihf",
+      "name": "gcc-14-arm-linux-gnueabihf",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-14-base",
+      "name": "gcc-14-base",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-14-for-host",
+      "name": "gcc-14-for-host",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-14",
+      "name": "gcc-14",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-7-base",
+      "name": "gcc-7-base",
+      "versionInfo": "7.5.0-6+rpi1+b2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-8-base",
+      "name": "gcc-8-base",
+      "versionInfo": "8.4.0-7+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-9-base",
+      "name": "gcc-9-base",
+      "versionInfo": "9.4.0-2+rpi1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc-arm-linux-gnueabihf",
+      "name": "gcc-arm-linux-gnueabihf",
+      "versionInfo": "4:14.2.0-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gcc",
+      "name": "gcc",
+      "versionInfo": "4:14.2.0-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gdb",
+      "name": "gdb",
+      "versionInfo": "16.2-8",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gdisk",
+      "name": "gdisk",
+      "versionInfo": "1.0.10-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gettext-base",
+      "name": "gettext-base",
+      "versionInfo": "0.23.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gnupg-l10n",
+      "name": "gnupg-l10n",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gnupg",
+      "name": "gnupg",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gpg-agent",
+      "name": "gpg-agent",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gpg-wks-client",
+      "name": "gpg-wks-client",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gpg",
+      "name": "gpg",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gpgconf",
+      "name": "gpgconf",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gpgsm",
+      "name": "gpgsm",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gpgv",
+      "name": "gpgv",
+      "versionInfo": "2.4.7-21+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gpiod",
+      "name": "gpiod",
+      "versionInfo": "2.2.1-2+rpi1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-grep",
+      "name": "grep",
+      "versionInfo": "3.11-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-groff-base",
+      "name": "groff-base",
+      "versionInfo": "1.23.0-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-gzip",
+      "name": "gzip",
+      "versionInfo": "1.13-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-hostapd",
+      "name": "hostapd",
+      "versionInfo": "2:2.10-24",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-hostname",
+      "name": "hostname",
+      "versionInfo": "3.25",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-htop",
+      "name": "htop",
+      "versionInfo": "3.4.1-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-init-system-helpers",
+      "name": "init-system-helpers",
+      "versionInfo": "1.69~deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-init",
+      "name": "init",
+      "versionInfo": "1.69~deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-initramfs-tools-bin",
+      "name": "initramfs-tools-bin",
+      "versionInfo": "0.148.4+rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-initramfs-tools-core",
+      "name": "initramfs-tools-core",
+      "versionInfo": "0.148.4+rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-initramfs-tools",
+      "name": "initramfs-tools",
+      "versionInfo": "0.148.4+rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-inotify-tools",
+      "name": "inotify-tools",
+      "versionInfo": "4.23.9.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-install-info",
+      "name": "install-info",
+      "versionInfo": "7.1.1-1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-iproute2",
+      "name": "iproute2",
+      "versionInfo": "6.15.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-iputils-arping",
+      "name": "iputils-arping",
+      "versionInfo": "3:20240905-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-iputils-ping",
+      "name": "iputils-ping",
+      "versionInfo": "3:20240905-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-isc-dhcp-client",
+      "name": "isc-dhcp-client",
+      "versionInfo": "4.4.3-P1-8",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-isc-dhcp-common",
+      "name": "isc-dhcp-common",
+      "versionInfo": "4.4.3-P1-8",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-iso-codes",
+      "name": "iso-codes",
+      "versionInfo": "4.18.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-iw",
+      "name": "iw",
+      "versionInfo": "6.9-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-kbd",
+      "name": "kbd",
+      "versionInfo": "2.7.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-keyboard-configuration",
+      "name": "keyboard-configuration",
+      "versionInfo": "1.242~deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-klibc-utils",
+      "name": "klibc-utils",
+      "versionInfo": "2.0.14-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-kmod",
+      "name": "kmod",
+      "versionInfo": "34.2-2+rpi1+~rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-kms---utils",
+      "name": "kms++-utils",
+      "versionInfo": "0~git20250807.1813ada-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-less",
+      "name": "less",
+      "versionInfo": "668-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libabsl20240722",
+      "name": "libabsl20240722",
+      "versionInfo": "20240722.0-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libacl1",
+      "name": "libacl1",
+      "versionInfo": "2.3.2-2+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libalgorithm-diff-perl",
+      "name": "libalgorithm-diff-perl",
+      "versionInfo": "1.201-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libalgorithm-diff-xs-perl",
+      "name": "libalgorithm-diff-xs-perl",
+      "versionInfo": "0.04-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libalgorithm-merge-perl",
+      "name": "libalgorithm-merge-perl",
+      "versionInfo": "0.08-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libapparmor1",
+      "name": "libapparmor1",
+      "versionInfo": "4.1.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libapt-pkg7.0",
+      "name": "libapt-pkg7.0",
+      "versionInfo": "3.0.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libasan8",
+      "name": "libasan8",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libasound2-data",
+      "name": "libasound2-data",
+      "versionInfo": "1.2.14-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libasound2t64",
+      "name": "libasound2t64",
+      "versionInfo": "1.2.14-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libassuan9",
+      "name": "libassuan9",
+      "versionInfo": "3.0.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libatasmart4",
+      "name": "libatasmart4",
+      "versionInfo": "0.19-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libatomic1",
+      "name": "libatomic1",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libatopology2t64",
+      "name": "libatopology2t64",
+      "versionInfo": "1.2.14-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libattr1",
+      "name": "libattr1",
+      "versionInfo": "1:2.5.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libaudit-common",
+      "name": "libaudit-common",
+      "versionInfo": "1:4.0.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libaudit1",
+      "name": "libaudit1",
+      "versionInfo": "1:4.0.2-2+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libavahi-common-data",
+      "name": "libavahi-common-data",
+      "versionInfo": "0.8-16",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libavahi-common3",
+      "name": "libavahi-common3",
+      "versionInfo": "0.8-16",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libavahi-core7",
+      "name": "libavahi-core7",
+      "versionInfo": "0.8-16",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libb2-1",
+      "name": "libb2-1",
+      "versionInfo": "0.98.1-1.1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbabeltrace1",
+      "name": "libbabeltrace1",
+      "versionInfo": "1.5.11-4+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbinutils",
+      "name": "libbinutils",
+      "versionInfo": "2.44-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblkid1",
+      "name": "libblkid1",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-crypto3",
+      "name": "libblockdev-crypto3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-fs3",
+      "name": "libblockdev-fs3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-loop3",
+      "name": "libblockdev-loop3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-mdraid3",
+      "name": "libblockdev-mdraid3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-nvme3",
+      "name": "libblockdev-nvme3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-part3",
+      "name": "libblockdev-part3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-swap3",
+      "name": "libblockdev-swap3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev-utils3",
+      "name": "libblockdev-utils3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libblockdev3",
+      "name": "libblockdev3",
+      "versionInfo": "3.3.0-2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbluetooth3",
+      "name": "libbluetooth3",
+      "versionInfo": "5.82-1.1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libboost-filesystem1.83.0",
+      "name": "libboost-filesystem1.83.0",
+      "versionInfo": "1.83.0-4.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libboost-log1.83.0",
+      "name": "libboost-log1.83.0",
+      "versionInfo": "1.83.0-4.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libboost-program-options1.83.0",
+      "name": "libboost-program-options1.83.0",
+      "versionInfo": "1.83.0-4.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libboost-thread1.83.0",
+      "name": "libboost-thread1.83.0",
+      "versionInfo": "1.83.0-4.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbpf1",
+      "name": "libbpf1",
+      "versionInfo": "1:1.5.0-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbrotli1",
+      "name": "libbrotli1",
+      "versionInfo": "1.1.0-2+b2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbsd0",
+      "name": "libbsd0",
+      "versionInfo": "0.12.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbytesize-common",
+      "name": "libbytesize-common",
+      "versionInfo": "2.11-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbytesize1",
+      "name": "libbytesize1",
+      "versionInfo": "2.11-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libbz2-1.0",
+      "name": "libbz2-1.0",
+      "versionInfo": "1.0.8-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libc-bin",
+      "name": "libc-bin",
+      "versionInfo": "2.41-12+rpt1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libc-dev-bin",
+      "name": "libc-dev-bin",
+      "versionInfo": "2.41-12+rpt1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libc-l10n",
+      "name": "libc-l10n",
+      "versionInfo": "2.41-12+rpt1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libc6-dev",
+      "name": "libc6-dev",
+      "versionInfo": "2.41-12+rpt1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libc6",
+      "name": "libc6",
+      "versionInfo": "2.41-12+rpt1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcamera-ipa",
+      "name": "libcamera-ipa",
+      "versionInfo": "0.7.1+rpt20260609-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcamera0.7",
+      "name": "libcamera0.7",
+      "versionInfo": "0.7.1+rpt20260609-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcap-ng0",
+      "name": "libcap-ng0",
+      "versionInfo": "0.8.5-4+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcap2-bin",
+      "name": "libcap2-bin",
+      "versionInfo": "1:2.75-10+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcap2",
+      "name": "libcap2",
+      "versionInfo": "1:2.75-10+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcbor0.10",
+      "name": "libcbor0.10",
+      "versionInfo": "0.10.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcc1-0",
+      "name": "libcc1-0",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcom-err2",
+      "name": "libcom-err2",
+      "versionInfo": "1.47.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcpuinfo0",
+      "name": "libcpuinfo0",
+      "versionInfo": "0.0~git20250327.39ea79a-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcrypt-dev",
+      "name": "libcrypt-dev",
+      "versionInfo": "1:4.4.38-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcrypt1",
+      "name": "libcrypt1",
+      "versionInfo": "1:4.4.38-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcryptsetup12",
+      "name": "libcryptsetup12",
+      "versionInfo": "2:2.7.5-2+b2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libctf-nobfd0",
+      "name": "libctf-nobfd0",
+      "versionInfo": "2.44-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libctf0",
+      "name": "libctf0",
+      "versionInfo": "2.44-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcurl3t64-gnutls",
+      "name": "libcurl3t64-gnutls",
+      "versionInfo": "8.14.1-2+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libcurl4t64",
+      "name": "libcurl4t64",
+      "versionInfo": "8.14.1-2+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdaemon0",
+      "name": "libdaemon0",
+      "versionInfo": "0.14-7.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdb5.3t64",
+      "name": "libdb5.3t64",
+      "versionInfo": "5.3.28+dfsg2-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdbus-1-3",
+      "name": "libdbus-1-3",
+      "versionInfo": "1.16.2-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdconf1",
+      "name": "libdconf1",
+      "versionInfo": "0.40.0-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdebconfclient0",
+      "name": "libdebconfclient0",
+      "versionInfo": "0.280",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdebuginfod-common",
+      "name": "libdebuginfod-common",
+      "versionInfo": "0.192-4+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdebuginfod1t64",
+      "name": "libdebuginfod1t64",
+      "versionInfo": "0.192-4+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdeflate0",
+      "name": "libdeflate0",
+      "versionInfo": "1.23-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdevmapper1.02.1",
+      "name": "libdevmapper1.02.1",
+      "versionInfo": "2:1.02.205-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdouble-conversion3",
+      "name": "libdouble-conversion3",
+      "versionInfo": "3.3.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdpkg-perl",
+      "name": "libdpkg-perl",
+      "versionInfo": "1.22.22+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdrm-common",
+      "name": "libdrm-common",
+      "versionInfo": "2.4.131-1~bpo13+1+rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdrm-omap1",
+      "name": "libdrm-omap1",
+      "versionInfo": "2.4.131-1~bpo13+1+rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdrm2",
+      "name": "libdrm2",
+      "versionInfo": "2.4.131-1~bpo13+1+rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdtovl0",
+      "name": "libdtovl0",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libduktape207",
+      "name": "libduktape207",
+      "versionInfo": "2.7.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdvdread8t64",
+      "name": "libdvdread8t64",
+      "versionInfo": "6.1.3-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libdw1t64",
+      "name": "libdw1t64",
+      "versionInfo": "0.192-4+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libeatmydata1",
+      "name": "libeatmydata1",
+      "versionInfo": "131-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libebml5",
+      "name": "libebml5",
+      "versionInfo": "1.4.5-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libedit2",
+      "name": "libedit2",
+      "versionInfo": "3.1-20250104-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libelf1t64",
+      "name": "libelf1t64",
+      "versionInfo": "0.192-4+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libexif12",
+      "name": "libexif12",
+      "versionInfo": "0.6.25-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libexpat1",
+      "name": "libexpat1",
+      "versionInfo": "2.7.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libext2fs2t64",
+      "name": "libext2fs2t64",
+      "versionInfo": "1.47.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfakeroot",
+      "name": "libfakeroot",
+      "versionInfo": "1.37.1.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfarmhash0",
+      "name": "libfarmhash0",
+      "versionInfo": "0~git20190513.0d859a8-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfdisk1",
+      "name": "libfdisk1",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfdt1",
+      "name": "libfdt1",
+      "versionInfo": "1.7.2-2+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libffi8",
+      "name": "libffi8",
+      "versionInfo": "3.4.8-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfftw3-single3",
+      "name": "libfftw3-single3",
+      "versionInfo": "3.3.10-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfido2-1",
+      "name": "libfido2-1",
+      "versionInfo": "1.15.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfile-fcntllock-perl",
+      "name": "libfile-fcntllock-perl",
+      "versionInfo": "0.22-4+b4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libflac14",
+      "name": "libflac14",
+      "versionInfo": "1.5.0+ds-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfmt10",
+      "name": "libfmt10",
+      "versionInfo": "10.1.1+ds1-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfribidi0",
+      "name": "libfribidi0",
+      "versionInfo": "1.0.16-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libftdi1-2",
+      "name": "libftdi1-2",
+      "versionInfo": "1.5-10",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfuse3-4",
+      "name": "libfuse3-4",
+      "versionInfo": "3.17.2-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgcc-14-dev",
+      "name": "libgcc-14-dev",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgcc-s1",
+      "name": "libgcc-s1",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgcrypt20",
+      "name": "libgcrypt20",
+      "versionInfo": "1.11.0-7+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgdbm-compat4t64",
+      "name": "libgdbm-compat4t64",
+      "versionInfo": "1.24-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgdbm6t64",
+      "name": "libgdbm6t64",
+      "versionInfo": "1.24-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libglib2.0-0t64",
+      "name": "libglib2.0-0t64",
+      "versionInfo": "2.84.4-3~deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libglib2.0-data",
+      "name": "libglib2.0-data",
+      "versionInfo": "2.84.4-3~deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgmp10",
+      "name": "libgmp10",
+      "versionInfo": "2:6.3.0+dfsg-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgnutls30t64",
+      "name": "libgnutls30t64",
+      "versionInfo": "3.8.9-3+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgomp1",
+      "name": "libgomp1",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgpg-error0",
+      "name": "libgpg-error0",
+      "versionInfo": "1.51-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgpgme11t64",
+      "name": "libgpgme11t64",
+      "versionInfo": "1.24.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgpiod3",
+      "name": "libgpiod3",
+      "versionInfo": "2.2.1-2+rpi1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgpiolib0",
+      "name": "libgpiolib0",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgssapi-krb5-2",
+      "name": "libgssapi-krb5-2",
+      "versionInfo": "1.21.3-5+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libgudev-1.0-0",
+      "name": "libgudev-1.0-0",
+      "versionInfo": "238-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libhidapi-hidraw0",
+      "name": "libhidapi-hidraw0",
+      "versionInfo": "0.14.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libhogweed6t64",
+      "name": "libhogweed6t64",
+      "versionInfo": "3.10.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libicu76",
+      "name": "libicu76",
+      "versionInfo": "76.1-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libidn2-0",
+      "name": "libidn2-0",
+      "versionInfo": "2.3.8-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libinotifytools0",
+      "name": "libinotifytools0",
+      "versionInfo": "4.23.9.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libisl23",
+      "name": "libisl23",
+      "versionInfo": "0.27-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libiw30t64",
+      "name": "libiw30t64",
+      "versionInfo": "30~pre9-18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libjansson4",
+      "name": "libjansson4",
+      "versionInfo": "2.14-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libjaylink0",
+      "name": "libjaylink0",
+      "versionInfo": "0.4.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libjbig0",
+      "name": "libjbig0",
+      "versionInfo": "2.1-6.1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libjim0.83",
+      "name": "libjim0.83",
+      "versionInfo": "0.83-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libjpeg62-turbo",
+      "name": "libjpeg62-turbo",
+      "versionInfo": "1:2.1.5-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libjson-c5",
+      "name": "libjson-c5",
+      "versionInfo": "0.18+ds-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libk5crypto3",
+      "name": "libk5crypto3",
+      "versionInfo": "1.21.3-5+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libkeyutils1",
+      "name": "libkeyutils1",
+      "versionInfo": "1.6.3-6+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libklibc",
+      "name": "libklibc",
+      "versionInfo": "2.0.14-1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libkmod2",
+      "name": "libkmod2",
+      "versionInfo": "34.2-2+rpi1+~rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libkms--0",
+      "name": "libkms++0",
+      "versionInfo": "0~git20250807.1813ada-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libkrb5-3",
+      "name": "libkrb5-3",
+      "versionInfo": "1.21.3-5+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libkrb5support0",
+      "name": "libkrb5support0",
+      "versionInfo": "1.21.3-5+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libksba8",
+      "name": "libksba8",
+      "versionInfo": "1.6.7-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblastlog2-2",
+      "name": "liblastlog2-2",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libldap2",
+      "name": "libldap2",
+      "versionInfo": "2.6.10+dfsg-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblerc4",
+      "name": "liblerc4",
+      "versionInfo": "4.0.0+ds-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblgpio1",
+      "name": "liblgpio1",
+      "versionInfo": "0.2.2-1~rpt1+trixie",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblocale-gettext-perl",
+      "name": "liblocale-gettext-perl",
+      "versionInfo": "1.07-7+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblttng-ust-common1t64",
+      "name": "liblttng-ust-common1t64",
+      "versionInfo": "2.13.9-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblttng-ust-ctl5t64",
+      "name": "liblttng-ust-ctl5t64",
+      "versionInfo": "2.13.9-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblttng-ust1t64",
+      "name": "liblttng-ust1t64",
+      "versionInfo": "2.13.9-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libluajit-5.1-2",
+      "name": "libluajit-5.1-2",
+      "versionInfo": "2.1.0+openresty20250117-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libluajit-5.1-common",
+      "name": "libluajit-5.1-common",
+      "versionInfo": "2.1.0+openresty20250117-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblz4-1",
+      "name": "liblz4-1",
+      "versionInfo": "1.10.0-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-liblzma5",
+      "name": "liblzma5",
+      "versionInfo": "5.8.1-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmagic-mgc",
+      "name": "libmagic-mgc",
+      "versionInfo": "1:5.46-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmagic1t64",
+      "name": "libmagic1t64",
+      "versionInfo": "1:5.46-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmatroska7",
+      "name": "libmatroska7",
+      "versionInfo": "1.7.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmd0",
+      "name": "libmd0",
+      "versionInfo": "1.1.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmm-glib0",
+      "name": "libmm-glib0",
+      "versionInfo": "1.24.0-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmnl0",
+      "name": "libmnl0",
+      "versionInfo": "1.0.5-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmount1",
+      "name": "libmount1",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmpc3",
+      "name": "libmpc3",
+      "versionInfo": "1.3.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmpfr6",
+      "name": "libmpfr6",
+      "versionInfo": "4.2.2-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmtp-common",
+      "name": "libmtp-common",
+      "versionInfo": "1.1.22-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmtp-runtime",
+      "name": "libmtp-runtime",
+      "versionInfo": "1.1.22-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libmtp9t64",
+      "name": "libmtp9t64",
+      "versionInfo": "1.1.22-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnbd-bin",
+      "name": "libnbd-bin",
+      "versionInfo": "1.22.2-1+b2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnbd0",
+      "name": "libnbd0",
+      "versionInfo": "1.22.2-1+b2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libncursesw6",
+      "name": "libncursesw6",
+      "versionInfo": "6.5+20250216-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libndp0",
+      "name": "libndp0",
+      "versionInfo": "1.9-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnetfilter-conntrack3",
+      "name": "libnetfilter-conntrack3",
+      "versionInfo": "1.1.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnetplan1",
+      "name": "libnetplan1",
+      "versionInfo": "1.1.2-7+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnettle8t64",
+      "name": "libnettle8t64",
+      "versionInfo": "3.10.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnewt0.52",
+      "name": "libnewt0.52",
+      "versionInfo": "0.52.25-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnfnetlink0",
+      "name": "libnfnetlink0",
+      "versionInfo": "1.0.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnftables1",
+      "name": "libnftables1",
+      "versionInfo": "1.1.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnftnl11",
+      "name": "libnftnl11",
+      "versionInfo": "1.2.9-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnghttp2-14",
+      "name": "libnghttp2-14",
+      "versionInfo": "1.64.0-1.1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnghttp3-9",
+      "name": "libnghttp3-9",
+      "versionInfo": "1.8.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libngtcp2-16",
+      "name": "libngtcp2-16",
+      "versionInfo": "1.11.0-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libngtcp2-crypto-gnutls8",
+      "name": "libngtcp2-crypto-gnutls8",
+      "versionInfo": "1.11.0-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnl-3-200",
+      "name": "libnl-3-200",
+      "versionInfo": "3.7.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnl-genl-3-200",
+      "name": "libnl-genl-3-200",
+      "versionInfo": "3.7.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnl-route-3-200",
+      "name": "libnl-route-3-200",
+      "versionInfo": "3.7.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnm0",
+      "name": "libnm0",
+      "versionInfo": "1.52.1-1+rpt4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnpth0t64",
+      "name": "libnpth0t64",
+      "versionInfo": "1.8-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnspr4",
+      "name": "libnspr4",
+      "versionInfo": "2:4.36-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnss-mdns",
+      "name": "libnss-mdns",
+      "versionInfo": "0.15.1-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnss3",
+      "name": "libnss3",
+      "versionInfo": "2:3.110-1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libntfs-3g89t64",
+      "name": "libntfs-3g89t64",
+      "versionInfo": "1:2022.10.3-5+deb13u2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libnvme1t64",
+      "name": "libnvme1t64",
+      "versionInfo": "1.13-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libogg0",
+      "name": "libogg0",
+      "versionInfo": "1.3.5-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libossp-uuid16",
+      "name": "libossp-uuid16",
+      "versionInfo": "1.6.4-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libp11-kit0",
+      "name": "libp11-kit0",
+      "versionInfo": "0.25.5-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpam-chksshpwd",
+      "name": "libpam-chksshpwd",
+      "versionInfo": "2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpam-modules-bin",
+      "name": "libpam-modules-bin",
+      "versionInfo": "1.7.0-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpam-modules",
+      "name": "libpam-modules",
+      "versionInfo": "1.7.0-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpam-runtime",
+      "name": "libpam-runtime",
+      "versionInfo": "1.7.0-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpam-systemd",
+      "name": "libpam-systemd",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpam0g",
+      "name": "libpam0g",
+      "versionInfo": "1.7.0-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libparted2t64",
+      "name": "libparted2t64",
+      "versionInfo": "3.6-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpcap0.8t64",
+      "name": "libpcap0.8t64",
+      "versionInfo": "1.10.5-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpci3",
+      "name": "libpci3",
+      "versionInfo": "1:3.13.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpcre2-16-0",
+      "name": "libpcre2-16-0",
+      "versionInfo": "10.46-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpcre2-8-0",
+      "name": "libpcre2-8-0",
+      "versionInfo": "10.46-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpcsclite1",
+      "name": "libpcsclite1",
+      "versionInfo": "2.3.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libperl5.40",
+      "name": "libperl5.40",
+      "versionInfo": "5.40.1-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpipeline1",
+      "name": "libpipeline1",
+      "versionInfo": "1.5.8-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpisp-common",
+      "name": "libpisp-common",
+      "versionInfo": "1.6.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpisp1",
+      "name": "libpisp1",
+      "versionInfo": "1.6.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpkgconf3",
+      "name": "libpkgconf3",
+      "versionInfo": "1.8.1-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpng16-16t64",
+      "name": "libpng16-16t64",
+      "versionInfo": "1.6.48-1+deb13u5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpolkit-agent-1-0",
+      "name": "libpolkit-agent-1-0",
+      "versionInfo": "126-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpolkit-gobject-1-0",
+      "name": "libpolkit-gobject-1-0",
+      "versionInfo": "126-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpopt0",
+      "name": "libpopt0",
+      "versionInfo": "1.19+dfsg-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libproc2-0",
+      "name": "libproc2-0",
+      "versionInfo": "2:4.0.4-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpsl5t64",
+      "name": "libpsl5t64",
+      "versionInfo": "0.21.2-1.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpugixml1v5",
+      "name": "libpugixml1v5",
+      "versionInfo": "1.14-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpython3-stdlib",
+      "name": "libpython3-stdlib",
+      "versionInfo": "3.13.5-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpython3.13-minimal",
+      "name": "libpython3.13-minimal",
+      "versionInfo": "3.13.5-2+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpython3.13-stdlib",
+      "name": "libpython3.13-stdlib",
+      "versionInfo": "3.13.5-2+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libpython3.13",
+      "name": "libpython3.13",
+      "versionInfo": "3.13.5-2+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libqt6core6t64",
+      "name": "libqt6core6t64",
+      "versionInfo": "6.8.2+dfsg-9+rpi1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libreadline8t64",
+      "name": "libreadline8t64",
+      "versionInfo": "8.2-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-librpicam-app1",
+      "name": "librpicam-app1",
+      "versionInfo": "1.12.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-librpieepromab0",
+      "name": "librpieepromab0",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-librpifwcrypto0",
+      "name": "librpifwcrypto0",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-librtmp1",
+      "name": "librtmp1",
+      "versionInfo": "2.4+20151223.gitfa8646d.1-2+b4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsamplerate0",
+      "name": "libsamplerate0",
+      "versionInfo": "0.2.2-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsasl2-2",
+      "name": "libsasl2-2",
+      "versionInfo": "2.1.28+dfsg1-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsasl2-modules-db",
+      "name": "libsasl2-modules-db",
+      "versionInfo": "2.1.28+dfsg1-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libseccomp2",
+      "name": "libseccomp2",
+      "versionInfo": "2.6.0-2+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libselinux1",
+      "name": "libselinux1",
+      "versionInfo": "3.8.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsemanage-common",
+      "name": "libsemanage-common",
+      "versionInfo": "3.8.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsemanage2",
+      "name": "libsemanage2",
+      "versionInfo": "3.8.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsepol2",
+      "name": "libsepol2",
+      "versionInfo": "3.8.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsframe1",
+      "name": "libsframe1",
+      "versionInfo": "2.44-3+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsharpyuv0",
+      "name": "libsharpyuv0",
+      "versionInfo": "1.5.0-0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsigc---1.2-5c2",
+      "name": "libsigc++-1.2-5c2",
+      "versionInfo": "1.2.7-2+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libslang2",
+      "name": "libslang2",
+      "versionInfo": "2.3.3-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsmartcols1",
+      "name": "libsmartcols1",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsource-highlight-common",
+      "name": "libsource-highlight-common",
+      "versionInfo": "3.1.9-4.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsource-highlight4t64",
+      "name": "libsource-highlight4t64",
+      "versionInfo": "3.1.9-4.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsqlite3-0",
+      "name": "libsqlite3-0",
+      "versionInfo": "3.46.1-7+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libss2",
+      "name": "libss2",
+      "versionInfo": "1.47.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libssh2-1t64",
+      "name": "libssh2-1t64",
+      "versionInfo": "1.11.1-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libssl3t64",
+      "name": "libssl3t64",
+      "versionInfo": "3.5.6-1~deb13u2+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libstdc---14-dev",
+      "name": "libstdc++-14-dev",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libstdc--6",
+      "name": "libstdc++6",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsystemd-shared",
+      "name": "libsystemd-shared",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libsystemd0",
+      "name": "libsystemd0",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtalloc2",
+      "name": "libtalloc2",
+      "versionInfo": "2:2.4.3+samba4.22.10+dfsg-0+deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtasn1-6",
+      "name": "libtasn1-6",
+      "versionInfo": "4.20.0-2+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libteamdctl0",
+      "name": "libteamdctl0",
+      "versionInfo": "1.31-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtensorflow-lite2.20.0",
+      "name": "libtensorflow-lite2.20.0",
+      "versionInfo": "2.20.0-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtext-charwidth-perl",
+      "name": "libtext-charwidth-perl",
+      "versionInfo": "0.04-11+b3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtext-iconv-perl",
+      "name": "libtext-iconv-perl",
+      "versionInfo": "1.7-8+b3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtext-wrapi18n-perl",
+      "name": "libtext-wrapi18n-perl",
+      "versionInfo": "0.06-10",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtiff6",
+      "name": "libtiff6",
+      "versionInfo": "4.7.0-3+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtinfo6",
+      "name": "libtinfo6",
+      "versionInfo": "6.5+20250216-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtirpc-common",
+      "name": "libtirpc-common",
+      "versionInfo": "1.3.6+ds-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libtirpc3t64",
+      "name": "libtirpc3t64",
+      "versionInfo": "1.3.6+ds-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libubsan1",
+      "name": "libubsan1",
+      "versionInfo": "14.2.0-19+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libuchardet0",
+      "name": "libuchardet0",
+      "versionInfo": "0.0.8-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libudev1",
+      "name": "libudev1",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libudisks2-0",
+      "name": "libudisks2-0",
+      "versionInfo": "2.10.1-12.1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libunistring5",
+      "name": "libunistring5",
+      "versionInfo": "1.3-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libusb-1.0-0",
+      "name": "libusb-1.0-0",
+      "versionInfo": "2:1.0.28-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libuuid1",
+      "name": "libuuid1",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libv4l-0t64",
+      "name": "libv4l-0t64",
+      "versionInfo": "1.30.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libv4l2rds0t64",
+      "name": "libv4l2rds0t64",
+      "versionInfo": "1.30.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libv4lconvert0t64",
+      "name": "libv4lconvert0t64",
+      "versionInfo": "1.30.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libvolume-key1",
+      "name": "libvolume-key1",
+      "versionInfo": "0.3.12-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libvorbis0a",
+      "name": "libvorbis0a",
+      "versionInfo": "1.3.7-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libwbclient0",
+      "name": "libwbclient0",
+      "versionInfo": "2:4.22.10+dfsg-0+deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libwebp7",
+      "name": "libwebp7",
+      "versionInfo": "1.5.0-0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libwrap0",
+      "name": "libwrap0",
+      "versionInfo": "7.6.q-36",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libwtmpdb0",
+      "name": "libwtmpdb0",
+      "versionInfo": "0.73.0-3+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libx11-6",
+      "name": "libx11-6",
+      "versionInfo": "2:1.8.12-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libx11-data",
+      "name": "libx11-data",
+      "versionInfo": "2:1.8.12-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxau6",
+      "name": "libxau6",
+      "versionInfo": "1:1.0.11-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxcb1",
+      "name": "libxcb1",
+      "versionInfo": "1.17.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxdmcp6",
+      "name": "libxdmcp6",
+      "versionInfo": "1:1.1.5-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxext6",
+      "name": "libxext6",
+      "versionInfo": "2:1.3.4-1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxml2",
+      "name": "libxml2",
+      "versionInfo": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxmuu1",
+      "name": "libxmuu1",
+      "versionInfo": "2:1.1.3-3+b2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxtables12",
+      "name": "libxtables12",
+      "versionInfo": "1.8.11-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libxxhash0",
+      "name": "libxxhash0",
+      "versionInfo": "0.8.3-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libyaml-0-2",
+      "name": "libyaml-0-2",
+      "versionInfo": "0.2.5-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libyuv0",
+      "name": "libyuv0",
+      "versionInfo": "0.0.1904.20250204-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libzstd1",
+      "name": "libzstd1",
+      "versionInfo": "1.5.7+dfsg-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-base-6.18.34-rpt-rpi-v6",
+      "name": "linux-base-6.18.34+rpt-rpi-v6",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-base-6.18.34-rpt-rpi-v7",
+      "name": "linux-base-6.18.34+rpt-rpi-v7",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-base-6.18.34-rpt-rpi-v8",
+      "name": "linux-base-6.18.34+rpt-rpi-v8",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-base-rpi-v6",
+      "name": "linux-base-rpi-v6",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-base-rpi-v7",
+      "name": "linux-base-rpi-v7",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-base-rpi-v8",
+      "name": "linux-base-rpi-v8",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-base",
+      "name": "linux-base",
+      "versionInfo": "4.12.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-headers-6.18.34-rpt-common-rpi",
+      "name": "linux-headers-6.18.34+rpt-common-rpi",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-headers-6.18.34-rpt-rpi-v6",
+      "name": "linux-headers-6.18.34+rpt-rpi-v6",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-headers-6.18.34-rpt-rpi-v7",
+      "name": "linux-headers-6.18.34+rpt-rpi-v7",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-headers-rpi-v6",
+      "name": "linux-headers-rpi-v6",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-headers-rpi-v7",
+      "name": "linux-headers-rpi-v7",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-image-6.18.34-rpt-rpi-v6",
+      "name": "linux-image-6.18.34+rpt-rpi-v6",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-image-6.18.34-rpt-rpi-v7",
+      "name": "linux-image-6.18.34+rpt-rpi-v7",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-image-6.18.34-rpt-rpi-v8",
+      "name": "linux-image-6.18.34+rpt-rpi-v8",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-image-rpi-v6",
+      "name": "linux-image-rpi-v6",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-image-rpi-v7",
+      "name": "linux-image-rpi-v7",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-image-rpi-v8",
+      "name": "linux-image-rpi-v8",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-kbuild-6.18.34-rpt",
+      "name": "linux-kbuild-6.18.34+rpt",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-libc-dev",
+      "name": "linux-libc-dev",
+      "versionInfo": "1:6.18.34-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-linux-sysctl-defaults",
+      "name": "linux-sysctl-defaults",
+      "versionInfo": "4.12.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-locales",
+      "name": "locales",
+      "versionInfo": "2.41-12+rpt1+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-login.defs",
+      "name": "login.defs",
+      "versionInfo": "1:4.17.4-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-login",
+      "name": "login",
+      "versionInfo": "1:4.16.0-2+really2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-logrotate",
+      "name": "logrotate",
+      "versionInfo": "3.22.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-logsave",
+      "name": "logsave",
+      "versionInfo": "1.47.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-lsb-base",
+      "name": "lsb-base",
+      "versionInfo": "11.6+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-lsb-release",
+      "name": "lsb-release",
+      "versionInfo": "12.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-lua5.1",
+      "name": "lua5.1",
+      "versionInfo": "5.1.5-11",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-luajit",
+      "name": "luajit",
+      "versionInfo": "2.1.0+openresty20250117-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-make",
+      "name": "make",
+      "versionInfo": "4.4.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-man-db",
+      "name": "man-db",
+      "versionInfo": "2.13.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-manpages-dev",
+      "name": "manpages-dev",
+      "versionInfo": "6.9.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-manpages",
+      "name": "manpages",
+      "versionInfo": "6.9.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-mawk",
+      "name": "mawk",
+      "versionInfo": "1.3.4.20250131-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-media-types",
+      "name": "media-types",
+      "versionInfo": "13.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-mkvtoolnix",
+      "name": "mkvtoolnix",
+      "versionInfo": "92.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-mount",
+      "name": "mount",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-nano",
+      "name": "nano",
+      "versionInfo": "8.4-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-nbd-client",
+      "name": "nbd-client",
+      "versionInfo": "1:3.26.1-6.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ncdu",
+      "name": "ncdu",
+      "versionInfo": "1.22-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ncurses-base",
+      "name": "ncurses-base",
+      "versionInfo": "6.5+20250216-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ncurses-bin",
+      "name": "ncurses-bin",
+      "versionInfo": "6.5+20250216-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ncurses-term",
+      "name": "ncurses-term",
+      "versionInfo": "6.5+20250216-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-net-tools",
+      "name": "net-tools",
+      "versionInfo": "2.10-1.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-netbase",
+      "name": "netbase",
+      "versionInfo": "6.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-netcat-openbsd",
+      "name": "netcat-openbsd",
+      "versionInfo": "1.229-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-netplan-generator",
+      "name": "netplan-generator",
+      "versionInfo": "1.1.2-7+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-netplan.io",
+      "name": "netplan.io",
+      "versionInfo": "1.1.2-7+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-network-manager-l10n",
+      "name": "network-manager-l10n",
+      "versionInfo": "1.52.1-1+rpt4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-network-manager",
+      "name": "network-manager",
+      "versionInfo": "1.52.1-1+rpt4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-nftables",
+      "name": "nftables",
+      "versionInfo": "1.1.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ntfs-3g",
+      "name": "ntfs-3g",
+      "versionInfo": "1:2022.10.3-5+deb13u2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-openssh-client",
+      "name": "openssh-client",
+      "versionInfo": "1:10.0p1-7+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-openssh-server",
+      "name": "openssh-server",
+      "versionInfo": "1:10.0p1-7+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-openssh-sftp-server",
+      "name": "openssh-sftp-server",
+      "versionInfo": "1:10.0p1-7+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-openssl-provider-legacy",
+      "name": "openssl-provider-legacy",
+      "versionInfo": "3.5.6-1~deb13u2+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-openssl",
+      "name": "openssl",
+      "versionInfo": "3.5.6-1~deb13u2+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-p7zip-full",
+      "name": "p7zip-full",
+      "versionInfo": "16.02+transitional.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pahole",
+      "name": "pahole",
+      "versionInfo": "1.30-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-parted",
+      "name": "parted",
+      "versionInfo": "3.6-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-passwd",
+      "name": "passwd",
+      "versionInfo": "1:4.17.4-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pastebinit",
+      "name": "pastebinit",
+      "versionInfo": "1.7.1-1+~rpt2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-patch",
+      "name": "patch",
+      "versionInfo": "2.8-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-paxctld",
+      "name": "paxctld",
+      "versionInfo": "1.2.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pci.ids",
+      "name": "pci.ids",
+      "versionInfo": "0.0~2025.06.09-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pciutils",
+      "name": "pciutils",
+      "versionInfo": "1:3.13.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-perl-base",
+      "name": "perl-base",
+      "versionInfo": "5.40.1-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-perl-modules-5.40",
+      "name": "perl-modules-5.40",
+      "versionInfo": "5.40.1-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-perl",
+      "name": "perl",
+      "versionInfo": "5.40.1-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pinentry-curses",
+      "name": "pinentry-curses",
+      "versionInfo": "1.3.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pkg-config",
+      "name": "pkg-config",
+      "versionInfo": "1.8.1-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pkgconf-bin",
+      "name": "pkgconf-bin",
+      "versionInfo": "1.8.1-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-pkgconf",
+      "name": "pkgconf",
+      "versionInfo": "1.8.1-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-polkitd",
+      "name": "polkitd",
+      "versionInfo": "126-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ppp",
+      "name": "ppp",
+      "versionInfo": "2.5.2-1+1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-procps",
+      "name": "procps",
+      "versionInfo": "2:4.0.4-9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-psmisc",
+      "name": "psmisc",
+      "versionInfo": "23.7-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-publicsuffix",
+      "name": "publicsuffix",
+      "versionInfo": "20250328.1952-0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python-apt-common",
+      "name": "python-apt-common",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python-babel-localedata",
+      "name": "python-babel-localedata",
+      "versionInfo": "2.17.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python-is-python3",
+      "name": "python-is-python3",
+      "versionInfo": "3.13.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-apt",
+      "name": "python3-apt",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-arrow",
+      "name": "python3-arrow",
+      "versionInfo": "1.3.0-1.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-attr",
+      "name": "python3-attr",
+      "versionInfo": "25.3.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-babel",
+      "name": "python3-babel",
+      "versionInfo": "2.17.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-bcrypt",
+      "name": "python3-bcrypt",
+      "versionInfo": "4.2.0-2.1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-blinker",
+      "name": "python3-blinker",
+      "versionInfo": "1.9.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-certifi",
+      "name": "python3-certifi",
+      "versionInfo": "2025.1.31+ds-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-cffi-backend",
+      "name": "python3-cffi-backend",
+      "versionInfo": "1.17.1-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-chardet",
+      "name": "python3-chardet",
+      "versionInfo": "5.2.0+dfsg-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-charset-normalizer",
+      "name": "python3-charset-normalizer",
+      "versionInfo": "3.4.2-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-colorzero",
+      "name": "python3-colorzero",
+      "versionInfo": "2.0-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-configobj",
+      "name": "python3-configobj",
+      "versionInfo": "5.0.9-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-cryptography",
+      "name": "python3-cryptography",
+      "versionInfo": "43.0.0-3+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-dateutil",
+      "name": "python3-dateutil",
+      "versionInfo": "2.9.0-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-debconf",
+      "name": "python3-debconf",
+      "versionInfo": "1.5.91",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-distro",
+      "name": "python3-distro",
+      "versionInfo": "1.9.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-fqdn",
+      "name": "python3-fqdn",
+      "versionInfo": "1.5.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-gpiozero",
+      "name": "python3-gpiozero",
+      "versionInfo": "2.0.1-0+rpt1+trixie",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-idna",
+      "name": "python3-idna",
+      "versionInfo": "3.10-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-isoduration",
+      "name": "python3-isoduration",
+      "versionInfo": "20.11.0+git20211126.ae0bd61-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-jinja2",
+      "name": "python3-jinja2",
+      "versionInfo": "3.1.6-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-json-pointer",
+      "name": "python3-json-pointer",
+      "versionInfo": "2.4-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-jsonpatch",
+      "name": "python3-jsonpatch",
+      "versionInfo": "1.32-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-jsonschema-specifications",
+      "name": "python3-jsonschema-specifications",
+      "versionInfo": "2023.12.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-jsonschema",
+      "name": "python3-jsonschema",
+      "versionInfo": "4.19.2-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-jwt",
+      "name": "python3-jwt",
+      "versionInfo": "2.10.1-2+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-lgpio",
+      "name": "python3-lgpio",
+      "versionInfo": "0.2.2-1~rpt1+trixie",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-libgpiod",
+      "name": "python3-libgpiod",
+      "versionInfo": "2.2.1-2+rpi1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-linkify-it",
+      "name": "python3-linkify-it",
+      "versionInfo": "2.0.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-markdown-it",
+      "name": "python3-markdown-it",
+      "versionInfo": "3.0.0-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-markupsafe",
+      "name": "python3-markupsafe",
+      "versionInfo": "2.1.5-1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-mdurl",
+      "name": "python3-mdurl",
+      "versionInfo": "0.1.2-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-minimal",
+      "name": "python3-minimal",
+      "versionInfo": "3.13.5-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-netplan",
+      "name": "python3-netplan",
+      "versionInfo": "1.1.2-7+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-oauthlib",
+      "name": "python3-oauthlib",
+      "versionInfo": "3.2.2-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-pip-whl",
+      "name": "python3-pip-whl",
+      "versionInfo": "25.1.1+dfsg-1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-pycryptodome",
+      "name": "python3-pycryptodome",
+      "versionInfo": "3.20.0+dfsg-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-pygments",
+      "name": "python3-pygments",
+      "versionInfo": "2.18.0+dfsg-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-referencing",
+      "name": "python3-referencing",
+      "versionInfo": "0.36.2-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-requests",
+      "name": "python3-requests",
+      "versionInfo": "2.32.3+dfsg-5+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-rfc3339-validator",
+      "name": "python3-rfc3339-validator",
+      "versionInfo": "0.1.4-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-rfc3986-validator",
+      "name": "python3-rfc3986-validator",
+      "versionInfo": "0.1.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-rfc3987",
+      "name": "python3-rfc3987",
+      "versionInfo": "1.3.8-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-rich",
+      "name": "python3-rich",
+      "versionInfo": "13.9.4-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-rpds-py",
+      "name": "python3-rpds-py",
+      "versionInfo": "0.21.0-2+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-rpi-lgpio",
+      "name": "python3-rpi-lgpio",
+      "versionInfo": "0.6-0~rpt1+trixie",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-setuptools-whl",
+      "name": "python3-setuptools-whl",
+      "versionInfo": "78.1.1-0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-smbus2",
+      "name": "python3-smbus2",
+      "versionInfo": "0.4.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-spidev",
+      "name": "python3-spidev",
+      "versionInfo": "3.6-1+b2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-typeshed",
+      "name": "python3-typeshed",
+      "versionInfo": "0.0~git20241223.ea91db2-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-uc-micro",
+      "name": "python3-uc-micro",
+      "versionInfo": "1.0.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-uritemplate",
+      "name": "python3-uritemplate",
+      "versionInfo": "4.1.1-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-urllib3",
+      "name": "python3-urllib3",
+      "versionInfo": "2.3.0-3+deb13u2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-venv",
+      "name": "python3-venv",
+      "versionInfo": "3.13.5-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-webcolors",
+      "name": "python3-webcolors",
+      "versionInfo": "1.13-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3-yaml",
+      "name": "python3-yaml",
+      "versionInfo": "6.0.2-1+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3.13-minimal",
+      "name": "python3.13-minimal",
+      "versionInfo": "3.13.5-2+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3.13-venv",
+      "name": "python3.13-venv",
+      "versionInfo": "3.13.5-2+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3.13",
+      "name": "python3.13",
+      "versionInfo": "3.13.5-2+deb13u3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-python3",
+      "name": "python3",
+      "versionInfo": "3.13.5-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspberrypi-archive-keyring",
+      "name": "raspberrypi-archive-keyring",
+      "versionInfo": "2025.1+rpt1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspberrypi-net-mods",
+      "name": "raspberrypi-net-mods",
+      "versionInfo": "1.4.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspberrypi-sys-mods",
+      "name": "raspberrypi-sys-mods",
+      "versionInfo": "1:20260612",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspbian-archive-keyring",
+      "name": "raspbian-archive-keyring",
+      "versionInfo": "20120528.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-config-core",
+      "name": "raspi-config-core",
+      "versionInfo": "20260720",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-config",
+      "name": "raspi-config",
+      "versionInfo": "20260720",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-copies-and-fills",
+      "name": "raspi-copies-and-fills",
+      "versionInfo": "0.13+git20240318.ee8ac1d-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-firmware",
+      "name": "raspi-firmware",
+      "versionInfo": "1:1.20260521-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-utils-core",
+      "name": "raspi-utils-core",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-utils-dt",
+      "name": "raspi-utils-dt",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-utils-eeprom",
+      "name": "raspi-utils-eeprom",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-utils-otp",
+      "name": "raspi-utils-otp",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspi-utils",
+      "name": "raspi-utils",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-raspinfo",
+      "name": "raspinfo",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-readline-common",
+      "name": "readline-common",
+      "versionInfo": "8.2-6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rfkill",
+      "name": "rfkill",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpcsvc-proto",
+      "name": "rpcsvc-proto",
+      "versionInfo": "1.4.3-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-cloud-init-mods",
+      "name": "rpi-cloud-init-mods",
+      "versionInfo": "1:20260119",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-connect-lite",
+      "name": "rpi-connect-lite",
+      "versionInfo": "2.12.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-eeprom",
+      "name": "rpi-eeprom",
+      "versionInfo": "28.28-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-keyboard-config",
+      "name": "rpi-keyboard-config",
+      "versionInfo": "1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-keyboard-fw-update",
+      "name": "rpi-keyboard-fw-update",
+      "versionInfo": "1.0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-loop-utils",
+      "name": "rpi-loop-utils",
+      "versionInfo": "1.2.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-swap",
+      "name": "rpi-swap",
+      "versionInfo": "1.2.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-systemd-config",
+      "name": "rpi-systemd-config",
+      "versionInfo": "1.1.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-update",
+      "name": "rpi-update",
+      "versionInfo": "20230904",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpi-usb-gadget",
+      "name": "rpi-usb-gadget",
+      "versionInfo": "1.0.6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpicam-apps-core",
+      "name": "rpicam-apps-core",
+      "versionInfo": "1.12.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpicam-apps-lite",
+      "name": "rpicam-apps-lite",
+      "versionInfo": "1.12.0-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpieepromab",
+      "name": "rpieepromab",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rpifwcrypto",
+      "name": "rpifwcrypto",
+      "versionInfo": "20260626-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-rsync",
+      "name": "rsync",
+      "versionInfo": "3.4.1+ds1-5+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-runit-helper",
+      "name": "runit-helper",
+      "versionInfo": "2.16.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-sed",
+      "name": "sed",
+      "versionInfo": "4.9-2+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-sensible-utils",
+      "name": "sensible-utils",
+      "versionInfo": "0.0.25",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-sgml-base",
+      "name": "sgml-base",
+      "versionInfo": "1.31+nmu1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-shared-mime-info",
+      "name": "shared-mime-info",
+      "versionInfo": "2.4-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-sqv",
+      "name": "sqv",
+      "versionInfo": "1.3.0-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ssh-import-id",
+      "name": "ssh-import-id",
+      "versionInfo": "5.10-3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ssh",
+      "name": "ssh",
+      "versionInfo": "1:10.0p1-7+deb13u4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-strace",
+      "name": "strace",
+      "versionInfo": "6.13+ds-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-sudo",
+      "name": "sudo",
+      "versionInfo": "1.9.16p2-3+deb13u2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-systemd-sysv",
+      "name": "systemd-sysv",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-systemd-timesyncd",
+      "name": "systemd-timesyncd",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-systemd-zram-generator",
+      "name": "systemd-zram-generator",
+      "versionInfo": "1.2.1-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-systemd",
+      "name": "systemd",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-sysvinit-utils",
+      "name": "sysvinit-utils",
+      "versionInfo": "3.14-4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-tar",
+      "name": "tar",
+      "versionInfo": "1.35+dfsg-3.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-traceroute",
+      "name": "traceroute",
+      "versionInfo": "1:2.1.6-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-tzdata",
+      "name": "tzdata",
+      "versionInfo": "2026b-0+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ucf",
+      "name": "ucf",
+      "versionInfo": "3.0052",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-udev",
+      "name": "udev",
+      "versionInfo": "257.9-1~deb13u1+rpi1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-udisks2",
+      "name": "udisks2",
+      "versionInfo": "2.10.1-12.1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-unzip",
+      "name": "unzip",
+      "versionInfo": "6.0-29",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-usb-modeswitch-data",
+      "name": "usb-modeswitch-data",
+      "versionInfo": "20191128-7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-usb-modeswitch",
+      "name": "usb-modeswitch",
+      "versionInfo": "2.6.1-4+b1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-usbutils",
+      "name": "usbutils",
+      "versionInfo": "1:018-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-userconf-pi",
+      "name": "userconf-pi",
+      "versionInfo": "0.18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-util-linux",
+      "name": "util-linux",
+      "versionInfo": "2.41-5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-uuid",
+      "name": "uuid",
+      "versionInfo": "1.6.4-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-v4l-utils",
+      "name": "v4l-utils",
+      "versionInfo": "1.30.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-vim-common",
+      "name": "vim-common",
+      "versionInfo": "2:9.1.1230-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-vim-tiny",
+      "name": "vim-tiny",
+      "versionInfo": "2:9.1.1230-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-wget",
+      "name": "wget",
+      "versionInfo": "1.25.0-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-whiptail",
+      "name": "whiptail",
+      "versionInfo": "0.52.25-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-wireless-regdb",
+      "name": "wireless-regdb",
+      "versionInfo": "2026.05.30-1~deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-wireless-tools",
+      "name": "wireless-tools",
+      "versionInfo": "30~pre9-18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-wpasupplicant",
+      "name": "wpasupplicant",
+      "versionInfo": "2:2.10-24",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-xauth",
+      "name": "xauth",
+      "versionInfo": "1:1.1.2-1.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-xdg-user-dirs",
+      "name": "xdg-user-dirs",
+      "versionInfo": "0.18-2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-xkb-data",
+      "name": "xkb-data",
+      "versionInfo": "2.42-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-xml-core",
+      "name": "xml-core",
+      "versionInfo": "0.19",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-xz-utils",
+      "name": "xz-utils",
+      "versionInfo": "5.8.1-1+deb13u1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-zip",
+      "name": "zip",
+      "versionInfo": "3.0-15",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-zlib1g",
+      "name": "zlib1g",
+      "versionInfo": "1:1.3.dfsg+really1.3.1-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-zstd",
+      "name": "zstd",
+      "versionInfo": "1.5.7+dfsg-1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    }
+  ]
+}

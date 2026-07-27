@@ -285,3 +285,8 @@
   complete-library backend is `DEFERRED_HARDWARE_UNAVAILABLE`. Host-side FAT32
   inspection, exact source read-through, read-only behavior, and storage
   allocation tests pass, but physical compatibility is not claimed.
+- The 512 MiB container/384 MiB Go defaults are host-tested but have not yet
+  been soak-tested against the operator's full production catalog on TrueNAS.
+  Monitor the Apps memory graph during the first catalog rebuild and NBD
+  session; raise both limits together only if the container reports an actual
+  memory-limit termination.

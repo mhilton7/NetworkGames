@@ -1,0 +1,81 @@
+services:
+  networkgames-host:
+    image: ghcr.io/OWNER/networkgames-host:0.1.0-rc.1@sha256:97de3bb60b71bcd55c85346aff3f665d16da18018400bd053242243bc506553c
+    user: "568:568"
+    restart: "unless-stopped"
+    read_only: true
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      NETWORKGAMES_LIBRARY: "/library"
+      NETWORKGAMES_DATA: "/data"
+      NETWORKGAMES_ADMIN_TOKEN: "REPLACE_WITH_A_NEW_RANDOM_VALUE"
+      NETWORKGAMES_HTTPS_LISTEN: ":8445"
+      NETWORKGAMES_NBD_LISTEN: ":10809"
+      NETWORKGAMES_EXPORT: "all"
+      NETWORKGAMES_TLS_CERT: "/certs/server.crt"
+      NETWORKGAMES_TLS_KEY: "/certs/server.key"
+      NETWORKGAMES_TLS_CLIENT_CA: "/certs/clients-ca.crt"
+    ports:
+      - "192.0.2.10:8445:8445/tcp"
+      - "192.0.2.10:10809:10809/tcp"
+    volumes:
+      - type: bind
+        source: /mnt/POOL/WII_DATASET
+        target: /library
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /mnt/POOL/apps/wiibridge/config
+        target: /config
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /mnt/POOL/apps/wiibridge/data
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /mnt/POOL/apps/wiibridge/certs
+        target: /certs
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /mnt/POOL/apps/wiibridge/logs
+        target: /logs
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /mnt/POOL/apps/wiibridge/backups
+        target: /backups
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:size=32m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test:
+        - CMD
+        - /networkgames-host
+        - healthcheck
+        - --url
+        - https://127.0.0.1:8445/healthz
+        - --ca
+        - /certs/ca.crt
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    pids_limit: 256
+    mem_limit: "1g"
+    cpus: "2.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

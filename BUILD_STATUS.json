@@ -27,7 +27,7 @@
   },
   "phases": {
     "baseline": "complete",
-    "server": "gamecube-schema2-no-copy-synthetic-fat32-host-verified",
+    "server": "wii-fat-on-demand-and-gamecube-no-copy-host-verified",
     "container": "ghcr-wbfsattrfix1-live-verified",
     "pi_bridge": "strict-readonly-live-wii-launch-verified",
     "firmware_zero_w": "server-wait-cleanup-vidpid-export-installed-offline-verified",
@@ -36,5 +36,5 @@
     "release": "software-complete-gamecube-hardware-validation-deferred"
   },
   "physical_tests": "gamecube-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
-  "updated_utc": "2026-07-27T22:40:17Z"
+  "updated_utc": "2026-07-27T23:40:54Z"
 }
