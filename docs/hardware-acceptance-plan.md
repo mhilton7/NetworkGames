@@ -21,3 +21,10 @@ For each Zero W, Pi 4, and Pi 5 independently:
 
 No outage-transparency, Wii, or USB Loader GX claim may be made until this plan
 passes on all claimed boards.
+
+For the complete-library profile, additionally verify that one activation shows
+every prepared GameCube title, launch at least three titles through Nintendont,
+exercise a valid two-disc set, switch Wii→GameCube→Wii ten times, and confirm
+the complete Wii snapshot remains unchanged. Record generated image size, Pi
+kernel/firmware, loader/runtime versions, cable, power source, and any USB reset
+or shutdown. Host-only image inspection is not physical acceptance.

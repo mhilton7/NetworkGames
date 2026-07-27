@@ -65,13 +65,19 @@ fixed at 9443 and the pinned certificate remains mandatory.
 
 ## Operation
 
-Prepare GameCube exports before switching. Then select a ready GameCube entry
-or click **Use Wii export**. The dashboard reports completion only after the Pi
-has reattached USB. USB Loader GX may need its normal device refresh after USB
-re-enumeration.
+Build the complete GameCube generation before switching. Then click **Activate
+GameCube Library** or **Activate Wii Library**. The dashboard reports completion
+only after the Pi has reattached USB. USB Loader GX may need its normal device
+refresh after USB re-enumeration.
 
-All Wii titles remain together in the normal Wii catalog. This feature does not
-switch individual Wii titles. Current GameCube cache behavior is unchanged.
+All Wii titles remain together in the proven Wii catalog. All prepared
+GameCube titles remain together in the generated GameCube FAT32 catalog.
+Primary switching never requires a title ID.
+
+The Host also provides typed storage controls: **Safely Detach USB**,
+**Disconnect NBD**, **Connect Current Library**, **Attach USB**, and
+**Reconcile Connection**. Connect mode is derived from trusted Host state,
+never from a browser-provided helper action.
 
 ## Pi power controls
 

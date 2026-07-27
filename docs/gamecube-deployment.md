@@ -1,5 +1,23 @@
 # GameCube deployment
 
+The primary Host export is a complete generated library, not a per-title
+volume. Ensure `/data` has enough free space for all validated GameCube
+payloads, configured headroom, save reserve, and retained generations. Build
+with **Build GameCube Library**, inspect its title/disc counts, then use
+**Activate GameCube Library**.
+
+```text
+WIIBRIDGE_GAMECUBE_MEMORY_CARD_MODE=physical
+WIIBRIDGE_GAMECUBE_HEADROOM_PERCENT=5
+WIIBRIDGE_GAMECUBE_SAVE_RESERVE_MIB=1024
+WIIBRIDGE_GAMECUBE_MAX_VOLUME_GIB=
+WIIBRIDGE_GAMECUBE_GENERATION_RETENTION=2
+```
+
+`physical` exports read-only. `emulated` permits writes only to the managed
+image and snapshots valid `.raw` cards before leaving GameCube mode. Per-title
+memory-card values do not override this trusted library-wide mode.
+
 Deployment is intentionally not performed by the build. Obtain explicit
 operator approval after reviewing the diff and host-test report.
 
@@ -12,9 +30,8 @@ make test
 make static
 make compose
 make oci
-make firmware-zero-w
 sha256sum dist/wii-sd/apps/Nintendont/*
-git diff 64ff84b43700d96c0ba7ab495a006301a9ff2014..HEAD
+git diff ada2b010900c348eb9504c3eeb71b6fd10cb7e65..HEAD
 ```
 
 Record the generated OCI digest and Pi image checksum. Snapshot the TrueNAS
@@ -26,16 +43,24 @@ change.
 Follow `deploy/truenas/upgrade.md`: with USB detached and NBD disconnected,
 replace only `WIIBRIDGE_IMAGE` with the newly built/imported immutable
 digest. Do not change certificates, tokens, paths, UID/GID, USB identity, or
-the read-only library mount. Confirm `/data` has at least 35 GiB free per
-concurrently cached title plus save history and snapshot headroom.
+the read-only library mount.
+
+For the complete-library image, capacity is calculated from the total prepared
+payload plus FAT32 metadata, configured headroom, and save reserve. During an
+update, allow room for both the current and staged generation. With the default
+retention of two, plan for roughly twice the calculated image size plus build
+staging. Set `WIIBRIDGE_GAMECUBE_MAX_VOLUME_GIB` if the deployed NBD/kernel
+combination has a verified lower capacity limit; the build then fails clearly
+instead of truncating the library.
 
 ## Pi image
 
-The Pi helper must be updated for explicit writable GameCube save mode. Flash
-only a separately verified removable microSD after approval and exact device
-inspection, following `docs/flashing.md`; preserve the existing card as the
-rollback image. Provision this same device with its existing matching
-credentials and VID/PID—do not invent or replace them.
+This Host change reuses the deployed typed `connect-wii`,
+`connect-gamecube-physical`, `connect-gamecube-emulated`, `detach`,
+`disconnect`, and `attach` actions; it does not require a firmware reflash when
+those actions are already present. If a separate verified firmware update is
+ever required, follow `docs/flashing.md`, preserve the existing card as the
+rollback image, and retain this device's matching credentials and VID/PID.
 
 ## Wii SD package
 
@@ -57,11 +82,14 @@ After host and Pi deployment:
 sudo /usr/libexec/wiibridge-helper detach
 sudo /usr/libexec/wiibridge-helper disconnect
 
-# Host UI/API: import once, then select the validated GameCube title.
-# The API requires the existing administrator token and CSRF confirmation:
+# Host API: build the complete library in the background when needed.
 curl --cacert /path/to/host-ca.crt -u "admin:$WIIBRIDGE_ADMIN_TOKEN" \
   -H 'X-WiiBridge-CSRF: 1' -X POST \
-  -d 'id=GAMEID&revision=0' \
+  https://HOST:8445/api/v1/gamecube/library/build
+
+# After GET /api/v1/gamecube/library reports Ready, select the complete image.
+curl --cacert /path/to/host-ca.crt -u "admin:$WIIBRIDGE_ADMIN_TOKEN" \
+  -H 'X-WiiBridge-CSRF: 1' -X POST \
   https://HOST:8445/api/v1/export/gamecube
 
 # Pi: choose exactly one matching card mode, then attach.
