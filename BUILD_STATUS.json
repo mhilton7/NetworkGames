@@ -2,8 +2,8 @@
   "schema_version": 1,
   "project_version": "0.1.0-rc.1",
   "prompt_version": 3,
-  "status": "hardware-validation-in-progress",
-  "final_label": "PHYSICAL WII BANNER AND GAME LAUNCH PASS — GAMEPLAY SOAK PENDING",
+  "status": "software-complete-gamecube-no-copy-hardware-unverified",
+  "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
   "application_commit": "74dfb5bb2d66c2a558c9de7690ee89c0c31daa70",
   "build_host": {
     "os": "Debian GNU/Linux 13 (trixie)",
@@ -27,14 +27,14 @@
   },
   "phases": {
     "baseline": "complete",
-    "server": "wbfs-fat-attribute-compatibility-repair-live-verified",
+    "server": "gamecube-schema2-no-copy-synthetic-fat32-host-verified",
     "container": "ghcr-wbfsattrfix1-live-verified",
     "pi_bridge": "strict-readonly-live-wii-launch-verified",
     "firmware_zero_w": "server-wait-cleanup-vidpid-export-installed-offline-verified",
     "firmware_pi4": "firmware-offline-verified",
     "firmware_pi5": "firmware-offline-verified",
-    "release": "release-candidate-physical-game-launch-pass-gameplay-soak-pending"
+    "release": "software-complete-gamecube-hardware-validation-deferred"
   },
-  "physical_tests": "10-minute-solution-banner-and-game-launch-pass",
-  "updated_utc": "2026-07-25T09:10:27Z"
+  "physical_tests": "gamecube-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
+  "updated_utc": "2026-07-27T22:40:17Z"
 }

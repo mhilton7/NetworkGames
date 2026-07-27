@@ -40,3 +40,11 @@ and restore the previous container digest or Git commit. The read-only source
 library and `/data/gamecube/save-backups` remain compatible. New
 `/data/gamecube/library/generations` may be retained or removed while the Host
 is stopped; older Host versions ignore it. Wii remains the startup profile.
+
+Schema-1 GameCube generations can contain a full `library.img`. They are
+reported as legacy and are never deleted at startup. Reclaim their space only
+after a schema-2 no-copy generation validates: activate Wii, detach USB,
+disconnect NBD, stop the Host, verify the candidate is directly beneath
+`/data/gamecube/library/generations`, and remove that one legacy directory
+without following symlinks. Preserve `/data/gamecube/save-backups` and
+`/data/auth`.

@@ -182,6 +182,7 @@ func serve() error {
 		return err
 	}
 	gcConfig := gamecube.DefaultLibraryConfig()
+	gcConfig.SourceRoot = root
 	gcConfig.HeadroomPercent, err = intEnv("WIIBRIDGE_GAMECUBE_HEADROOM_PERCENT", 5)
 	if err != nil {
 		return err
@@ -900,8 +901,7 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 				http.StatusConflict)
 			return
 		}
-		backend, err := gamecube.OpenFileBackend(manifest.ImagePath,
-			!manifest.ReadOnly)
+		backend, err := gamecube.OpenLibraryBackend(a.gcLibrary.Root(), manifest)
 		if err != nil {
 			http.Error(w, "GameCube backend open failed", http.StatusInternalServerError)
 			return
@@ -1304,6 +1304,7 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"GameCubeDiscs": totalDiscs, "GameCubeMode": strings.Title(string(a.gcMode)),
 		"GCBuild": a.gcLibrary.Progress(), "GCReady": activeErr == nil,
 		"GCGeneration": generation, "GCUpdate": gcUpdate,
+		"GCLegacy": len(a.gcLibrary.LegacyGenerations()) > 0,
 		"Rejected": len(review), "Review": review,
 		"AutomaticSwitch": a.pi != nil, "PiAddress": piAddress,
 		"StorageControls": storageControls,

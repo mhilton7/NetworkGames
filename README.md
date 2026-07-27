@@ -53,8 +53,8 @@ flowchart LR
 
 Wii mode synthesizes an immutable MBR/FAT32 disk from existing WBFS files
 without copying or rewriting them. GameCube mode is isolated behind a separate
-export profile and prepares a persistent Nintendont-compatible FAT32 volume.
-Wii remains the startup default.
+export profile and synthesizes a Nintendont-compatible FAT32 disk whose file
+extents read through to the original sources. Wii remains the startup default.
 
 ## Requirements
 
@@ -183,17 +183,23 @@ GX. Game payloads and the Wii-facing LUN remain read-only.
 ### GameCube
 
 1. Add a supported legal backup to the read-only library.
-2. In the Host dashboard, select **GameCube** and confirm its ID, region,
-   revision, format, disc count, and validation state.
-3. Choose **Prepare export** once. Repeated launches reuse the validated cache.
-4. Detach USB and disconnect NBD before changing profiles.
-5. Select the prepared title and the intended physical or emulated memory-card
-   mode.
-6. Reconnect NBD, attach USB, and launch through USB Loader GX and Nintendont.
+2. In the Host dashboard, confirm its ID, region, revision, format, disc count,
+   and validation state.
+3. Choose **Build GameCube Library**. This builds compact FAT32 metadata and a
+   source extent map; it does not copy game payloads.
+4. Choose **Activate GameCube Library**. The Host safely detaches USB,
+   disconnects NBD, validates every source, selects the complete synthetic
+   library, reconnects NBD, and reattaches USB.
+5. Launch through USB Loader GX and Nintendont.
 
 Supported sources are `.iso`, `.gcm`, the documented CISO/CSO mapping, extracted
 FST layouts, and validated two-disc sets. Sources are never modified. Details
 and exact commands are in [GameCube support](docs/gamecube-support.md).
+
+The GameCube disk is synthetic: its apparent size includes every mapped game,
+while `/data` stores only compact FAT32 metadata, manifests, extent maps, and
+save data. Payload reads are served directly from the original read-only
+`/library` files.
 
 ## Safe platform switching
 

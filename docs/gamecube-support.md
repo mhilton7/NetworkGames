@@ -16,7 +16,7 @@ are unsupported.
 
 NKit, RVZ, ZIP, arbitrary compression, and mixed/ambiguous sets are rejected.
 Sources are scanned and hashed read-only. They become playable only after a
-validated persistent cache is complete.
+validated metadata generation is complete.
 
 ## Operator workflow
 
@@ -28,7 +28,8 @@ validated persistent cache is complete.
 4. Start USB Loader GX and browse the complete GameCube catalog.
 5. Click **Activate Wii Library** to return to the complete Wii catalog.
 
-Never mount the GameCube image on the host or Pi while exported.
+Never mount the exported GameCube block device on the host or Pi while the Wii
+owns it.
 
 ## Managed generations
 
@@ -36,19 +37,34 @@ Generated data is stored under `/data/gamecube/library`:
 
 ```text
 active.json
-generations/<generation-id>/library.img
 generations/<generation-id>/manifest.json
+generations/<generation-id>/layout.bin
+generations/<generation-id>/metadata.bin
+generations/<generation-id>/checksums.json
 ```
 
-Builds use `.building-*` staging directories, validate the closed image, rename
-the generation atomically, and then atomically update `active.json`. A failed
-build cannot replace the prior generation. Source changes show **Update
-available** and never modify an open backend.
+Builds use `.building-*` staging directories, validate the closed metadata and
+source map, rename the generation atomically, and then atomically update
+`active.json`. A failed or canceled build cannot replace the prior generation.
+Source changes show **Update available** and invalidate activation.
 
-Sizing includes all prepared payloads, FAT metadata, configurable headroom, and
-save reserve. Plan writable Host storage for roughly the physical size of all
-supported GameCube sources, plus at least 5% and 1 GiB. Source files remain on
-the read-only library mount and are never modified.
+The apparent virtual FAT32 disk includes the mapped size of every payload,
+headroom, and save reserve. Physical `/data` usage contains only FAT32 metadata,
+the extent map, manifests, checksums, and optional saves. ISO, GCM, CISO, and FST
+payload bytes remain only under the read-only `/library` mount. Retained
+schema-2 generations therefore do not multiply payload storage.
+
+Schema-1 generations containing `library.img` are detected but never removed
+automatically. After a schema-2 generation is built and validated, return to
+Wii mode, detach USB, disconnect NBD, stop the Host, and remove only the
+validated legacy generation directory beneath
+`/data/gamecube/library/generations`. Preserve save backups and never follow
+symlinks during cleanup.
+
+Physical memory-card mode is the supported no-copy mode and rejects every block
+write. Emulated memory-card mode is explicitly rejected at startup until its
+bounded save-only copy-on-write overlay is complete; it never falls back to a
+copied image.
 
 ## USB Loader GX / Nintendont settings
 

@@ -44,11 +44,11 @@
       const value = await response.json();
       text("gc-build-state", value.progress.state);
       text("gc-current", value.progress.current_title || "Finalizing");
-      text("gc-count", `${value.progress.games_completed} / ${value.progress.total_games} games`);
+      text("gc-count", `${value.progress.titles_processed} / ${value.progress.total_titles} titles · ${value.progress.files_mapped} files mapped · ${value.progress.metadata_generation}`);
       const progress = document.getElementById("gc-progress");
       if (progress) {
-        progress.max = value.progress.total_games || 1;
-        progress.value = value.progress.games_completed;
+        progress.max = value.progress.total_titles || 1;
+        progress.value = value.progress.titles_processed;
       }
       if (value.progress.state !== "Building") window.location.reload();
     } catch (_) {}
