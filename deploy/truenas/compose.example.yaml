@@ -19,6 +19,10 @@ services:
       WIIBRIDGE_TLS_CERT: /certs/server.crt
       WIIBRIDGE_TLS_KEY: /certs/server.key
       WIIBRIDGE_TLS_CLIENT_CA: /certs/clients-ca.crt
+      # Optional, all-or-nothing automatic platform switching configuration.
+      WIIBRIDGE_PI_URL: ""
+      WIIBRIDGE_PI_ADMIN_TOKEN: ""
+      WIIBRIDGE_PI_CERT: ""
     ports:
       - "CHANGE_ME_TRUENAS_LAN_IP:8445:8445/tcp"
       - "CHANGE_ME_TRUENAS_PI_IP:10809:10809/tcp"

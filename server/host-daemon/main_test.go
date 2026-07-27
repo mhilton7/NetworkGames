@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -12,6 +14,19 @@ import (
 	"wiibridge/server/host-daemon/vdisk"
 	"wiibridge/shared/model"
 )
+
+type fakePiController struct {
+	actions []string
+	fail    string
+}
+
+func (f *fakePiController) Action(_ context.Context, action string) error {
+	f.actions = append(f.actions, action)
+	if action == f.fail {
+		return errors.New("synthetic Pi failure")
+	}
+	return nil
+}
 
 func testApp(t *testing.T) *app {
 	t.Helper()
@@ -132,5 +147,39 @@ func TestBrowserActionsRedirectBackToDashboard(t *testing.T) {
 	if !strings.Contains(location, "notice=Export+switched") ||
 		!strings.Contains(location, "platform=wii") {
 		t.Fatalf("unexpected redirect %q", location)
+	}
+}
+
+func TestAutomaticWiiSwitchUsesSafeActionOrder(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{}
+	a.pi = pi
+	request := httptest.NewRequest("POST", "/api/v1/export/wii", nil)
+	request.SetPathValue("platform", "wii")
+	response := httptest.NewRecorder()
+	a.selectExport(response, request)
+	if response.Code != 200 {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	got := strings.Join(pi.actions, ",")
+	if got != "detach,disconnect,connect-wii,attach" {
+		t.Fatalf("unsafe automatic action order: %s", got)
+	}
+}
+
+func TestAutomaticAttachFailureLeavesPiDisconnected(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{fail: "attach"}
+	a.pi = pi
+	request := httptest.NewRequest("POST", "/api/v1/export/wii", nil)
+	request.SetPathValue("platform", "wii")
+	response := httptest.NewRecorder()
+	a.selectExport(response, request)
+	if response.Code != 502 {
+		t.Fatalf("status = %d, want 502", response.Code)
+	}
+	got := strings.Join(pi.actions, ",")
+	if got != "detach,disconnect,connect-wii,attach,detach,disconnect" {
+		t.Fatalf("failed switch did not return to safe detached state: %s", got)
 	}
 }
