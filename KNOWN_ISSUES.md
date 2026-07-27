@@ -277,3 +277,11 @@
   PR #1, and the cumulative idlefix.1 image is available through GHCR. The
   Windows FAT32 follow-up remains on the same branch until its replacement
   image and physical retest complete.
+- The schema-2 complete GameCube library currently supports
+  `WIIBRIDGE_GAMECUBE_MEMORY_CARD_MODE=physical` only. `emulated` is rejected
+  with a configuration error until a bounded save-only sector overlay can be
+  implemented and validated; there is no silent fallback.
+- Physical USB Loader GX/Nintendont testing of the new synthetic GameCube
+  complete-library backend is `DEFERRED_HARDWARE_UNAVAILABLE`. Host-side FAT32
+  inspection, exact source read-through, read-only behavior, and storage
+  allocation tests pass, but physical compatibility is not claimed.

@@ -85,3 +85,10 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | Legal game launch | PASS | 10 Minute Solution successfully loads on the Wii through the Zero W bridge and repaired TrueNAS export |
 | Gameplay soak | PENDING | Sustained gameplay plus a later power/reconnect cycle remain to be exercised |
 | Cable, power, reconnect, reboot | PASS | Repeated reboot, NBD reconnect, USB reset, cIOS handoff, and trace captures completed without Pi transport failure |
+| GameCube schema-2 no-copy generation | PASS | Complete FAT32 metadata and sorted source extents are generated without `library.img` or payload-copy helper calls |
+| GameCube no-copy physical storage | PASS | 6,291,456 source bytes produced 2,252,800 physically allocated metadata bytes for an 8,589,934,592-byte apparent disk; retained-generation regression passes |
+| GameCube source integrity and read-through | PASS | ISO/GCM/CISO/two-disc/FST reads match original sources; size, hash, symlink, escape, overlap, duplicate-path, and changed-FST checks pass |
+| GameCube physical memory-card mode | PASS | Backend and NBD profile are read-only and every write is rejected |
+| GameCube emulated memory-card overlay | DEFERRED | Startup is explicitly rejected; no copied-image fallback is present |
+| Wii synthetic disk regression | PASS | Full repository tests pass and `server/host-daemon/vdisk` has no implementation diff |
+| Physical GameCube Wii/Nintendont acceptance | DEFERRED_HARDWARE_UNAVAILABLE | Host-side FAT32 and storage behavior pass; no claim of physical compatibility is made |

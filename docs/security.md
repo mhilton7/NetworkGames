@@ -3,10 +3,13 @@
 NBD plaintext export selection is refused until `NBD_OPT_STARTTLS` completes
 with TLS 1.3 and a client certificate chained to the configured client CA.
 Exports are read-only; write, trim, and write-zero requests return errors.
-Source identity is checked before every payload read.
+GameCube sources are fully validated during build and activation. Bounded
+device/inode/size/mtime identity checks occur during payload reads, and a
+changed active source fails closed. Payload bytes are read directly from
+read-only source extents and are never mirrored into `/data`.
 
 The container is non-root with a read-only root, all capabilities dropped,
-no-new-privileges, bounded memory/PIDs/logs/tmpfs, no devices, and no Docker
+no-new-privileges, bounded PIDs/logs/tmpfs, no devices, and no Docker
 socket. `/library` and `/certs` are read-only binds.
 
 Each Pi generates machine identity, setup TLS identity, and an administrator

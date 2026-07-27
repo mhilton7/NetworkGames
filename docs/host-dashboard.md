@@ -27,6 +27,12 @@ control selects the current complete validated generation and is disabled until
 one exists. Building and updating are separate background operations; opening
 the page never starts a build.
 
+GameCube builds report titles, discs, mapped files, metadata generation, and
+validation rather than payload-copy bytes. The generated FAT32 disk reads game
+payloads through to `/library`; `/data` contains compact metadata only. The
+dashboard reports **Legacy copied GameCube generation detected** when an older
+schema-1 `library.img` remains, but it does not delete it automatically.
+
 The Pi panel uses the existing pinned management certificate and independent Pi
 token. It exposes only typed operations: detach USB, disconnect NBD, connect the
 current trusted profile, attach USB, reconcile, reboot, and power off. It does
@@ -41,5 +47,5 @@ private keys, or filesystem access.
 4. Restart the Host.
 5. Sign in with `admin` / `wiibridge` and immediately replace it.
 
-This does not alter API/Pi tokens, certificates, games, generated images, or
+This does not alter API/Pi tokens, certificates, games, generated metadata, or
 save backups.

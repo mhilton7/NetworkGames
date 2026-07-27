@@ -61,8 +61,10 @@ func testApp(t *testing.T) *app {
 		t.Fatal(err)
 	}
 	dataDir := t.TempDir()
+	gcConfig := gamecube.DefaultLibraryConfig()
+	gcConfig.SourceRoot = dataDir
 	gcLibrary, err := gamecube.NewLibraryManager(
-		dataDir+"/gamecube/library", gamecube.DefaultLibraryConfig())
+		dataDir+"/gamecube/library", gcConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

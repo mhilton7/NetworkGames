@@ -1,15 +1,18 @@
 package gamecube
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
-
-	diskfs "github.com/diskfs/go-diskfs"
 
 	"wiibridge/tests/testutil"
 )
@@ -24,13 +27,12 @@ func libraryGames(t *testing.T, root string) []Game {
 		disc, revision  byte
 	}{
 		{"alpha.iso", "GALP01", "Alpha/Game", 0, 0},
-		{"beta-1.iso", "GBET01", "Beta Game", 0, 1},
-		{"beta-2.iso", "GBET01", "Beta Game", 1, 1},
+		{"beta-1.gcm", "GBET01", "Beta Game", 0, 1},
+		{"beta-2.gcm", "GBET01", "Beta Game", 1, 1},
 	}
 	for _, fixture := range fixtures {
-		path := filepath.Join(root, fixture.name)
-		if err := testutil.SyntheticGameCubeISO(path, fixture.id, fixture.title,
-			fixture.disc, fixture.revision, 2<<20); err != nil {
+		if err := testutil.SyntheticGameCubeISO(filepath.Join(root, fixture.name),
+			fixture.id, fixture.title, fixture.disc, fixture.revision, 2<<20); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -44,10 +46,23 @@ func libraryGames(t *testing.T, root string) []Game {
 	return result.Games
 }
 
-func TestCompleteLibraryBuildContainsEveryTitleAndDisc(t *testing.T) {
+func libraryManager(t *testing.T, managed, sources string) *LibraryManager {
+	t.Helper()
+	config := DefaultLibraryConfig()
+	config.SourceRoot = sources
+	manager, err := NewLibraryManager(managed, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return manager
+}
+
+func TestCompleteLibraryIsNoCopyAndReadsEveryDisc(t *testing.T) {
 	root := t.TempDir()
-	games := libraryGames(t, filepath.Join(root, "sources"))
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
 	before := make(map[string]string)
+	var sourceBytes int64
 	for _, game := range games {
 		for _, disc := range game.Discs {
 			sum, err := hashFile(disc.SourcePath)
@@ -55,47 +70,70 @@ func TestCompleteLibraryBuildContainsEveryTitleAndDisc(t *testing.T) {
 				t.Fatal(err)
 			}
 			before[disc.SourcePath] = sum
+			sourceBytes += disc.PhysicalSize
 		}
 	}
-	manager, err := NewLibraryManager(filepath.Join(root, "managed"), DefaultLibraryConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
 	manifest, err := manager.Build(context.Background(), games)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest.TitleCount != 2 || manifest.DiscCount != 3 || !manifest.ReadOnly {
+	if manifest.Schema != 2 || manifest.TitleCount != 2 || manifest.DiscCount != 3 ||
+		!manifest.ReadOnly || manifest.MappedFileCount != 3 {
 		t.Fatalf("manifest=%#v", manifest)
 	}
-	active, err := manager.Active()
-	if err != nil {
-		t.Fatal(err)
+	paths := make(map[string]bool)
+	for _, file := range manifest.Files {
+		paths[file.VirtualPath] = true
 	}
-	if active.GenerationID != manifest.GenerationID {
-		t.Fatalf("active generation=%q want %q", active.GenerationID, manifest.GenerationID)
+	if !paths["/games/Alpha_Game [GALP01]/game.iso"] ||
+		!paths["/games/Beta Game [GBET01] [Rev 1]/game.iso"] ||
+		!paths["/games/Beta Game [GBET01] [Rev 1]/disc2.iso"] {
+		t.Fatalf("unexpected Nintendont namespace: %#v", paths)
 	}
-	disk, err := diskfs.Open(manifest.ImagePath, diskfs.WithOpenMode(diskfs.ReadOnly))
-	if err != nil {
-		t.Fatal(err)
+	generation := filepath.Dir(manifest.LayoutPath)
+	if _, err = os.Stat(filepath.Join(generation, "library.img")); !os.IsNotExist(err) {
+		t.Fatal("no-copy generation contains library.img")
 	}
-	defer disk.Close()
-	fat, err := disk.GetFilesystem(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fat.Close()
-	for _, title := range manifest.Titles {
-		if !strings.Contains(title.OutputDir, "["+title.ID+"]") {
-			t.Fatalf("output path lacks ID: %q", title.OutputDir)
+	var allocated int64
+	err = filepath.Walk(generation, func(_ string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
 		}
-		if _, err = fat.Stat(strings.TrimPrefix(title.OutputDir, "/") + "/game.iso"); err != nil {
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			allocated += stat.Blocks * 512
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if allocated >= sourceBytes/2 {
+		t.Fatalf("metadata storage scales like payload: allocated=%d source=%d", allocated, sourceBytes)
+	}
+	report, err := StorageReport(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reportData, _ := json.Marshal(report)
+	t.Logf("no-copy storage report: %s", reportData)
+	backend, err := OpenLibraryBackend(manager.Root(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Close()
+	for _, file := range manifest.Files {
+		expected, err := os.ReadFile(file.SourcePath)
+		if err != nil {
 			t.Fatal(err)
 		}
-		if title.DiscCount == 2 {
-			if _, err = fat.Stat(strings.TrimPrefix(title.OutputDir, "/") + "/disc2.iso"); err != nil {
-				t.Fatal(err)
-			}
+		extent := findManifestExtent(t, manifest, file.VirtualPath)
+		actual := make([]byte, len(expected))
+		if _, err = backend.ReadAt(actual, extent); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(actual, expected) {
+			t.Fatalf("virtual payload differs for %s", file.VirtualPath)
 		}
 	}
 	for path, expected := range before {
@@ -106,7 +144,349 @@ func TestCompleteLibraryBuildContainsEveryTitleAndDisc(t *testing.T) {
 	}
 }
 
-func TestLibrarySizingLimitsAndOverflow(t *testing.T) {
+func TestRetainedGenerationsDoNotMultiplyPayloadStorage(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	var sourceBytes int64
+	for _, game := range games {
+		for _, disc := range game.Discs {
+			sourceBytes += disc.PhysicalSize
+		}
+	}
+	for build := 0; build < 2; build++ {
+		if _, err := manager.Build(context.Background(), games); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var allocated int64
+	err := filepath.Walk(filepath.Join(manager.Root(), "generations"),
+		func(path string, info os.FileInfo, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if info.Name() == "library.img" {
+				t.Fatalf("retained schema-2 generation contains %s", path)
+			}
+			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+				allocated += stat.Blocks * 512
+			}
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if allocated >= sourceBytes {
+		t.Fatalf("retained metadata allocated=%d source payload=%d", allocated, sourceBytes)
+	}
+}
+
+func TestCompleteLibraryMapsCISOWithoutConversion(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	if err := os.MkdirAll(sourceRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	iso := filepath.Join(sourceRoot, "source.tmp")
+	if err := testutil.SyntheticGameCubeISO(iso, "GCSE01", "CISO Game", 0, 0, 2<<20); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := os.ReadFile(iso)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ciso := make([]byte, int(cisoHeader)+len(payload))
+	copy(ciso[:4], "CISO")
+	binary.LittleEndian.PutUint32(ciso[4:8], uint32(cisoBlock))
+	ciso[8] = 1
+	copy(ciso[cisoHeader:], payload)
+	source := filepath.Join(sourceRoot, "game.cso")
+	if err = os.WriteFile(source, ciso, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Remove(iso); err != nil {
+		t.Fatal(err)
+	}
+	result, err := Scan(sourceRoot)
+	if err != nil || len(result.Games) != 1 {
+		t.Fatalf("scan=%#v err=%v", result, err)
+	}
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), result.Games)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.Files) != 1 ||
+		!strings.HasSuffix(manifest.Files[0].VirtualPath, "/game.ciso") ||
+		manifest.Files[0].SourcePath != source {
+		t.Fatalf("CISO mapping=%#v", manifest.Files)
+	}
+}
+
+func TestCompleteLibraryPathContainsNoPayloadCopyCalls(t *testing.T) {
+	_, current, _, _ := runtime.Caller(0)
+	data, err := os.ReadFile(filepath.Join(filepath.Dir(current), "library.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"copyFileToFilesystem", "copyTreeToFilesystem"} {
+		if bytes.Contains(data, []byte(forbidden)) {
+			t.Fatalf("complete-library path still references %s", forbidden)
+		}
+	}
+}
+
+func findManifestExtent(t *testing.T, manifest LibraryManifest, virtualPath string) int64 {
+	t.Helper()
+	data, err := os.ReadFile(manifest.LayoutPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		SourceExtents []struct {
+			VirtualOffset int64  `json:"virtual_offset"`
+			SourcePath    string `json:"source_path"`
+		} `json:"source_extents"`
+	}
+	if err = json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	var source string
+	for _, file := range manifest.Files {
+		if file.VirtualPath == virtualPath {
+			source = file.SourcePath
+			break
+		}
+	}
+	for _, extent := range document.SourceExtents {
+		if extent.SourcePath == source {
+			return extent.VirtualOffset
+		}
+	}
+	t.Fatalf("extent not found for %s", virtualPath)
+	return 0
+}
+
+func TestLibraryReadCrossesPayloadPaddingAndReturnsZeroes(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)[:1]
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), games)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend, err := OpenLibraryBackend(manager.Root(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Close()
+	file := manifest.Files[0]
+	start := findManifestExtent(t, manifest, file.VirtualPath)
+	buffer := make([]byte, 1024)
+	if _, err = backend.ReadAt(buffer, start+file.LogicalSize-256); err != nil {
+		t.Fatal(err)
+	}
+	expected, _ := os.ReadFile(file.SourcePath)
+	if !bytes.Equal(buffer[:256], expected[len(expected)-256:]) {
+		t.Fatal("cross-boundary source bytes differ")
+	}
+	if !bytes.Equal(buffer[256:], make([]byte, len(buffer)-256)) {
+		t.Fatal("cluster padding was not zero-filled")
+	}
+}
+
+func TestPhysicalLibraryRejectsWrites(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), games[:1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend, err := OpenLibraryBackend(manager.Root(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Close()
+	if _, err = backend.WriteAt([]byte{1}, 0); !errorsIsPermission(err) {
+		t.Fatalf("physical backend write error=%v", err)
+	}
+}
+
+func errorsIsPermission(err error) bool {
+	return err == os.ErrPermission
+}
+
+func TestSourceChangesInvalidateGeneration(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(string) error
+	}{
+		{"size", func(name string) error {
+			file, err := os.OpenFile(name, os.O_APPEND|os.O_WRONLY, 0)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			_, err = file.Write([]byte{0})
+			return err
+		}},
+		{"fingerprint", func(name string) error {
+			file, err := os.OpenFile(name, os.O_WRONLY, 0)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			_, err = file.WriteAt([]byte{0xff}, 0x1000)
+			return err
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			sourceRoot := filepath.Join(root, "sources")
+			games := libraryGames(t, sourceRoot)
+			manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+			manifest, err := manager.Build(context.Background(), games[:1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = test.change(manifest.Files[0].SourcePath); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = OpenLibraryBackend(manager.Root(), manifest); err == nil {
+				t.Fatal("changed source generation remained valid")
+			}
+		})
+	}
+}
+
+func TestSourceEscapeAndSymlinkRejected(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	outside := filepath.Join(root, "outside.iso")
+	if err := os.Rename(games[0].Discs[0].SourcePath, outside); err != nil {
+		t.Fatal(err)
+	}
+	games[0].Discs[0].SourcePath = outside
+	if _, err := manager.Build(context.Background(), games[:1]); err == nil {
+		t.Fatal("source path escape accepted")
+	}
+	link := filepath.Join(sourceRoot, "link.iso")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Fatal(err)
+	}
+	games[0].Discs[0].SourcePath = link
+	if _, err := manager.Build(context.Background(), games[:1]); err == nil {
+		t.Fatal("source symlink accepted")
+	}
+}
+
+func TestExtractedFSTFilesMapToOriginalSources(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	fstRoot := filepath.Join(sourceRoot, "Extracted [GFST01]")
+	if err := writeSyntheticFST(fstRoot, "GFST01"); err != nil {
+		t.Fatal(err)
+	}
+	result, err := Scan(sourceRoot)
+	if err != nil || len(result.Games) != 1 {
+		t.Fatalf("scan=%#v err=%v", result, err)
+	}
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), result.Games)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := map[string]string{
+		"/sys/boot.bin":      filepath.Join(fstRoot, "sys", "boot.bin"),
+		"/sys/main.dol":      filepath.Join(fstRoot, "sys", "main.dol"),
+		"/files/fixture.bin": filepath.Join(fstRoot, "files", "fixture.bin"),
+	}
+	for suffix, source := range expected {
+		found := false
+		for _, file := range manifest.Files {
+			if strings.HasSuffix(file.VirtualPath, suffix) {
+				found = true
+				if file.SourcePath != source || file.Format != "fst" {
+					t.Fatalf("FST mapping=%#v want source=%s", file, source)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("missing mapped FST file %s", suffix)
+		}
+	}
+	if _, err = os.Stat(filepath.Join(filepath.Dir(manifest.LayoutPath), "library.img")); !os.IsNotExist(err) {
+		t.Fatal("FST build created payload image")
+	}
+	if err = os.WriteFile(filepath.Join(fstRoot, "files", "added.bin"), []byte("changed"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err = ValidateLibraryManifest(manager.Root(), manifest); err == nil ||
+		!strings.Contains(err.Error(), "FST tree changed") {
+		t.Fatalf("changed FST tree validation error=%v", err)
+	}
+}
+
+func TestInvalidAndCanceledGenerationDoNotReplaceActive(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	first, err := manager.Build(context.Background(), games[:1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeBefore, _ := os.ReadFile(filepath.Join(manager.Root(), "active.json"))
+	bad := games[1]
+	bad.Discs[0].SourcePath = filepath.Join(root, "missing.iso")
+	if _, err = manager.Build(context.Background(), []Game{bad}); err == nil {
+		t.Fatal("invalid rebuild succeeded")
+	}
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err = manager.Build(canceled, games); err == nil {
+		t.Fatal("canceled rebuild succeeded")
+	}
+	activeAfter, _ := os.ReadFile(filepath.Join(manager.Root(), "active.json"))
+	if !bytes.Equal(activeBefore, activeAfter) {
+		t.Fatal("failed build replaced active generation")
+	}
+	active, err := manager.Active()
+	if err != nil || active.GenerationID != first.GenerationID {
+		t.Fatalf("active generation lost: %#v err=%v", active, err)
+	}
+}
+
+func TestLegacySchemaOneDetectedButNotDeleted(t *testing.T) {
+	root := t.TempDir()
+	generation := filepath.Join(root, "managed", "generations", "legacy-safe")
+	if err := os.MkdirAll(generation, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(generation, "library.img"), []byte("legacy"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	config := DefaultLibraryConfig()
+	config.SourceRoot = root
+	manager, err := NewLibraryManager(filepath.Join(root, "managed"), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := manager.LegacyGenerations(); len(got) != 1 || got[0] != "legacy-safe" {
+		t.Fatalf("legacy generations=%v", got)
+	}
+	if _, err = os.Stat(filepath.Join(generation, "library.img")); err != nil {
+		t.Fatal("legacy image was automatically deleted")
+	}
+}
+
+func TestLibrarySizingLimitsAndExplicitEmulatedRejection(t *testing.T) {
 	config := DefaultLibraryConfig()
 	size, err := CalculateLibrarySize(4<<30, config)
 	if err != nil {
@@ -122,86 +502,19 @@ func TestLibrarySizingLimitsAndOverflow(t *testing.T) {
 	if _, err = CalculateLibrarySize(math.MaxInt64, DefaultLibraryConfig()); err == nil {
 		t.Fatal("integer overflow was accepted")
 	}
-}
-
-func TestLibraryRejectsUnsafeTitleAndFAT32Overflow(t *testing.T) {
-	if _, err := libraryOutputDir(Game{ID: "GTEST1", Title: "../escape"}); err == nil {
-		t.Fatal("path traversal title was accepted")
-	}
-	manager, err := NewLibraryManager(filepath.Join(t.TempDir(), "managed"), DefaultLibraryConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	game := Game{
-		ID: "GTEST1", Title: "Too Large", Validation: "valid",
-		Discs: []Disc{{
-			ID: "GTEST1", Number: 0, Format: "iso", Validation: "valid",
-			SourcePath: "/not/read", PhysicalSize: fat32MaximumFileSize + 1,
-		}},
-	}
-	if _, err = manager.Build(context.Background(), []Game{game}); err == nil {
-		t.Fatal("FAT32 oversized source was accepted")
-	}
-}
-
-func TestInvalidGenerationCannotReplaceActive(t *testing.T) {
-	root := t.TempDir()
-	games := libraryGames(t, filepath.Join(root, "sources"))
-	manager, err := NewLibraryManager(filepath.Join(root, "managed"), DefaultLibraryConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	first, err := manager.Build(context.Background(), games)
-	if err != nil {
-		t.Fatal(err)
-	}
-	activeBefore, err := os.ReadFile(filepath.Join(manager.Root(), "active.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	bad := games[0]
-	bad.Discs[0].SourcePath = filepath.Join(root, "missing.iso")
-	if _, err = manager.Build(context.Background(), []Game{bad}); err == nil {
-		t.Fatal("invalid rebuild succeeded")
-	}
-	activeAfter, err := os.ReadFile(filepath.Join(manager.Root(), "active.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(activeAfter) != string(activeBefore) {
-		t.Fatal("failed build replaced active generation")
-	}
-	active, err := manager.Active()
-	if err != nil || active.GenerationID != first.GenerationID {
-		t.Fatalf("active generation lost: %#v err=%v", active, err)
-	}
-}
-
-func TestManifestEscapeMissingImageAndSizeMismatchRejected(t *testing.T) {
-	root := t.TempDir()
-	manifest := LibraryManifest{
-		Schema: LibrarySchema, GenerationID: "safe", Complete: true,
-		Filesystem: "fat32", ImagePath: filepath.Join(root, "..", "escape.img"),
-		TitleCount: 1, Titles: []LibraryTitle{{ID: "GTEST1", DiscCount: 1}},
-	}
-	if err := ValidateLibraryManifest(root, manifest); err == nil {
-		t.Fatal("manifest path escape accepted")
-	}
-	manifest.ImagePath = filepath.Join(root, "missing.img")
-	if err := ValidateLibraryManifest(root, manifest); err == nil {
-		t.Fatal("missing image accepted")
-	}
-	if err := os.WriteFile(manifest.ImagePath, []byte("short"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	manifest.VolumeSize = 99
-	if err := ValidateLibraryManifest(root, manifest); err == nil {
-		t.Fatal("image size mismatch accepted")
+	config = DefaultLibraryConfig()
+	config.Mode = MemoryCardEmulated
+	if _, err = NewLibraryManager(filepath.Join(t.TempDir(), "managed"), config); err == nil ||
+		!strings.Contains(err.Error(), "unavailable") {
+		t.Fatalf("emulated mode did not fail clearly: %v", err)
 	}
 }
 
 func TestActivePointerRejectsTraversal(t *testing.T) {
-	manager, err := NewLibraryManager(filepath.Join(t.TempDir(), "managed"), DefaultLibraryConfig())
+	root := t.TempDir()
+	config := DefaultLibraryConfig()
+	config.SourceRoot = root
+	manager, err := NewLibraryManager(filepath.Join(root, "managed"), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,5 +524,28 @@ func TestActivePointerRejectsTraversal(t *testing.T) {
 	}
 	if _, err = manager.Active(); err == nil {
 		t.Fatal("active generation traversal accepted")
+	}
+}
+
+func TestUnallocatedVirtualSectorsAreZero(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), games[:1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend, err := OpenLibraryBackend(manager.Root(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Close()
+	buffer := make([]byte, 4096)
+	if _, err = backend.ReadAt(buffer, backend.Size()-int64(len(buffer))); err != nil && err != io.EOF {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(buffer, make([]byte, len(buffer))) {
+		t.Fatal("unallocated virtual range is not zero")
 	}
 }

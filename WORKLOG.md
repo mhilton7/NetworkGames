@@ -631,3 +631,34 @@
   failed banner/boot access with DOS read-only entries, and immediate success
   after changing only those entries to archive attributes confirm the root
   cause end to end. Sustained gameplay and a later reconnect cycle remain.
+
+## 2026-07-27 — Complete GameCube library no-copy backend
+
+- Confirmed schema 1 summed every disc's physical size, allocated and formatted
+  a complete `library.img`, copied ISO/GCM/CISO or every FST file into it, and
+  retained multiple payload-bearing generations.
+- Replaced the complete-library path with schema 2 compact FAT32 metadata plus
+  a sorted source-extent map. NBD reads resolve metadata, immutable source
+  ranges, and zero padding without staging complete payloads. A bounded
+  read-only handle cache performs identity checks and closes on backend close.
+- ISO and GCM map as `game.iso`/`disc2.iso`, CISO maps as
+  `game.ciso`/`disc2.ciso`, and extracted FST files map individually to their
+  validated original files. FST tree changes invalidate activation.
+- Physical memory-card mode is fully read-only. Emulated mode now fails
+  configuration explicitly because a bounded save-only overlay is not yet
+  implemented; it never falls back to a copied image.
+- Schema-1 copied generations are detected and reported but never deleted
+  automatically. Offline, explicitly targeted cleanup is documented.
+- Measured synthetic fixture: 6,291,456 source bytes, 8,589,934,592 apparent
+  virtual bytes, 2,252,800 physically allocated generation bytes, three mapped
+  files/extents, and zero overlay bytes. Evidence is recorded in
+  `reports/gamecube-no-copy-storage.json`.
+- `make test`, `make static`, `make compose`, `make oci`,
+  `go test -race ./server/host-daemon/...`,
+  `go vet ./server/host-daemon/...`, the many-extent benchmark, and
+  `git diff --check` pass. Exact repository-root `gofmt -w .` and
+  `go mod tidy` encounter pre-existing unreadable root-owned Pi firmware
+  artifacts under `build/pi-gen-zero-w-armhf`; scoped Go formatting passes and
+  no module-file change is required.
+- No physical GameCube Wii/USB Loader GX/Nintendont test hardware was available:
+  `DEFERRED_HARDWARE_UNAVAILABLE`.
