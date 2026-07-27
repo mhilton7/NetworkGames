@@ -44,6 +44,15 @@ At upstream and TrueNAS firewalls, allow TCP 8445 only from the management CIDR
 and TCP 10809 only from explicit Pi IPs or their dedicated CIDR. Deny both from
 WAN networks. Compose port publishing does not replace firewall policy.
 
+Automatic platform switching is optional. To enable it, copy the Pi's exact
+`/etc/wiibridge/device.crt` public certificate into the host certificate
+dataset, then configure `WIIBRIDGE_PI_URL`, `WIIBRIDGE_PI_ADMIN_TOKEN`, and
+`WIIBRIDGE_PI_CERT` together. The URL must use HTTPS and port 9443. Permit the
+Host app to reach only that Pi and port; do not expose the Pi controller to the
+internet. Leave all three values empty to retain manual switching. See
+`docs/automatic-platform-switching.md` for certificate-pinning, failure, and
+rotation behavior.
+
 Paste the resolved Compose YAML into Install via YAML. After installation,
 confirm healthy state, then capture `docker inspect`/Apps details, mounts,
 listeners, and sanitized logs using `tests/truenas/capture-evidence.sh`.
