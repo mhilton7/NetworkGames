@@ -23,11 +23,16 @@ func testApp(t *testing.T) *app {
 		disk: disk,
 		scan: scanner.Result{Games: []model.Game{{
 			ID: "TEST01", Title: "Synthetic Wii", Size: 512,
+		}}, Rejected: []scanner.Rejection{{
+			Path: "/library/broken.wbfs", Reason: "invalid WBFS magic",
 		}}},
 		gcScan: gamecube.Result{Games: []gamecube.Game{{
 			ID: "GTEST0", Title: "Synthetic GameCube", Region: "USA",
 			Format: "iso", DiscCount: 1, Validation: "valid",
+		}}, Rejected: []gamecube.Rejection{{
+			Path: "/library/unsupported.nkit.iso", Reason: "NKit images are unsupported",
 		}}},
+		root:    "/library",
 		started: time.Now(),
 		csrf:    "test-csrf",
 	}
@@ -69,9 +74,24 @@ func TestDashboardProvidesPlatformFiltersWithoutHidingWii(t *testing.T) {
 	for _, expected := range []string{
 		"All", "Wii", "GameCube", "Synthetic Wii", "Synthetic GameCube",
 		"Wii remains the safe default export", "Published snapshot", "Library summary",
+		"Library review", "broken.wbfs", "invalid WBFS magic",
+		"unsupported.nkit.iso", "NKit images are unsupported", "Rescan library",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("dashboard missing %q", expected)
+		}
+	}
+}
+
+func TestLibraryReviewSeparatesScannerCounts(t *testing.T) {
+	a := testApp(t)
+	request := httptest.NewRequest("GET", "/", nil)
+	response := httptest.NewRecorder()
+	a.dashboard(response, request)
+	body := response.Body.String()
+	for _, expected := range []string{"1 Wii", "1 GameCube", "2 items", "open details"} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("review panel missing %q", expected)
 		}
 	}
 }
