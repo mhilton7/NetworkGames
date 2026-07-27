@@ -43,10 +43,12 @@ sudo cp /etc/wiibridge/device.crt /path/to/removable-or-secure-transfer/pi-devic
 Do not copy `device.key`. Place `pi-device.crt` in the TrueNAS certificate
 dataset and compare its SHA-256 with the value recorded on the Pi.
 
-Set all three values in `deploy/truenas/.env`:
+Set the token and pinned certificate in `deploy/truenas/.env`. The URL is an
+optional initial address; when it is blank, enter the Pi's literal IP address
+from the authenticated dashboard:
 
 ```text
-WIIBRIDGE_PI_URL=https://PI_MANAGEMENT_ADDRESS:9443
+WIIBRIDGE_PI_URL=
 WIIBRIDGE_PI_ADMIN_TOKEN=THE_EXISTING_PI_MANAGEMENT_PASSWORD
 WIIBRIDGE_PI_CERT=/certs/pi-device.crt
 ```
@@ -56,9 +58,10 @@ administrator token. Keep it out of Git. Restrict the Host app's network access
 to the single Pi address and TCP 9443.
 
 Restart only the Host app after reviewing the configuration. The dashboard
-will show “Automatic safety sequence enabled.” If any of the three values is
-missing or invalid, the Host refuses startup instead of silently falling back
-to an insecure partial configuration.
+will show “Automatic safety sequence enabled.” The token and certificate are
+required. If the URL is blank, status and controls remain offline until an
+administrator saves the Pi IP in the dashboard. The management port remains
+fixed at 9443 and the pinned certificate remains mandatory.
 
 ## Operation
 
@@ -96,11 +99,13 @@ poweroff helper. No arbitrary action name or command text is accepted.
 
 ## Live Pi status
 
-When automatic coordination is configured, the Host dashboard requests
-`GET /api/v1/pi/status` every three seconds. The Host retrieves each fresh
-result through the same certificate-pinned HTTPS connection and independent Pi
-administrator token used for switching. The browser never receives that token
-or the pinned certificate.
+When automatic coordination is configured, one Host background worker requests
+fresh Pi state every ten seconds. Dashboard browsers request
+`GET /api/v1/pi/status`, which returns only the cached result; opening more
+dashboard windows never creates more Pi traffic. Page rendering does not wait
+for the Pi. The Host retrieves each fresh result through the same
+certificate-pinned HTTPS connection and independent Pi administrator token used
+for switching. The browser never receives that token or the pinned certificate.
 
 The panel reports controller and provisioning state, export mode, NBD
 connection, USB attachment and controller state, detected board, network
@@ -108,6 +113,12 @@ addresses, and automatic-attach state. If the Pi is offline, authentication
 fails, its certificate does not match, or the request times out, the panel
 changes to `Unavailable` and retries. The dashboard receives a deliberately
 generic error instead of transport or credential details.
+
+The dashboard also provides an authenticated, CSRF-protected Raspberry Pi IP
+address control. It accepts only a literal IPv4 or IPv6 address, always uses
+HTTPS port 9443, and retains the existing pinned certificate and administrator
+token. The address is stored with mode `0600` under the Host data directory.
+Arbitrary URLs, hostnames, ports, paths, and credentials are rejected.
 
 ## Disable or recover
 

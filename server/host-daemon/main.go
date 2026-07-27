@@ -62,6 +62,8 @@ type app struct {
 type piController interface {
 	Action(context.Context, string) error
 	Status(context.Context) (bridgecontrol.Status, error)
+	Address() string
+	SetAddress(context.Context, string) error
 }
 
 type authFailure struct {
@@ -182,14 +184,16 @@ func serve() error {
 		tokenSum: sha256.Sum256([]byte(token)), started: time.Now(), store: database,
 		failures: make(map[string]authFailure), csrf: hex.EncodeToString(csrfSum[:]),
 		imports: make(map[string]importJob)}
-	a.pi, err = bridgecontrol.New(
+	piManager, err := bridgecontrol.NewManager(
 		os.Getenv("WIIBRIDGE_PI_URL"),
 		os.Getenv("WIIBRIDGE_PI_ADMIN_TOKEN"),
 		os.Getenv("WIIBRIDGE_PI_CERT"),
+		filepath.Join(dataDir, "pi-address"),
 	)
 	if err != nil {
 		return fmt.Errorf("automatic Pi switching configuration: %w", err)
 	}
+	a.pi = piManager
 	a.wii = &wiiExportProfile{app: a}
 	a.exports, err = exportprofile.New(a.wii)
 	if err != nil {
@@ -208,6 +212,9 @@ func serve() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+	if piManager != nil {
+		go piManager.Run(ctx)
+	}
 	nbdListener, err := net.Listen("tcp", env("WIIBRIDGE_NBD_LISTEN", ":10809"))
 	if err != nil {
 		return err
@@ -223,6 +230,7 @@ func serve() error {
 	mux.HandleFunc("GET /healthz", a.health)
 	mux.HandleFunc("GET /api/v1/status", a.auth(a.status))
 	mux.HandleFunc("GET /api/v1/pi/status", a.auth(a.piStatus))
+	mux.HandleFunc("POST /api/v1/pi/address", a.auth(a.setPiAddress))
 	mux.HandleFunc("GET /assets/pi-status.js", a.auth(piStatusScript))
 	mux.HandleFunc("GET /api/v1/scan", a.auth(a.scanResult))
 	mux.HandleFunc("POST /api/v1/scan", a.auth(a.rescan))
@@ -404,6 +412,26 @@ func (a *app) piStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"connected": true, "pi": status})
 }
 
+func (a *app) setPiAddress(w http.ResponseWriter, r *http.Request) {
+	if a.pi == nil {
+		http.Error(w, "Pi connection is not configured", http.StatusServiceUnavailable)
+		return
+	}
+	address := strings.TrimSpace(r.FormValue("address"))
+	if net.ParseIP(address) == nil {
+		http.Error(w, "Pi address must be a literal IPv4 or IPv6 address", http.StatusBadRequest)
+		return
+	}
+	if err := a.pi.SetAddress(r.Context(), address); err != nil {
+		slog.Warn("cannot update Pi address", "error", err)
+		http.Error(w, "Pi address update failed", http.StatusInternalServerError)
+		return
+	}
+	respondAction(w, r, http.StatusOK,
+		map[string]string{"status": "updated", "address": a.pi.Address()},
+		"Raspberry Pi address updated; live status is reconnecting.", "all")
+}
+
 func piStatusScript(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	_, _ = w.Write([]byte(`(() => {
@@ -443,7 +471,7 @@ func piStatusScript(w http.ResponseWriter, _ *http.Request) {
     }
   }
   refresh();
-  window.setInterval(refresh, 3000);
+  window.setInterval(refresh, 10000);
 })();`))
 }
 
@@ -962,14 +990,9 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 			importFailed++
 		}
 	}
-	var livePi bridgecontrol.Status
-	piConnected := false
+	piAddress := ""
 	if a.pi != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		var statusErr error
-		livePi, statusErr = a.pi.Status(ctx)
-		cancel()
-		piConnected = statusErr == nil
+		piAddress = a.pi.Address()
 	}
 	data := map[string]any{
 		"Version": version, "Snapshot": snapshot,
@@ -982,8 +1005,9 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"GCRejected":      gameCubeRejected,
 		"Review":          review,
 		"AutomaticSwitch": a.pi != nil,
-		"PiConnected":     piConnected,
-		"PiStatus":        livePi,
+		"PiConnected":     false,
+		"PiStatus":        bridgecontrol.Status{},
+		"PiAddress":       piAddress,
 		"ImportActive":    importActive, "ImportReady": importReady, "ImportFailed": importFailed,
 	}
 	if err := hostDashboard.Execute(w, data); err != nil {
@@ -1014,13 +1038,13 @@ var hostDashboard = template.Must(template.New("host").Funcs(template.FuncMap{
 <title>WiiBridge Host</title>
 <style>
 :root{color-scheme:dark;--bg:#080b12;--panel:#111724;--panel2:#161e2e;--line:#273349;--text:#f4f7fb;--muted:#9eabc0;--blue:#56a8ff;--cyan:#55e2d5;--green:#71e39a;--amber:#ffc766;--red:#ff7b87;--shadow:0 20px 50px #0007}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#12315c66,transparent 32rem),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}a{color:inherit}.shell{max-width:1240px;margin:auto;padding:28px 22px 64px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:13px}.mark{display:grid;place-items:center;width:44px;height:44px;border:1px solid #70b8ff66;border-radius:14px;background:linear-gradient(145deg,#173861,#0d1c31);box-shadow:inset 0 1px #ffffff24,0 8px 30px #2d83dc33;font-weight:850;color:#8dc9ff}.brand h1{font-size:20px;line-height:1.1;margin:0}.brand p,.muted{color:var(--muted);margin:3px 0 0}.status{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#0d1320}.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}.dot.offline{background:var(--red);box-shadow:0 0 14px var(--red)}.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:18px;margin-bottom:18px}.card{border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,#151d2bfa,#0d121dfa);box-shadow:var(--shadow)}.hero-main{padding:28px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.hero h2{font-size:clamp(27px,4vw,44px);line-height:1.05;letter-spacing:-.04em;margin:12px 0}.hero p{max-width:680px;color:var(--muted);font-size:16px}.snapshot{padding:24px}.snapshot code{display:block;overflow:hidden;text-overflow:ellipsis;color:#b9c6da;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric{display:block;padding:18px;text-decoration:none}.metric strong{display:block;font-size:28px;letter-spacing:-.04em}.metric span{color:var(--muted);font-size:13px}.metric[href]:hover{border-color:#496789}.pi-live{padding:20px;margin:18px 0}.pi-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.pi-head h2{margin:0}.pi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:15px}.pi-value{padding:12px;border:1px solid var(--line);border-radius:12px;background:#0b111b}.pi-value small{display:block;color:var(--muted)}.pi-value strong{display:block;overflow-wrap:anywhere}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:24px 0 16px}.tabs{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:14px;background:#0d131e}.tab{padding:8px 14px;border-radius:10px;text-decoration:none;color:var(--muted);font-weight:700}.tab.active,.tab:hover{background:#1d2a3d;color:var(--text)}.search{display:flex;gap:8px;min-width:min(100%,350px)}input,select{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a101a;color:var(--text);padding:10px 12px}button,.button{appearance:none;border:1px solid #3a7fc5;border-radius:10px;background:linear-gradient(#2786db,#1762a5);color:white;padding:9px 13px;font-weight:750;cursor:pointer;text-decoration:none}button:hover{filter:brightness(1.12)}button.secondary{border-color:var(--line);background:#172131}.danger{border-color:#a74450!important;background:#5d2028!important}.notice{margin:16px 0;padding:13px 16px;border:1px solid #347f7566;border-radius:13px;background:#14332e;color:#9ff4dc}.section-head{display:flex;justify-content:space-between;align-items:end;margin:28px 0 12px}.section-head h2{margin:0;font-size:22px}.section-head p{margin:0;color:var(--muted)}.table-wrap{overflow:auto}.library{width:100%;border-collapse:collapse}.library th{color:#91a2ba;font-size:11px;text-transform:uppercase;letter-spacing:.1em}.library th,.library td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line)}.library tr:last-child td{border:0}.title{font-weight:750}.tag{display:inline-flex;padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:#b8c7da;background:#111a29;font-size:12px}.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}.game{padding:20px}.game-top{display:flex;justify-content:space-between;gap:12px}.game h3{margin:5px 0 2px;font-size:19px}.metadata{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.health{padding:11px 12px;border-radius:11px;background:#0b111b;color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.actions form{margin:0}details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;color:#b9c9dc;font-weight:700}.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.settings label{color:var(--muted);font-size:12px}.settings button{grid-column:1/-1}.empty{padding:28px;text-align:center;color:var(--muted)}.review{margin-top:24px;padding:0 20px 20px}.review>summary{padding:20px 0;font-size:17px}.review-help{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.review-help p{margin:0;color:var(--muted)}.reason{color:#ffbec4}.path{word-break:break-all}.switcher{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px;margin-top:24px}.switcher h2{margin:0;font-size:18px}.switcher p{margin:4px 0 0;color:var(--muted)}.power{padding:0 20px 20px;margin-top:14px}.power form{margin-top:12px}.confirm{display:flex;align-items:center;gap:8px;color:var(--muted)}.confirm input{width:auto}footer{margin-top:30px;color:#718096;font-size:12px}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#12315c66,transparent 32rem),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}a{color:inherit}.shell{max-width:1240px;margin:auto;padding:28px 22px 64px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:13px}.mark{display:grid;place-items:center;width:44px;height:44px;border:1px solid #70b8ff66;border-radius:14px;background:linear-gradient(145deg,#173861,#0d1c31);box-shadow:inset 0 1px #ffffff24,0 8px 30px #2d83dc33;font-weight:850;color:#8dc9ff}.brand h1{font-size:20px;line-height:1.1;margin:0}.brand p,.muted{color:var(--muted);margin:3px 0 0}.status{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#0d1320}.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}.dot.offline{background:var(--red);box-shadow:0 0 14px var(--red)}.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:18px;margin-bottom:18px}.card{border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,#151d2bfa,#0d121dfa);box-shadow:var(--shadow)}.hero-main{padding:28px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.hero h2{font-size:clamp(27px,4vw,44px);line-height:1.05;letter-spacing:-.04em;margin:12px 0}.hero p{max-width:680px;color:var(--muted);font-size:16px}.snapshot{padding:24px}.snapshot code{display:block;overflow:hidden;text-overflow:ellipsis;color:#b9c6da;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric{display:block;padding:18px;text-decoration:none}.metric strong{display:block;font-size:28px;letter-spacing:-.04em}.metric span{color:var(--muted);font-size:13px}.metric[href]:hover{border-color:#496789}.pi-live{padding:20px;margin:18px 0}.pi-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.pi-head h2{margin:0}.pi-address{display:flex;gap:8px;align-items:end;margin-top:14px}.pi-address label{flex:1;color:var(--muted);font-size:12px}.pi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:15px}.pi-value{padding:12px;border:1px solid var(--line);border-radius:12px;background:#0b111b}.pi-value small{display:block;color:var(--muted)}.pi-value strong{display:block;overflow-wrap:anywhere}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:24px 0 16px}.tabs{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:14px;background:#0d131e}.tab{padding:8px 14px;border-radius:10px;text-decoration:none;color:var(--muted);font-weight:700}.tab.active,.tab:hover{background:#1d2a3d;color:var(--text)}.search{display:flex;gap:8px;min-width:min(100%,350px)}input,select{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a101a;color:var(--text);padding:10px 12px}button,.button{appearance:none;border:1px solid #3a7fc5;border-radius:10px;background:linear-gradient(#2786db,#1762a5);color:white;padding:9px 13px;font-weight:750;cursor:pointer;text-decoration:none}button:hover{filter:brightness(1.12)}button.secondary{border-color:var(--line);background:#172131}.danger{border-color:#a74450!important;background:#5d2028!important}.notice{margin:16px 0;padding:13px 16px;border:1px solid #347f7566;border-radius:13px;background:#14332e;color:#9ff4dc}.section-head{display:flex;justify-content:space-between;align-items:end;margin:28px 0 12px}.section-head h2{margin:0;font-size:22px}.section-head p{margin:0;color:var(--muted)}.table-wrap{overflow:auto}.library{width:100%;border-collapse:collapse}.library th{color:#91a2ba;font-size:11px;text-transform:uppercase;letter-spacing:.1em}.library th,.library td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line)}.library tr:last-child td{border:0}.title{font-weight:750}.tag{display:inline-flex;padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:#b8c7da;background:#111a29;font-size:12px}.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}.game{padding:20px}.game-top{display:flex;justify-content:space-between;gap:12px}.game h3{margin:5px 0 2px;font-size:19px}.metadata{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.health{padding:11px 12px;border-radius:11px;background:#0b111b;color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.actions form{margin:0}details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;color:#b9c9dc;font-weight:700}.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.settings label{color:var(--muted);font-size:12px}.settings button{grid-column:1/-1}.empty{padding:28px;text-align:center;color:var(--muted)}.review{margin-top:24px;padding:0 20px 20px}.review>summary{padding:20px 0;font-size:17px}.review-help{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.review-help p{margin:0;color:var(--muted)}.reason{color:#ffbec4}.path{word-break:break-all}.switcher{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px;margin-top:24px}.switcher h2{margin:0;font-size:18px}.switcher p{margin:4px 0 0;color:var(--muted)}.power{padding:0 20px 20px;margin-top:14px}.power form{margin-top:12px}.confirm{display:flex;align-items:center;gap:8px;color:var(--muted)}.confirm input{width:auto}footer{margin-top:30px;color:#718096;font-size:12px}
 @media(max-width:760px){.hero{grid-template-columns:1fr}.metrics,.pi-grid{grid-template-columns:repeat(2,1fr)}.toolbar,.topbar,.switcher,.pi-head{align-items:stretch;flex-direction:column}.search{min-width:0}.tabs{overflow:auto}.library th:nth-child(1),.library td:nth-child(1){display:none}.shell{padding:18px 14px 45px}}
 </style></head><body><main class="shell">
 <header class="topbar"><div class="brand"><div class="mark" aria-hidden="true">WB</div><div><h1>WiiBridge Host</h1><p>Private game-library bridge</p></div></div><div class="status"><span class="dot"></span><span><strong>{{.Platform}}</strong> · {{.State}}</span></div></header>
 {{if .Notice}}<div class="notice" role="status">{{.Notice}}</div>{{end}}
 <section class="hero"><div class="card hero-main"><span class="eyebrow">Direct Pi-to-Wii storage</span><h2>Your library, ready at the console.</h2><p>Browse validated Wii and GameCube backups, prepare Nintendont exports, and control the active read-only storage profile without changing source media.</p></div><aside class="card snapshot"><span class="eyebrow">Published snapshot</span><h3>Catalog is synchronized</h3><code title="{{.Snapshot}}">{{.Snapshot}}</code><p class="muted">Host version {{.Version}}</p></aside></section>
-{{if .AutomaticSwitch}}<section class="card pi-live" id=pi-live data-status-url=/api/v1/pi/status><div class=pi-head><div><span class=eyebrow>Live Raspberry Pi connection</span><h2><span class="dot {{if not .PiConnected}}offline{{end}}" id=pi-dot></span> <span id=pi-connection>{{if .PiConnected}}Connected{{else}}Unavailable{{end}}</span></h2></div><span class=tag id=pi-updated>Checking now</span></div><div class=pi-grid><div class=pi-value><small>Controller state</small><strong id=pi-state>{{if .PiConnected}}{{.PiStatus.State}}{{else}}unknown{{end}}</strong></div><div class=pi-value><small>Export mode</small><strong id=pi-export>{{if .PiConnected}}{{.PiStatus.ExportMode}}{{else}}unknown{{end}}</strong></div><div class=pi-value><small>NBD / USB</small><strong id=pi-storage>{{if .PiConnected}}{{if .PiStatus.NBDConnected}}NBD connected{{else}}NBD disconnected{{end}} · {{if .PiStatus.USBAttached}}USB attached{{else}}USB detached{{end}}{{else}}unavailable{{end}}</strong></div><div class=pi-value><small>USB controller</small><strong id=pi-usb>{{if .PiConnected}}{{.PiStatus.USBController}} · {{.PiStatus.USBState}}{{else}}unavailable{{end}}</strong></div><div class=pi-value><small>Board</small><strong id=pi-board>{{if .PiConnected}}{{.PiStatus.Board}}{{else}}unavailable{{end}}</strong></div><div class=pi-value><small>Network addresses</small><strong id=pi-addresses>{{if .PiConnected}}{{range $i,$v := .PiStatus.Addresses}}{{if $i}}, {{end}}{{$v}}{{end}}{{else}}unavailable{{end}}</strong></div><div class=pi-value><small>Provisioning</small><strong id=pi-provision>{{if .PiConnected}}{{if .PiStatus.Provisioned}}Ready{{else}}Incomplete{{end}}{{else}}unknown{{end}}</strong></div><div class=pi-value><small>Automatic attach</small><strong id=pi-attach>{{if .PiConnected}}{{if .PiStatus.AutoAttach}}Enabled{{else}}Disabled{{end}}{{else}}unknown{{end}}</strong></div></div></section><script src=/assets/pi-status.js defer></script>{{end}}
+{{if .AutomaticSwitch}}<section class="card pi-live" id=pi-live data-status-url=/api/v1/pi/status><div class=pi-head><div><span class=eyebrow>Live Raspberry Pi connection</span><h2><span class="dot offline" id=pi-dot></span> <span id=pi-connection>Checking</span></h2></div><span class=tag id=pi-updated>Waiting for cached status</span></div><form class=pi-address method=post action=/api/v1/pi/address><input type=hidden name=csrf value="{{.CSRF}}"><label>Raspberry Pi IP address<input name=address value="{{.PiAddress}}" inputmode=decimal placeholder="192.0.2.10" required></label><button class=secondary>Save address</button></form><p class=muted>Port 9443 and the pinned Pi certificate remain fixed. Status is collected once every 10 seconds regardless of how many dashboards are open.</p><div class=pi-grid><div class=pi-value><small>Controller state</small><strong id=pi-state>unknown</strong></div><div class=pi-value><small>Export mode</small><strong id=pi-export>unknown</strong></div><div class=pi-value><small>NBD / USB</small><strong id=pi-storage>unavailable</strong></div><div class=pi-value><small>USB controller</small><strong id=pi-usb>unavailable</strong></div><div class=pi-value><small>Board</small><strong id=pi-board>unavailable</strong></div><div class=pi-value><small>Network addresses</small><strong id=pi-addresses>unavailable</strong></div><div class=pi-value><small>Provisioning</small><strong id=pi-provision>unknown</strong></div><div class=pi-value><small>Automatic attach</small><strong id=pi-attach>unknown</strong></div></div></section><script src=/assets/pi-status.js defer></script>{{end}}
 <section class="metrics" aria-label="Library summary"><div class="card metric"><strong>{{.TotalWii}}</strong><span>Wii titles</span></div><div class="card metric"><strong>{{.TotalGameCube}}</strong><span>GameCube titles</span></div><div class="card metric"><strong>{{.ImportReady}}</strong><span>Ready imports</span></div><a class="card metric" href="#library-review"><strong>{{.Rejected}}</strong><span>Needs review · open details</span></a></section>
 <div class="toolbar"><nav class="tabs" aria-label="Platform filter"><a class="tab {{if eq .Filter "all"}}active{{end}}" href="?platform=all{{if .Query}}&q={{.Query}}{{end}}">All</a><a class="tab {{if eq .Filter "wii"}}active{{end}}" href="?platform=wii{{if .Query}}&q={{.Query}}{{end}}">Wii</a><a class="tab {{if eq .Filter "gamecube"}}active{{end}}" href="?platform=gamecube{{if .Query}}&q={{.Query}}{{end}}">GameCube</a></nav><form class="search" method=get><input type=hidden name=platform value="{{.Filter}}"><input name=q value="{{.Query}}" placeholder="Search title or game ID" aria-label="Search title or game ID"><button type=submit>Search</button>{{if .Query}}<a class="button secondary" href="?platform={{.Filter}}">Clear</a>{{end}}</form></div>
 {{if ne .Filter "gamecube"}}<section><div class="section-head"><div><h2>Wii library</h2><p>Wii remains the safe default export.</p></div><span class="tag">{{len .Wii}} shown</span></div><div class="card table-wrap">{{if .Wii}}<table class=library><thead><tr><th>Platform</th><th>Title</th><th>Game ID</th><th>Virtual size</th></tr></thead><tbody>{{range .Wii}}<tr><td><span class=tag>Wii</span></td><td class=title>{{.Title}}</td><td><code>{{.ID}}</code></td><td>{{bytes .Size}}</td></tr>{{end}}</tbody></table>{{else}}<div class=empty>No Wii titles match this view.</div>{{end}}</div></section>{{end}}
