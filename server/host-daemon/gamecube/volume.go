@@ -418,6 +418,55 @@ func LoadAndValidateVolume(manifestPath string) (VolumeManifest, error) {
 	return manifest, nil
 }
 
+// FindReadyVolume resolves a prepared export from stable catalog metadata.
+// Catalog scans intentionally defer full hashes, while ready manifests contain
+// those hashes, so their cache keys cannot be recomputed from scan results.
+func FindReadyVolume(cacheRoot string, game Game, mode MemoryCardMode) (VolumeManifest, string, error) {
+	readyRoot := filepath.Join(cacheRoot, "ready")
+	entries, err := os.ReadDir(readyRoot)
+	if err != nil {
+		return VolumeManifest{}, "", err
+	}
+	var (
+		selected     VolumeManifest
+		selectedPath string
+	)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		manifestPath := filepath.Join(readyRoot, entry.Name(), "manifest.json")
+		manifest, loadErr := LoadAndValidateVolume(manifestPath)
+		if loadErr != nil || !sameCatalogSource(manifest, game, mode) {
+			continue
+		}
+		if selectedPath == "" || manifest.Created.After(selected.Created) {
+			selected, selectedPath = manifest, manifestPath
+		}
+	}
+	if selectedPath == "" {
+		return VolumeManifest{}, "", os.ErrNotExist
+	}
+	return selected, selectedPath, nil
+}
+
+func sameCatalogSource(manifest VolumeManifest, game Game, mode MemoryCardMode) bool {
+	if manifest.Mode != mode || manifest.Game.ID != game.ID ||
+		manifest.Game.Revision != game.Revision ||
+		len(manifest.Game.Discs) != len(game.Discs) {
+		return false
+	}
+	for index := range game.Discs {
+		cached, current := manifest.Game.Discs[index], game.Discs[index]
+		if cached.Number != current.Number || cached.Format != current.Format ||
+			cached.SourcePath != current.SourcePath ||
+			cached.PhysicalSize != current.PhysicalSize {
+			return false
+		}
+	}
+	return true
+}
+
 func bytesEqual(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
