@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -384,7 +385,7 @@ func (a *app) gamecubeImports(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, a.imports)
 }
 
-func (a *app) rescan(w http.ResponseWriter, _ *http.Request) {
+func (a *app) rescan(w http.ResponseWriter, r *http.Request) {
 	result, err := scanner.Scan(a.root)
 	if err != nil {
 		http.Error(w, "scan failed", http.StatusInternalServerError)
@@ -407,7 +408,8 @@ func (a *app) rescan(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "snapshot persistence failed", http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, disk.Snapshot())
+	respondAction(w, r, http.StatusOK, disk.Snapshot(),
+		"Library rescan completed.", "all")
 }
 
 func (a *app) findGameCube(id string, revision byte) (gamecube.Game, bool) {
@@ -680,6 +682,9 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 	gameCubeGames := append([]gamecube.Game(nil), a.gcScan.Games...)
 	wiiRejected := len(a.scan.Rejected)
 	gameCubeRejected := len(a.gcScan.Rejected)
+	wiiRejections := append([]scanner.Rejection(nil), a.scan.Rejected...)
+	gameCubeRejections := append([]gamecube.Rejection(nil), a.gcScan.Rejected...)
+	libraryRoot := a.root
 	imports := make(map[string]importJob, len(a.imports))
 	for key, job := range a.imports {
 		imports[key] = job
@@ -713,6 +718,36 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		Backups  []gamecube.SaveBackup
 		Settings gamecube.Settings
 	}
+	type reviewRow struct {
+		Platform string
+		Path     string
+		Reason   string
+	}
+	displayPath := func(path string) string {
+		relative, err := filepath.Rel(libraryRoot, path)
+		if err == nil && relative != "." && relative != ".." &&
+			!strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			return relative
+		}
+		return path
+	}
+	review := make([]reviewRow, 0, wiiRejected+gameCubeRejected)
+	for _, rejected := range wiiRejections {
+		review = append(review, reviewRow{
+			Platform: "Wii", Path: displayPath(rejected.Path), Reason: rejected.Reason,
+		})
+	}
+	for _, rejected := range gameCubeRejections {
+		review = append(review, reviewRow{
+			Platform: "GameCube", Path: displayPath(rejected.Path), Reason: rejected.Reason,
+		})
+	}
+	sort.Slice(review, func(i, j int) bool {
+		if review[i].Platform == review[j].Platform {
+			return review[i].Path < review[j].Path
+		}
+		return review[i].Platform < review[j].Platform
+	})
 	rows := make([]gameCubeRow, 0, len(gameCubeGames))
 	for _, game := range gameCubeGames {
 		backups, err := gamecube.ListSaveBackups(
@@ -751,6 +786,9 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"Query": query, "Notice": strings.TrimSpace(r.URL.Query().Get("notice")),
 		"TotalWii": totalWii, "TotalGameCube": totalGameCube,
 		"Rejected":     wiiRejected + gameCubeRejected,
+		"WiiRejected":  wiiRejected,
+		"GCRejected":   gameCubeRejected,
+		"Review":       review,
 		"ImportActive": importActive, "ImportReady": importReady, "ImportFailed": importFailed,
 	}
 	if err := hostDashboard.Execute(w, data); err != nil {
@@ -781,13 +819,13 @@ var hostDashboard = template.Must(template.New("host").Funcs(template.FuncMap{
 <title>WiiBridge Host</title>
 <style>
 :root{color-scheme:dark;--bg:#080b12;--panel:#111724;--panel2:#161e2e;--line:#273349;--text:#f4f7fb;--muted:#9eabc0;--blue:#56a8ff;--cyan:#55e2d5;--green:#71e39a;--amber:#ffc766;--red:#ff7b87;--shadow:0 20px 50px #0007}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#12315c66,transparent 32rem),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}a{color:inherit}.shell{max-width:1240px;margin:auto;padding:28px 22px 64px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:13px}.mark{display:grid;place-items:center;width:44px;height:44px;border:1px solid #70b8ff66;border-radius:14px;background:linear-gradient(145deg,#173861,#0d1c31);box-shadow:inset 0 1px #ffffff24,0 8px 30px #2d83dc33;font-weight:850;color:#8dc9ff}.brand h1{font-size:20px;line-height:1.1;margin:0}.brand p,.muted{color:var(--muted);margin:3px 0 0}.status{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#0d1320}.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:18px;margin-bottom:18px}.card{border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,#151d2bfa,#0d121dfa);box-shadow:var(--shadow)}.hero-main{padding:28px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.hero h2{font-size:clamp(27px,4vw,44px);line-height:1.05;letter-spacing:-.04em;margin:12px 0}.hero p{max-width:680px;color:var(--muted);font-size:16px}.snapshot{padding:24px}.snapshot code{display:block;overflow:hidden;text-overflow:ellipsis;color:#b9c6da;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric{padding:18px}.metric strong{display:block;font-size:28px;letter-spacing:-.04em}.metric span{color:var(--muted);font-size:13px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:24px 0 16px}.tabs{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:14px;background:#0d131e}.tab{padding:8px 14px;border-radius:10px;text-decoration:none;color:var(--muted);font-weight:700}.tab.active,.tab:hover{background:#1d2a3d;color:var(--text)}.search{display:flex;gap:8px;min-width:min(100%,350px)}input,select{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a101a;color:var(--text);padding:10px 12px}button,.button{appearance:none;border:1px solid #3a7fc5;border-radius:10px;background:linear-gradient(#2786db,#1762a5);color:white;padding:9px 13px;font-weight:750;cursor:pointer;text-decoration:none}button:hover{filter:brightness(1.12)}button.secondary{border-color:var(--line);background:#172131}.notice{margin:16px 0;padding:13px 16px;border:1px solid #347f7566;border-radius:13px;background:#14332e;color:#9ff4dc}.section-head{display:flex;justify-content:space-between;align-items:end;margin:28px 0 12px}.section-head h2{margin:0;font-size:22px}.section-head p{margin:0;color:var(--muted)}.table-wrap{overflow:auto}.library{width:100%;border-collapse:collapse}.library th{color:#91a2ba;font-size:11px;text-transform:uppercase;letter-spacing:.1em}.library th,.library td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line)}.library tr:last-child td{border:0}.title{font-weight:750}.tag{display:inline-flex;padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:#b8c7da;background:#111a29;font-size:12px}.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}.game{padding:20px}.game-top{display:flex;justify-content:space-between;gap:12px}.game h3{margin:5px 0 2px;font-size:19px}.metadata{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.health{padding:11px 12px;border-radius:11px;background:#0b111b;color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.actions form{margin:0}details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;color:#b9c9dc;font-weight:700}.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.settings label{color:var(--muted);font-size:12px}.settings button{grid-column:1/-1}.empty{padding:28px;text-align:center;color:var(--muted)}.switcher{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px;margin-top:24px}.switcher h2{margin:0;font-size:18px}.switcher p{margin:4px 0 0;color:var(--muted)}footer{margin-top:30px;color:#718096;font-size:12px}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#12315c66,transparent 32rem),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}a{color:inherit}.shell{max-width:1240px;margin:auto;padding:28px 22px 64px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:13px}.mark{display:grid;place-items:center;width:44px;height:44px;border:1px solid #70b8ff66;border-radius:14px;background:linear-gradient(145deg,#173861,#0d1c31);box-shadow:inset 0 1px #ffffff24,0 8px 30px #2d83dc33;font-weight:850;color:#8dc9ff}.brand h1{font-size:20px;line-height:1.1;margin:0}.brand p,.muted{color:var(--muted);margin:3px 0 0}.status{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#0d1320}.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:18px;margin-bottom:18px}.card{border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,#151d2bfa,#0d121dfa);box-shadow:var(--shadow)}.hero-main{padding:28px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.hero h2{font-size:clamp(27px,4vw,44px);line-height:1.05;letter-spacing:-.04em;margin:12px 0}.hero p{max-width:680px;color:var(--muted);font-size:16px}.snapshot{padding:24px}.snapshot code{display:block;overflow:hidden;text-overflow:ellipsis;color:#b9c6da;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric{display:block;padding:18px;text-decoration:none}.metric strong{display:block;font-size:28px;letter-spacing:-.04em}.metric span{color:var(--muted);font-size:13px}.metric[href]:hover{border-color:#496789}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:24px 0 16px}.tabs{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:14px;background:#0d131e}.tab{padding:8px 14px;border-radius:10px;text-decoration:none;color:var(--muted);font-weight:700}.tab.active,.tab:hover{background:#1d2a3d;color:var(--text)}.search{display:flex;gap:8px;min-width:min(100%,350px)}input,select{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a101a;color:var(--text);padding:10px 12px}button,.button{appearance:none;border:1px solid #3a7fc5;border-radius:10px;background:linear-gradient(#2786db,#1762a5);color:white;padding:9px 13px;font-weight:750;cursor:pointer;text-decoration:none}button:hover{filter:brightness(1.12)}button.secondary{border-color:var(--line);background:#172131}.notice{margin:16px 0;padding:13px 16px;border:1px solid #347f7566;border-radius:13px;background:#14332e;color:#9ff4dc}.section-head{display:flex;justify-content:space-between;align-items:end;margin:28px 0 12px}.section-head h2{margin:0;font-size:22px}.section-head p{margin:0;color:var(--muted)}.table-wrap{overflow:auto}.library{width:100%;border-collapse:collapse}.library th{color:#91a2ba;font-size:11px;text-transform:uppercase;letter-spacing:.1em}.library th,.library td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line)}.library tr:last-child td{border:0}.title{font-weight:750}.tag{display:inline-flex;padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:#b8c7da;background:#111a29;font-size:12px}.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}.game{padding:20px}.game-top{display:flex;justify-content:space-between;gap:12px}.game h3{margin:5px 0 2px;font-size:19px}.metadata{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.health{padding:11px 12px;border-radius:11px;background:#0b111b;color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.actions form{margin:0}details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;color:#b9c9dc;font-weight:700}.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.settings label{color:var(--muted);font-size:12px}.settings button{grid-column:1/-1}.empty{padding:28px;text-align:center;color:var(--muted)}.review{margin-top:24px;padding:0 20px 20px}.review>summary{padding:20px 0;font-size:17px}.review-help{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.review-help p{margin:0;color:var(--muted)}.reason{color:#ffbec4}.path{word-break:break-all}.switcher{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px;margin-top:24px}.switcher h2{margin:0;font-size:18px}.switcher p{margin:4px 0 0;color:var(--muted)}footer{margin-top:30px;color:#718096;font-size:12px}
 @media(max-width:760px){.hero{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.toolbar,.topbar,.switcher{align-items:stretch;flex-direction:column}.search{min-width:0}.tabs{overflow:auto}.library th:nth-child(1),.library td:nth-child(1){display:none}.shell{padding:18px 14px 45px}}
 </style></head><body><main class="shell">
 <header class="topbar"><div class="brand"><div class="mark" aria-hidden="true">WB</div><div><h1>WiiBridge Host</h1><p>Private game-library bridge</p></div></div><div class="status"><span class="dot"></span><span><strong>{{.Platform}}</strong> · {{.State}}</span></div></header>
 {{if .Notice}}<div class="notice" role="status">{{.Notice}}</div>{{end}}
 <section class="hero"><div class="card hero-main"><span class="eyebrow">Direct Pi-to-Wii storage</span><h2>Your library, ready at the console.</h2><p>Browse validated Wii and GameCube backups, prepare Nintendont exports, and control the active read-only storage profile without changing source media.</p></div><aside class="card snapshot"><span class="eyebrow">Published snapshot</span><h3>Catalog is synchronized</h3><code title="{{.Snapshot}}">{{.Snapshot}}</code><p class="muted">Host version {{.Version}}</p></aside></section>
-<section class="metrics" aria-label="Library summary"><div class="card metric"><strong>{{.TotalWii}}</strong><span>Wii titles</span></div><div class="card metric"><strong>{{.TotalGameCube}}</strong><span>GameCube titles</span></div><div class="card metric"><strong>{{.ImportReady}}</strong><span>Ready imports</span></div><div class="card metric"><strong>{{.Rejected}}</strong><span>Needs review</span></div></section>
+<section class="metrics" aria-label="Library summary"><div class="card metric"><strong>{{.TotalWii}}</strong><span>Wii titles</span></div><div class="card metric"><strong>{{.TotalGameCube}}</strong><span>GameCube titles</span></div><div class="card metric"><strong>{{.ImportReady}}</strong><span>Ready imports</span></div><a class="card metric" href="#library-review"><strong>{{.Rejected}}</strong><span>Needs review · open details</span></a></section>
 <div class="toolbar"><nav class="tabs" aria-label="Platform filter"><a class="tab {{if eq .Filter "all"}}active{{end}}" href="?platform=all{{if .Query}}&q={{.Query}}{{end}}">All</a><a class="tab {{if eq .Filter "wii"}}active{{end}}" href="?platform=wii{{if .Query}}&q={{.Query}}{{end}}">Wii</a><a class="tab {{if eq .Filter "gamecube"}}active{{end}}" href="?platform=gamecube{{if .Query}}&q={{.Query}}{{end}}">GameCube</a></nav><form class="search" method=get><input type=hidden name=platform value="{{.Filter}}"><input name=q value="{{.Query}}" placeholder="Search title or game ID" aria-label="Search title or game ID"><button type=submit>Search</button>{{if .Query}}<a class="button secondary" href="?platform={{.Filter}}">Clear</a>{{end}}</form></div>
 {{if ne .Filter "gamecube"}}<section><div class="section-head"><div><h2>Wii library</h2><p>Wii remains the safe default export.</p></div><span class="tag">{{len .Wii}} shown</span></div><div class="card table-wrap">{{if .Wii}}<table class=library><thead><tr><th>Platform</th><th>Title</th><th>Game ID</th><th>Virtual size</th></tr></thead><tbody>{{range .Wii}}<tr><td><span class=tag>Wii</span></td><td class=title>{{.Title}}</td><td><code>{{.ID}}</code></td><td>{{bytes .Size}}</td></tr>{{end}}</tbody></table>{{else}}<div class=empty>No Wii titles match this view.</div>{{end}}</div></section>{{end}}
 {{if ne .Filter "wii"}}<section><div class="section-head"><div><h2>GameCube library</h2><p>{{if .ImportActive}}{{.ImportActive}} import in progress · {{end}}{{if .ImportFailed}}{{.ImportFailed}} failed import{{else}}Nintendont-compatible exports{{end}}</p></div><span class=tag>{{len .GameCube}} shown</span></div><div class=games>{{range .GameCube}}<article class="card game"><div class=game-top><div><span class=eyebrow>GameCube</span><h3>{{.Title}}</h3><code>{{.ID}} · revision {{.Revision}}</code></div><span class=tag>{{.Validation}}</span></div><div class=metadata><span class=tag>{{.Region}}</span><span class=tag>{{.Format}}</span><span class=tag>{{.DiscCount}} disc{{if ne .DiscCount 1}}s{{end}}</span></div><div class=health>{{if .Backups}}<strong>{{len .Backups}} validated save backups</strong><br>Latest {{time (index .Backups 0).Created}}{{else}}No emulated-memory-card backup recorded yet.{{end}}</div><div class=actions>
@@ -800,6 +838,7 @@ var hostDashboard = template.Must(template.New("host").Funcs(template.FuncMap{
 <label>Video mode<select name=video_mode><option {{if eq .Settings.VideoMode "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.VideoMode "disc"}}selected{{end}}>disc</option><option {{if eq .Settings.VideoMode "ntsc"}}selected{{end}}>ntsc</option><option {{if eq .Settings.VideoMode "pal50"}}selected{{end}}>pal50</option><option {{if eq .Settings.VideoMode "pal60"}}selected{{end}}>pal60</option><option {{if eq .Settings.VideoMode "mpal"}}selected{{end}}>mpal</option></select></label>
 <label>Controller<select name=controller_mode><option {{if eq .Settings.ControllerMode "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.ControllerMode "native"}}selected{{end}}>native</option><option {{if eq .Settings.ControllerMode "hid"}}selected{{end}}>hid</option></select></label>
 <label>Disc speed<select name=disc_speed><option {{if eq .Settings.DiscSpeed "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.DiscSpeed "original"}}selected{{end}}>original</option></select></label><input type=hidden name=return_to_loader value=1><button>Save settings</button></form></details></article>{{else}}<div class="card empty">No GameCube titles match this view.</div>{{end}}</div></section>{{end}}
+<details class="card review" id="library-review" {{if .Rejected}}open{{end}}><summary>Library review — {{.Rejected}} item{{if ne .Rejected 1}}s{{end}}</summary><div class=review-help><p>{{.WiiRejected}} Wii · {{.GCRejected}} GameCube. Rejected files are never modified or exported.</p><form method=post action=/api/v1/scan><input type=hidden name=csrf value="{{.CSRF}}"><button class=secondary>Rescan library</button></form></div>{{if .Review}}<div class=table-wrap><table class=library><thead><tr><th>Scanner</th><th>Source path</th><th>Reason</th></tr></thead><tbody>{{range .Review}}<tr><td><span class=tag>{{.Platform}}</span></td><td class=path><code>{{.Path}}</code></td><td class=reason>{{.Reason}}</td></tr>{{end}}</tbody></table></div>{{else}}<div class=empty>No rejected library entries.</div>{{end}}</details>
 <section class="card switcher"><div><h2>Return to Wii mode</h2><p>Detach USB and disconnect Pi NBD before switching the host export.</p></div><form method=post action=/api/v1/export/wii><input type=hidden name=csrf value="{{.CSRF}}"><button>Use Wii export</button></form></section>
 <footer>WiiBridge keeps source libraries immutable. Hardware deployment and write-enabled GameCube saves remain explicit operator actions.</footer>
 </main></body></html>`))
