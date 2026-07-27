@@ -666,11 +666,11 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "settings invalid", http.StatusConflict)
 			return
 		}
-		key := gamecube.CacheKey(game, settings.MemoryCard)
-		manifestPath := filepath.Join(a.dataDir, "gamecube", "cache", "ready", key, "manifest.json")
-		manifest, err := gamecube.LoadAndValidateVolume(manifestPath)
+		manifest, manifestPath, err := gamecube.FindReadyVolume(
+			filepath.Join(a.dataDir, "gamecube", "cache"), game, settings.MemoryCard)
 		if err != nil {
-			http.Error(w, "GameCube cache is not ready: "+err.Error(), http.StatusConflict)
+			http.Error(w, "GameCube cache is not ready; use Prepare export first",
+				http.StatusConflict)
 			return
 		}
 		backend, err := gamecube.OpenFileBackend(manifest.ImagePath,

@@ -33,6 +33,14 @@ func TestBuildSingleDiscVolumeAndReuseValidatedCache(t *testing.T) {
 	if len(manifest.Game.Discs[0].SHA256) != 64 {
 		t.Fatal("Prepare export did not hash the source image")
 	}
+	found, manifestPath, err := FindReadyVolume(cache, scan.Games[0], MemoryCardPhysical)
+	if err != nil {
+		t.Fatalf("find prepared volume from unhashed catalog metadata: %v", err)
+	}
+	if found.CacheKey != manifest.CacheKey ||
+		manifestPath != filepath.Join(filepath.Dir(manifest.ImagePath), "manifest.json") {
+		t.Fatalf("prepared volume lookup mismatch: found=%#v path=%q", found, manifestPath)
+	}
 	validation, err := ValidateVolume(manifest.ImagePath, manifest)
 	if err != nil {
 		t.Fatal(err)
