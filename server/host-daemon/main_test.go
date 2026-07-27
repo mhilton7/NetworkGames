@@ -77,6 +77,13 @@ func testApp(t *testing.T) *app {
 	return a
 }
 
+func TestDisabledPiManagerProducesNilController(t *testing.T) {
+	controller := configuredPiController(nil)
+	if controller != nil {
+		t.Fatal("disabled Pi manager became a non-nil controller interface")
+	}
+}
+
 func TestWiiProfileRemainsDefaultAndUsesCurrentSnapshot(t *testing.T) {
 	a := testApp(t)
 	if got := a.exports.Platform(); got != "wii" {

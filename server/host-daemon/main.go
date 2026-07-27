@@ -193,7 +193,7 @@ func serve() error {
 	if err != nil {
 		return fmt.Errorf("automatic Pi switching configuration: %w", err)
 	}
-	a.pi = piManager
+	a.pi = configuredPiController(piManager)
 	a.wii = &wiiExportProfile{app: a}
 	a.exports, err = exportprofile.New(a.wii)
 	if err != nil {
@@ -270,6 +270,16 @@ func serve() error {
 	_ = web.Shutdown(shutdown)
 	_ = nbdListener.Close()
 	return err
+}
+
+// configuredPiController prevents a nil *Manager from becoming a non-nil
+// interface value. That distinction matters because dashboard feature checks
+// use the interface to determine whether Pi coordination is enabled.
+func configuredPiController(manager *bridgecontrol.Manager) piController {
+	if manager == nil {
+		return nil
+	}
+	return manager
 }
 
 func env(key, fallback string) string {
