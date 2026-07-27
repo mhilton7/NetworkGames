@@ -41,6 +41,12 @@ bounded systemd start-limit window.
 Catalog switches require detach, disconnect, identity validation, reconnect,
 and reattach.
 
+After Pi provisioning, normal switching, status, reconciliation, reboot, and
+shutdown are performed from the Host dashboard. The Pi page remains a local
+recovery surface. Host browser bootstrap login is `admin` / `wiibridge` on a
+fresh Host data directory and must be replaced at first login; it is separate
+from this Pi's management password.
+
 To force recovery mode, create an empty `wiibridge-recovery` file on the
 boot partition and reboot. Remove the marker after recovery. Password SSH
 remains disabled.

@@ -2,18 +2,26 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	webauth "wiibridge/server/host-daemon/auth"
 	"wiibridge/server/host-daemon/bridgecontrol"
 	"wiibridge/server/host-daemon/exportprofile"
 	"wiibridge/server/host-daemon/gamecube"
 	"wiibridge/server/host-daemon/scanner"
 	"wiibridge/server/host-daemon/vdisk"
+	webui "wiibridge/server/host-daemon/web"
 	"wiibridge/shared/model"
+	"wiibridge/tests/testutil"
 )
 
 type fakePiController struct {
@@ -52,6 +60,20 @@ func testApp(t *testing.T) *app {
 	if err != nil {
 		t.Fatal(err)
 	}
+	dataDir := t.TempDir()
+	gcLibrary, err := gamecube.NewLibraryManager(
+		dataDir+"/gamecube/library", gamecube.DefaultLibraryConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	browser, err := webauth.New(dataDir+"/auth", "admin", "wiibridge", 12*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	renderer, err := webui.New(webui.Functions(humanBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
 	a := &app{
 		disk: disk,
 		scan: scanner.Result{Games: []model.Game{{
@@ -68,6 +90,8 @@ func testApp(t *testing.T) *app {
 		root:    "/library",
 		started: time.Now(),
 		csrf:    "test-csrf",
+		dataDir: dataDir, gcLibrary: gcLibrary, gcMode: gamecube.MemoryCardPhysical,
+		browser: browser, web: renderer, failures: make(map[string]authFailure),
 	}
 	a.wii = &wiiExportProfile{app: a}
 	a.exports, err = exportprofile.New(a.wii)
@@ -91,9 +115,8 @@ func TestDashboardKeepsPiIndicatorsVisibleWhenUnconfigured(t *testing.T) {
 	a.dashboard(response, request)
 	body := response.Body.String()
 	for _, expected := range []string{
-		"Live Raspberry Pi connection", "Raspberry Pi IP address",
-		"Host credentials required", "WIIBRIDGE_PI_ADMIN_TOKEN",
-		"Controller state", "NBD / USB", "/assets/pi-status.js",
+		"Raspberry Pi bridge", "Configured Pi IP",
+		"Controller", "NBD / USB", "/assets/app.js",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("unconfigured dashboard missing %q", expected)
@@ -130,9 +153,10 @@ func TestDashboardProvidesPlatformFiltersWithoutHidingWii(t *testing.T) {
 	body := response.Body.String()
 	for _, expected := range []string{
 		"All", "Wii", "GameCube", "Synthetic Wii", "Synthetic GameCube",
-		"Wii remains the safe default export", "Published snapshot", "Library summary",
-		"Library review", "broken.wbfs", "invalid WBFS magic",
+		"Complete Wii game catalog", "Complete Wii catalog",
+		"Source review", "broken.wbfs", "invalid WBFS magic",
 		"unsupported.nkit.iso", "NKit images are unsupported", "Rescan library",
+		"Activate Wii Library", "Activate GameCube Library",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("dashboard missing %q", expected)
@@ -146,7 +170,9 @@ func TestLibraryReviewSeparatesScannerCounts(t *testing.T) {
 	response := httptest.NewRecorder()
 	a.dashboard(response, request)
 	body := response.Body.String()
-	for _, expected := range []string{"1 Wii", "1 GameCube", "2 items", "open details"} {
+	for _, expected := range []string{
+		"Source review", "2 items", "broken.wbfs", "unsupported.nkit.iso",
+	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("review panel missing %q", expected)
 		}
@@ -315,8 +341,8 @@ func TestDashboardShowsLivePiStatusPanel(t *testing.T) {
 	a.dashboard(response, request)
 	body := response.Body.String()
 	for _, expected := range []string{
-		"Live Raspberry Pi connection", `value="192.0.2.10"`,
-		"once every 10 seconds", "/assets/pi-status.js",
+		"Raspberry Pi bridge", `value="192.0.2.10"`,
+		"/assets/app.js", "Reconcile Connection",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("dashboard missing %q", expected)
@@ -334,6 +360,164 @@ func TestPiAddressControlUsesConfiguredManager(t *testing.T) {
 	if response.Code != 200 || pi.address != "192.0.2.20" {
 		t.Fatalf("address update status=%d address=%q body=%s",
 			response.Code, pi.address, response.Body.String())
+	}
+}
+
+func TestBrowserRedirectAPITokenCompatibilityAndBootstrapRestriction(t *testing.T) {
+	a := testApp(t)
+	token := "this-is-a-valid-api-token"
+	a.tokenSum = sha256.Sum256([]byte(token))
+	protected := a.auth(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	browserRequest := httptest.NewRequest(http.MethodGet, "/", nil)
+	browserRequest.Header.Set("Accept", "text/html")
+	browserResponse := httptest.NewRecorder()
+	protected(browserResponse, browserRequest)
+	if browserResponse.Code != http.StatusSeeOther ||
+		browserResponse.Header().Get("Location") != "/login" {
+		t.Fatalf("browser auth response=%d location=%q",
+			browserResponse.Code, browserResponse.Header().Get("Location"))
+	}
+	apiRequest := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+	apiResponse := httptest.NewRecorder()
+	protected(apiResponse, apiRequest)
+	if apiResponse.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated API status=%d", apiResponse.Code)
+	}
+	for _, authorize := range []func(*http.Request){
+		func(request *http.Request) { request.Header.Set("Authorization", "Bearer "+token) },
+		func(request *http.Request) { request.SetBasicAuth("admin", token) },
+	} {
+		request := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+		authorize(request)
+		response := httptest.NewRecorder()
+		protected(response, request)
+		if response.Code != http.StatusNoContent {
+			t.Fatalf("compatible API authentication status=%d", response.Code)
+		}
+	}
+	form := url.Values{
+		"csrf": {a.csrf}, "username": {"admin"}, "password": {"wiibridge"},
+	}
+	loginRequest := httptest.NewRequest(http.MethodPost, "/login",
+		strings.NewReader(form.Encode()))
+	loginRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	loginResponse := httptest.NewRecorder()
+	a.login(loginResponse, loginRequest)
+	if loginResponse.Code != http.StatusSeeOther ||
+		loginResponse.Header().Get("Location") != "/account/password" {
+		t.Fatalf("bootstrap login status=%d location=%q",
+			loginResponse.Code, loginResponse.Header().Get("Location"))
+	}
+	cookies := loginResponse.Result().Cookies()
+	if len(cookies) != 1 || !cookies[0].Secure || !cookies[0].HttpOnly ||
+		cookies[0].SameSite != http.SameSiteStrictMode {
+		t.Fatalf("unsafe session cookie: %#v", cookies)
+	}
+	session, ok := a.browser.Validate(cookies[0].Value)
+	if !ok || !session.PasswordChange {
+		t.Fatal("bootstrap session is not password-change restricted")
+	}
+	mutation := httptest.NewRequest(http.MethodPost, "/api/v1/export/wii",
+		strings.NewReader(url.Values{"csrf": {session.CSRF}}.Encode()))
+	mutation.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	mutation.AddCookie(cookies[0])
+	mutationResponse := httptest.NewRecorder()
+	protected(mutationResponse, mutation)
+	if mutationResponse.Code != http.StatusForbidden {
+		t.Fatalf("bootstrap session mutation status=%d", mutationResponse.Code)
+	}
+}
+
+func TestDashboardExactLibraryControlsAndNoPerTitleActivation(t *testing.T) {
+	a := testApp(t)
+	a.pi = &fakePiController{}
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	response := httptest.NewRecorder()
+	a.dashboard(response, request)
+	body := response.Body.String()
+	for _, required := range []string{
+		"Activate Wii Library", "Activate GameCube Library",
+		"Build GameCube Library", "GameCube Library", "Wii Library",
+		"Safely Detach USB", "Disconnect NBD", "Connect Current Library",
+		"Attach USB", "Reconcile Connection", "Reboot Raspberry Pi",
+		"Shut Down Raspberry Pi", "Log out",
+	} {
+		if !strings.Contains(body, required) {
+			t.Errorf("dashboard missing %q", required)
+		}
+	}
+	if strings.Contains(body, "Prepare export") ||
+		strings.Contains(body, `name="id"`) {
+		t.Fatal("primary dashboard exposes per-title activation")
+	}
+	if strings.Contains(body, "https://") || strings.Contains(body, "http://") {
+		t.Fatal("dashboard contains an external asset URL")
+	}
+}
+
+func TestCompleteGameCubeActivationNeedsNoGameIDAndUsesSafeSequence(t *testing.T) {
+	a := testApp(t)
+	sourceRoot := filepath.Join(a.dataDir, "gc-source")
+	if err := os.MkdirAll(sourceRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(sourceRoot, "game.iso")
+	if err := testutil.SyntheticGameCubeISO(
+		source, "GACT01", "Activation Test", 0, 0, 2<<20); err != nil {
+		t.Fatal(err)
+	}
+	scan, err := gamecube.Scan(sourceRoot)
+	if err != nil || len(scan.Games) != 1 {
+		t.Fatalf("scan=%#v err=%v", scan, err)
+	}
+	if _, err = a.gcLibrary.Build(context.Background(), scan.Games); err != nil {
+		t.Fatal(err)
+	}
+	pi := &fakePiController{}
+	a.pi = pi
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/export/gamecube", nil)
+	request.SetPathValue("platform", "gamecube")
+	response := httptest.NewRecorder()
+	a.selectExport(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("activation status=%d body=%s", response.Code, response.Body.String())
+	}
+	if got := strings.Join(pi.actions, ","); got !=
+		"detach,disconnect,connect-gamecube-physical,attach" {
+		t.Fatalf("unsafe aggregate activation sequence: %s", got)
+	}
+	backend, release, err := a.exports.BeginSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mode, ok := backend.(interface{ ReadOnly() bool })
+	release()
+	if a.exports.Platform() != "gamecube" || !ok || !mode.ReadOnly() {
+		t.Fatalf("aggregate profile platform=%s mode=%T",
+			a.exports.Platform(), backend)
+	}
+}
+
+func TestPiStorageControlsDeriveActionsAndRejectRawNames(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{}
+	a.pi = pi
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/pi/storage/disconnect", nil)
+	request.SetPathValue("action", "disconnect")
+	response := httptest.NewRecorder()
+	a.piStorageAction(response, request)
+	if got := strings.Join(pi.actions, ","); got != "detach,disconnect" {
+		t.Fatalf("disconnect sequence=%s", got)
+	}
+	pi.actions = nil
+	request = httptest.NewRequest(http.MethodPost, "/api/v1/pi/storage/systemctl", nil)
+	request.SetPathValue("action", "systemctl")
+	response = httptest.NewRecorder()
+	a.piStorageAction(response, request)
+	if response.Code != http.StatusBadRequest || len(pi.actions) != 0 {
+		t.Fatalf("raw action accepted: status=%d actions=%v", response.Code, pi.actions)
 	}
 }
 

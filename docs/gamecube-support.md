@@ -1,7 +1,8 @@
 # GameCube support
 
-GameCube mode is a separate Nintendont-compatible FAT32 export. Wii mode is
-still the startup default and retains its existing read-only virtual disk.
+GameCube mode is a separate, complete Nintendont-compatible FAT32 library
+export. Wii mode remains the startup default and retains its existing read-only
+virtual disk unchanged.
 The Pi remains connected directly to the Wii gadget port; HATs and USB hubs
 are unsupported.
 
@@ -20,18 +21,34 @@ validated persistent cache is complete.
 ## Operator workflow
 
 1. Put a legal GameCube backup in the existing read-only library dataset.
-2. In the host UI choose GameCube, verify ID/region/revision/status, configure
-   per-game settings, and click Import once.
-3. Detach USB and disconnect NBD on the Pi.
-4. Select the ready GameCube entry on the host.
-5. On the Pi choose either:
-   - `Connect GameCube (physical card, read-only)`, or
-   - `Connect GameCube (emulated card, saves writable)`.
-6. Attach USB, start USB Loader GX, and launch through Nintendont.
-7. Detach/disconnect before switching. Selecting Wii on the host performs the
-   emulated-card backup and restores the normal read-only Wii export.
+2. In the Host UI choose **Build GameCube Library**. The Host creates and
+   validates an inactive generation containing every validated title.
+3. Click **Activate GameCube Library**. The Host performs the complete safe
+   detach/disconnect/select/connect/attach sequence.
+4. Start USB Loader GX and browse the complete GameCube catalog.
+5. Click **Activate Wii Library** to return to the complete Wii catalog.
 
 Never mount the GameCube image on the host or Pi while exported.
+
+## Managed generations
+
+Generated data is stored under `/data/gamecube/library`:
+
+```text
+active.json
+generations/<generation-id>/library.img
+generations/<generation-id>/manifest.json
+```
+
+Builds use `.building-*` staging directories, validate the closed image, rename
+the generation atomically, and then atomically update `active.json`. A failed
+build cannot replace the prior generation. Source changes show **Update
+available** and never modify an open backend.
+
+Sizing includes all prepared payloads, FAT metadata, configurable headroom, and
+save reserve. Plan writable Host storage for roughly the physical size of all
+supported GameCube sources, plus at least 5% and 1 GiB. Source files remain on
+the read-only library mount and are never modified.
 
 ## USB Loader GX / Nintendont settings
 

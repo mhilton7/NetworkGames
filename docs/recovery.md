@@ -29,3 +29,14 @@ configuration or credential files.
 
 Do not clear identity or reuse a client private key between devices. Sanitized
 diagnostics must omit admin tokens and all private-key material.
+
+For Host browser-password recovery, stop the Host and back up and remove only
+`/data/auth/password.json`. Restarting restores the bootstrap login and
+mandatory password-change flow. Do not remove the API token, Pi token,
+certificates, database, GameCube generations, or save backups.
+
+To roll back the complete-library dashboard, safely detach USB, stop the Host,
+and restore the previous container digest or Git commit. The read-only source
+library and `/data/gamecube/save-backups` remain compatible. New
+`/data/gamecube/library/generations` may be retained or removed while the Host
+is stopped; older Host versions ignore it. Wii remains the startup profile.

@@ -2,11 +2,14 @@ module wiibridge
 
 go 1.25.12
 
-require modernc.org/sqlite v1.54.0
+require (
+	github.com/diskfs/go-diskfs v1.9.2
+	golang.org/x/crypto v0.54.0
+	modernc.org/sqlite v1.54.0
+)
 
 require (
 	github.com/anchore/go-lzo v0.1.0 // indirect
-	github.com/diskfs/go-diskfs v1.9.2 // indirect
 	github.com/djherbis/times v1.6.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/elliotwutingfeng/asciiset v0.0.0-20260129054604-cfde2086bc57 // indirect
@@ -19,7 +22,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	modernc.org/libc v1.74.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
