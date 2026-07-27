@@ -88,6 +88,14 @@ while IFS= read -r kernel_version; do
     "$tmp/root/lib/modules/$kernel_version/modules.dep"
   find "$tmp/root/lib/modules/$kernel_version" -type f -name 'nbd.ko*' \
     -print -quit | grep -q .
+  grep -q 'kernel/drivers/usb/gadget/libcomposite\.ko' \
+    "$tmp/root/lib/modules/$kernel_version/modules.dep"
+  find "$tmp/root/lib/modules/$kernel_version" -type f -name 'libcomposite.ko*' \
+    -print -quit | grep -q .
+  grep -q 'kernel/drivers/usb/gadget/function/usb_f_mass_storage\.ko' \
+    "$tmp/root/lib/modules/$kernel_version/modules.dep"
+  find "$tmp/root/lib/modules/$kernel_version" -type f -name 'usb_f_mass_storage.ko*' \
+    -print -quit | grep -q .
 done <<< "$kernel_versions_text"
 kernel_versions=$(printf '%s\n' "$kernel_versions_text" | jq -Rsc 'split("\n")[:-1]')
 sudo umount "$tmp/root" "$tmp/boot"
@@ -101,6 +109,7 @@ jq -n --arg target "$target" --arg architecture "$arch" \
     board_metadata:"PASS",boot_files:"PASS",usb_gadget_boot_config:"PASS",
     services:"PASS",
     nbd_kernel_modules:"PASS",nbd_boot_preload:"PASS",
+    usb_gadget_kernel_modules:"PASS",
     qemu_application_smoke:"PASS",
     no_payloads:"PASS",no_embedded_identity:"PASS",
     kernel_versions:$kernel_versions,
