@@ -31,10 +31,10 @@ func SyntheticGameCubeISO(path, id, title string, disc, revision byte, size int6
 	header[7] = revision
 	binary.BigEndian.PutUint32(header[0x1c:0x20], GameCubeMagic)
 	copy(header[0x20:0x60], title)
-	binary.BigEndian.PutUint32(header[0x424:0x428], 0x2000)
-	binary.BigEndian.PutUint32(header[0x428:0x42c], uint32(GameCubeFSTOffset))
+	binary.BigEndian.PutUint32(header[0x420:0x424], 0x2000)
+	binary.BigEndian.PutUint32(header[0x424:0x428], uint32(GameCubeFSTOffset))
+	binary.BigEndian.PutUint32(header[0x428:0x42c], 12)
 	binary.BigEndian.PutUint32(header[0x42c:0x430], 12)
-	binary.BigEndian.PutUint32(header[0x430:0x434], 12)
 	if _, err = f.WriteAt(header, 0); err != nil {
 		return err
 	}

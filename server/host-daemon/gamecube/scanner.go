@@ -258,8 +258,8 @@ func validateHeader(header []byte) (string, error) {
 }
 
 func validateFST(reader io.ReaderAt, header []byte, logicalSize int64) error {
-	offset := int64(binary.BigEndian.Uint32(header[0x428:0x42c]))
-	size := int64(binary.BigEndian.Uint32(header[0x42c:0x430]))
+	offset := int64(binary.BigEndian.Uint32(header[0x424:0x428]))
+	size := int64(binary.BigEndian.Uint32(header[0x428:0x42c]))
 	if offset < headerSize || size < 12 || offset > logicalSize || size > logicalSize-offset {
 		return errors.New("invalid or unreadable filesystem table")
 	}
