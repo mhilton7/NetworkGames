@@ -12,6 +12,18 @@ import (
 	"wiibridge/tests/testutil"
 )
 
+func TestVolumeCapacityIsPiZeroNBDSafe(t *testing.T) {
+	if VolumeSize >= 32<<30 {
+		t.Fatalf("GameCube volume crosses the 32 GiB Pi Zero NBD boundary: %d", VolumeSize)
+	}
+	if VolumeSize < 4<<30 {
+		t.Fatalf("GameCube volume cannot safely hold a two-disc set: %d", VolumeSize)
+	}
+	if key := CacheKey(Game{ID: "GTEST1"}, MemoryCardPhysical); !strings.HasPrefix(key, "gc-v3-") {
+		t.Fatalf("cache key does not identify volume schema 3: %q", key)
+	}
+}
+
 func TestBuildSingleDiscVolumeAndReuseValidatedCache(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "library", "game.iso")
@@ -45,7 +57,7 @@ func TestBuildSingleDiscVolumeAndReuseValidatedCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if validation.ClusterSize != 32<<10 || !validation.BackupBoot ||
+	if validation.ClusterSize != VolumeClusterSize || !validation.BackupBoot ||
 		!validation.RequiredPathsOK || validation.Capacity != VolumeSize {
 		t.Fatalf("invalid volume validation: %#v", validation)
 	}
