@@ -30,6 +30,9 @@ func TestBuildSingleDiscVolumeAndReuseValidatedCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(manifest.Game.Discs[0].SHA256) != 64 {
+		t.Fatal("Prepare export did not hash the source image")
+	}
 	validation, err := ValidateVolume(manifest.ImagePath, manifest)
 	if err != nil {
 		t.Fatal(err)
