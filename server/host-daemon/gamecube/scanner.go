@@ -248,7 +248,7 @@ func validateHeader(header []byte) (string, error) {
 	if !validID.MatchString(id) {
 		return "", errors.New("invalid GameCube game ID")
 	}
-	if binary.BigEndian.Uint32(header[0x18:0x1c]) != gameCubeMagic {
+	if binary.BigEndian.Uint32(header[0x1c:0x20]) != gameCubeMagic {
 		return "", errors.New("invalid GameCube magic")
 	}
 	if header[6] > 1 {
