@@ -68,10 +68,49 @@ func TestDashboardProvidesPlatformFiltersWithoutHidingWii(t *testing.T) {
 	body := response.Body.String()
 	for _, expected := range []string{
 		"All", "Wii", "GameCube", "Synthetic Wii", "Synthetic GameCube",
-		"Wii remains the default export",
+		"Wii remains the safe default export", "Published snapshot", "Library summary",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("dashboard missing %q", expected)
 		}
+	}
+}
+
+func TestDashboardSearchFiltersBothPlatforms(t *testing.T) {
+	a := testApp(t)
+	request := httptest.NewRequest("GET", "/?platform=all&q=gamecube", nil)
+	response := httptest.NewRecorder()
+	a.dashboard(response, request)
+	body := response.Body.String()
+	if strings.Contains(body, "Synthetic Wii") {
+		t.Fatal("Wii result did not respect the search query")
+	}
+	if !strings.Contains(body, "Synthetic GameCube") || !strings.Contains(body, `value="gamecube"`) {
+		t.Fatal("GameCube search result or retained query is missing")
+	}
+}
+
+func TestHumanBytes(t *testing.T) {
+	tests := map[int64]string{512: "512 B", 1024: "1.0 KiB", 5 << 20: "5.0 MiB"}
+	for size, expected := range tests {
+		if got := humanBytes(size); got != expected {
+			t.Errorf("humanBytes(%d) = %q, want %q", size, got, expected)
+		}
+	}
+}
+
+func TestBrowserActionsRedirectBackToDashboard(t *testing.T) {
+	request := httptest.NewRequest("POST", "/api/v1/export/wii", nil)
+	request.Header.Set("Accept", "text/html,application/xhtml+xml")
+	response := httptest.NewRecorder()
+	respondAction(response, request, 200, map[string]string{"status": "ok"},
+		"Export switched.", "wii")
+	if response.Code != 303 {
+		t.Fatalf("status = %d, want 303", response.Code)
+	}
+	location := response.Header().Get("Location")
+	if !strings.Contains(location, "notice=Export+switched") ||
+		!strings.Contains(location, "platform=wii") {
+		t.Fatalf("unexpected redirect %q", location)
 	}
 }
