@@ -1,0 +1,64 @@
+{
+  "image": "sha256:5ffbb5cf073213351117b9651e33c3bd732c83411af07ae8b675baef8b17efa4",
+  "user": "568:568",
+  "health": null,
+  "readonly_root": true,
+  "privileged": false,
+  "cap_drop": [
+    "ALL"
+  ],
+  "security_opt": [
+    "no-new-privileges:true"
+  ],
+  "devices": [],
+  "mounts": [
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/data",
+      "Destination": "/data",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/certs",
+      "Destination": "/certs",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/logs",
+      "Destination": "/logs",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/backups",
+      "Destination": "/backups",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/library",
+      "Destination": "/library",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/config",
+      "Destination": "/config",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    }
+  ]
+}

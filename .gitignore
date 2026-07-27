@@ -1,0 +1,58 @@
+# Private game and image data
+testdata/private/*
+!testdata/private/.gitkeep
+
+# Generated builds and releases
+build/*
+dist/*
+!build/.gitkeep
+!dist/.gitkeep
+
+# Test and diagnostic artifacts
+reports/**/*.log
+reports/**/*.bin
+reports/**/*.img
+reports/**/*.img.xz
+reports/**/*.pcap
+
+# Credentials and provisioning data
+*.credentials
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+wiibridge-seed.toml
+
+# Go and Rust outputs
+bin/
+target/
+coverage.out
+*.test
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Added by scripts/publish_github.py
+# Generated build state and private test material.
+/build/
+/testdata/private/*
+!/testdata/private/.gitkeep
+# Binary releases are uploaded as GitHub Release assets.
+/dist/*.img
+/dist/*.img.xz
+/dist/*.oci/
+/dist/*.bmap
+# Deployment secrets; examples remain tracked.
+!.env.example
+deploy/truenas/.env

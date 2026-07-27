@@ -1,0 +1,17 @@
+[Unit]
+Description=WiiBridge unique first-boot identity
+Before=wiibridge-controller.service
+ConditionPathExists=!/etc/wiibridge/identity-generated
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wiibridge-firstboot
+RemainAfterExit=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/etc /var/lib/systemd /boot/firmware
+ProtectHome=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

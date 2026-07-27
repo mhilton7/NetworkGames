@@ -1,0 +1,68 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build server binary
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          mkdir -p build/container-root
+          go build -trimpath -ldflags="-s -w -buildid=" \
+            -o build/container-root/wiibridge-host \
+            ./server/host-daemon
+
+      - name: Build Docker image
+        run: |
+          docker build . \
+            --file server/packaging/container/Dockerfile \
+            --tag "wiibridge-host:${GITHUB_SHA}"
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ghcr.io/OWNER/wiibridge-host
+          VERSION: 0.1.0-rc.1
+        run: |
+          docker tag "wiibridge-host:${GITHUB_SHA}" "${IMAGE}:${VERSION}"
+          docker tag "wiibridge-host:${GITHUB_SHA}" "${IMAGE}:sha-${GITHUB_SHA}"
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:sha-${GITHUB_SHA}"

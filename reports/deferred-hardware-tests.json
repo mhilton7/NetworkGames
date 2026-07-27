@@ -1,0 +1,16 @@
+{
+  "status": "DEFERRED_HARDWARE_UNAVAILABLE",
+  "tests": [
+    "Raspberry Pi Zero W physical boot, power, Wi-Fi, USB, reboot, and soak",
+    "Raspberry Pi 4 physical boot, external power, USB-C gadget, reboot, and soak",
+    "Raspberry Pi 5 physical boot, external power, RP1/USB-C gadget, reboot, and soak",
+    "Linux USB-host physical enumeration and SCSI behavior",
+    "Nintendo Wii detection",
+    "USB Loader GX catalog enumeration and virtual split compatibility",
+    "legal private game launch",
+    "gameplay soak",
+    "physical cable, power-loss, reconnect, and outage behavior"
+  ],
+  "claim": "No hardware, Wii, or USB Loader GX compatibility claim is made.",
+  "plan": "docs/hardware-acceptance-plan.md"
+}

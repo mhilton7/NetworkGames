@@ -1,0 +1,1678 @@
+WIIBRIDGE HOSTBRIDGE
+TRUENAS COMMUNITY EDITION + RASPBERRY PI ZERO W / PI 4 / PI 5
+SOFTWARE-COMPLETE RELEASE-CANDIDATE CODEX PROMPT
+HARDWARE TESTING DEFERRED
+
+This document is the controlling implementation specification for Codex.
+
+Codex must build:
+1. A TrueNAS Community Edition Custom App that reads existing WBFS files in place.
+2. A read-only virtual FAT32 block device exported over authenticated NBD/TLS.
+3. Three separate full flashable Raspberry Pi firmware images:
+   - Raspberry Pi Zero W ARMHF
+   - Raspberry Pi 4 ARM64
+   - Raspberry Pi 5 ARM64
+4. The Raspberry Pi bridge that converts the remote NBD block device into a
+   read-only USB mass-storage device for Nintendo Wii and USB Loader GX.
+5. Automated tests, packaging, documentation, checksums, SBOMs, provenance,
+   hardware validation, and Wii release gates.
+
+Do not stop after architecture, scaffolding, source generation, or build scripts.
+Do not replace this architecture with a complete local mirror or a giant copied
+raw disk image. Existing WBFS payload files must remain in place on TrueNAS.
+
+
+# HARDWARE-UNAVAILABLE COMPLETION MODE — CONTROLLING OVERRIDE
+
+This section overrides every contradictory physical-hardware requirement elsewhere
+in this document.
+
+No Raspberry Pi, Linux USB-host test computer, Nintendo Wii, USB Loader GX test
+installation, removable microSD target, data cable, or legal private game fixture
+is currently available for physical testing.
+
+Codex must not pause, stop, or request user action for any physical test.
+
+Codex must complete every task that can be performed on the build computer and
+through the available TrueNAS or container environment, including:
+
+- Full implementation of the TrueNAS Community Edition hosting application
+- OCI container image creation
+- TrueNAS Custom App Docker Compose creation
+- Compose and container validation
+- Read-only WBFS dataset handling
+- Virtual MBR and FAT32 synthesis
+- NBD over TLS implementation
+- Automated NBD client interoperability tests
+- Synthetic WBFS tests
+- At least 1,000-entry synthetic catalog testing
+- Source-mutation and failure-injection testing
+- Security testing
+- Three separate complete Raspberry Pi firmware builds
+- Offline filesystem and image validation
+- Cross-architecture binary inspection
+- QEMU or chroot smoke tests where technically possible
+- Checksums, bmap files, SBOMs, package manifests, provenance, and documentation
+
+The absence of physical hardware is not an external blocker and must not prevent
+completion.
+
+Every physical Raspberry Pi, USB gadget enumeration, Linux USB-host, Nintendo Wii,
+USB Loader GX, cable, power, gameplay, reboot, or soak test must be recorded as:
+
+DEFERRED_HARDWARE_UNAVAILABLE
+
+A deferred hardware test is not a failure and is not a completion blocker.
+
+The final result must be labeled:
+
+SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED
+
+Do not label any firmware image or the complete system production-ready,
+hardware-verified, Wii-verified, or USB Loader GX-verified.
+
+The definition of done for this execution is successful software implementation,
+automated validation, package creation, TrueNAS deployment artifacts, and three
+offline-validated flashable Raspberry Pi images.
+
+
+# VERSION
+
+3
+
+# PROMPT NAME
+
+wiibridge-wbfs-wiibridge-truenas-three-pi-production
+
+# PROJECT NAME
+
+WiiBridge for TrueNAS and Raspberry Pi Zero W, Pi 4, and Pi 5
+
+# ROLE
+
+Act as the principal Linux storage, networking, embedded, security, test, and release engineer. Implement the complete system. Do not stop after planning, documentation, scaffolding, or source generation. Continue through automated tests, packaging, Raspberry Pi image creation, and every available automated or offline gate. Physical hardware gates are deferred and non-blocking. Never claim an unperformed test passed.
+
+# OBJECTIVE
+
+Build a two-part system that lets a Nintendo Wii running USB Loader GX access an existing TrueNAS Community Edition dataset of WBFS files without copying the full library to the Raspberry Pi and without creating a second full raw disk image that contains the game payloads. The continuously running server component must be packaged as a TrueNAS Custom App deployed through Docker Compose YAML.
+
+# REQUIRED DATA PATH
+
+- Existing WBFS files on server storage
+- Continuously running WiiBridge server application
+- Read-only synthesized FAT32 whole-disk view
+- Authenticated NBD over TLS
+- Raspberry Pi NBD or managed block client
+- Linux ConfigFS USB mass-storage gadget
+- Nintendo Wii running USB Loader GX
+
+# NON NEGOTIABLE RULES
+
+- Build three separate full flashable Raspberry Pi OS firmware images: one for Raspberry Pi Zero W, one for Raspberry Pi 4 Model B, and one for Raspberry Pi 5.
+- Do not substitute one combined Pi 4/Pi 5 image for the required separate board-specific release artifacts.
+- Use the term firmware image in this specification to mean a complete bootable microSD-card operating-system image, including boot files, kernel, device-tree configuration, services, and WiiBridge application software.
+- The server deployment target is TrueNAS Community Edition.
+- Deploy the server component as a TrueNAS Custom App through Docker Compose YAML.
+- Do not install packages into or otherwise modify the TrueNAS base operating system.
+- Bind-mount the existing TrueNAS WBFS dataset directly into the container as read-only; do not mount the local SMB share back into the container.
+- Persist only configuration, compact metadata, certificates, logs, and backups in dedicated TrueNAS datasets.
+- The TrueNAS application container must not require privileged mode, the Docker socket, or host block-device access.
+- The existing WBFS files remain in place.
+- The server application runs continuously while the Wii is using the library.
+- The Pi must not mount SMB during the Wii runtime data path.
+- Do not create a complete duplicate raw image containing game payloads.
+- Do not copy the complete game library to the Pi.
+- Small metadata indexes and strictly bounded caches are allowed.
+- The USB disk must be read-only.
+- Every active catalog snapshot must remain stable for its complete session.
+- Do not replace this architecture with the earlier raw-image-on-SMB design.
+
+# ARCHITECTURE
+
+## SERVER
+
+### COMPONENT
+
+wiibridge-host
+
+### PREFERRED LOCATION
+
+Run as a TrueNAS Community Edition Custom App on the TrueNAS host that owns the WBFS dataset. Access the dataset through a read-only bind mount from a host path under /mnt/<POOL>/..., not through SMB from inside the container.
+
+### RESPONSIBILITIES
+
+- Scan and validate existing WBFS files and split WBFS sets.
+- Create versioned immutable catalog metadata snapshots.
+- Synthesize MBR, FAT32, directory, FAT, and allocation metadata.
+- Map virtual game-file clusters directly to source WBFS byte ranges.
+- Export one or more read-only NBD exports.
+- Require TLS and client authentication.
+- Provide a web UI, CLI, metrics, logs, and diagnostics.
+- Detect source mutation and fail safely.
+- Run correctly under the TrueNAS Custom App lifecycle.
+- Preserve metadata and configuration across container replacement, restart, and upgrade.
+- Expose a health check that TrueNAS can use to report application state.
+
+### DEPLOYMENT
+
+TrueNAS Apps using Docker Compose YAML
+
+### HOST MODIFICATION POLICY
+
+Do not use apt, install host-level packages, create a host systemd service, or alter the TrueNAS base OS. All runtime dependencies must be inside the OCI container image.
+
+## RASPBERRY PI
+
+### COMPONENT
+
+wiibridge-pi-bridge
+
+### RESPONSIBILITIES
+
+- Provide secure first-run network provisioning.
+- Connect to a selected authenticated NBD export.
+- Expose the remote export as a local read-only block device.
+- Optionally use strictly bounded read-through caching.
+- Attach the block device to a ConfigFS mass-storage LUN.
+- Provide a local status and configuration UI.
+- Recover safely from network, server, or client failures.
+
+# TRUENAS COMMUNITY DEPLOYMENT
+
+## REQUIRED
+
+True
+
+## PRODUCT
+
+TrueNAS Community Edition
+
+## COMPATIBILITY DETECTION
+
+### REQUIREMENTS
+
+- Detect and record the exact TrueNAS version before deployment.
+- Verify that the installed Apps platform accepts Docker Compose Custom Apps through Install via YAML.
+- Do not assume a TrueNAS version or Apps backend; stop with a precise compatibility report when the target does not support the required Compose deployment.
+- Record the host CPU architecture and require an amd64 server image unless the detected host requires another supported architecture.
+
+## INSTALLATION METHOD
+
+### TYPE
+
+TrueNAS Custom App installed from Docker Compose YAML
+
+### UI PATH
+
+- Apps
+- Discover Apps
+- Install via YAML
+
+### REQUIREMENTS
+
+- Produce one complete Compose YAML file that can be pasted into the TrueNAS Install via YAML editor.
+- Also produce an environment-file template and a generated deployment-specific YAML after the user supplies dataset paths and ports.
+- Validate the Compose model before presenting it to the user.
+
+## PROHIBITED HOST ACTIONS
+
+- Installing packages into the TrueNAS base operating system
+- Using apt, dpkg, pip, cargo, npm, or language package managers directly on the TrueNAS host for production deployment
+- Creating a permanent host-level systemd service
+- Editing protected TrueNAS system files outside supported application configuration
+- Using the Docker socket from the application container
+- Requiring privileged mode
+- Mounting the TrueNAS SMB share from inside the container when the dataset is locally available
+
+## REQUIRED USER INPUTS
+
+### POOL NAME
+
+<POOL>
+
+### WBFS DATASET HOST PATH
+
+/mnt/<POOL>/<WII_DATASET>
+
+### APPLICATION ROOT HOST PATH
+
+/mnt/<POOL>/apps/wiibridge
+
+### HTTPS HOST PORT
+
+8443
+
+### NBD TLS HOST PORT
+
+10809
+
+### ALLOWED MANAGEMENT SUBNET
+
+<LAN_CIDR>
+
+### ALLOWED PI ADDRESSES OR SUBNET
+
+<PI_CIDR_OR_IPS>
+
+### CONTAINER UID
+
+<CONFIGURED_UID>
+
+### CONTAINER GID
+
+<CONFIGURED_GID>
+
+## DATASET LAYOUT
+
+### SOURCE LIBRARY
+
+#### HOST PATH
+
+/mnt/<POOL>/<WII_DATASET>
+
+#### CONTAINER PATH
+
+/library
+
+#### MODE
+
+read-only
+
+#### CONTENTS
+
+Existing WBFS files and split sets
+
+### CONFIG
+
+#### HOST PATH
+
+/mnt/<POOL>/apps/wiibridge/config
+
+#### CONTAINER PATH
+
+/config
+
+#### MODE
+
+read-write
+
+### DATA
+
+#### HOST PATH
+
+/mnt/<POOL>/apps/wiibridge/data
+
+#### CONTAINER PATH
+
+/data
+
+#### MODE
+
+read-write
+
+#### ALLOWED CONTENTS
+
+- SQLite database
+- Catalog definitions
+- Synthesized FAT32 metadata sectors
+- Extent maps
+- Snapshot manifests
+- Compact indexes
+
+#### PROHIBITED CONTENTS
+
+- Complete WBFS payload copies
+- Complete raw virtual-disk images containing game payloads
+
+### CERTIFICATES
+
+#### HOST PATH
+
+/mnt/<POOL>/apps/wiibridge/certs
+
+#### CONTAINER PATH
+
+/certs
+
+#### MODE
+
+read-only at runtime
+
+### LOGS
+
+#### HOST PATH
+
+/mnt/<POOL>/apps/wiibridge/logs
+
+#### CONTAINER PATH
+
+/logs
+
+#### MODE
+
+read-write
+
+### BACKUPS
+
+#### HOST PATH
+
+/mnt/<POOL>/apps/wiibridge/backups
+
+#### CONTAINER PATH
+
+/backups
+
+#### MODE
+
+read-write
+
+## DATASET REQUIREMENTS
+
+- Provide exact TrueNAS dataset creation and ACL instructions.
+- Do not hardcode a TrueNAS application UID or GID; make UID and GID configurable and validate access before startup.
+- Confirm the source library bind mount is read-only from inside the running container.
+- Confirm the application cannot rename, delete, chmod, chown, or write any source WBFS file.
+- Confirm application metadata survives container recreation and app upgrades.
+- Confirm removing the app does not remove or alter the source WBFS dataset.
+- Recommend snapshot and backup policies for the application metadata datasets.
+
+## CONTAINER
+
+### IMAGE
+
+OCI-compatible, pinned by immutable digest for production
+
+### REQUIRED ARCHITECTURE
+
+amd64 for the typical TrueNAS host; detect and document the actual host architecture
+
+### REQUIREMENTS
+
+- Run as a configurable non-root UID and GID whenever technically possible.
+- Use a read-only root filesystem where practical.
+- Use tmpfs for temporary writable paths.
+- Drop all Linux capabilities unless a specific capability is proven necessary.
+- Set no-new-privileges.
+- Include a reliable healthcheck.
+- Handle SIGTERM and drain or close NBD sessions safely.
+- Use bounded memory, CPU, log, and temporary-storage policies.
+- Do not require host networking unless explicit port mapping cannot satisfy a measured requirement.
+- Do not require privileged mode, /dev access, or access to the Docker socket.
+
+## NETWORKING
+
+### MANAGEMENT
+
+#### CONTAINER PORT
+
+8443
+
+#### PROTOCOL
+
+HTTPS
+
+#### EXPOSURE
+
+LAN management network only
+
+### NBD
+
+#### CONTAINER PORT
+
+10809
+
+#### PROTOCOL
+
+NBD over TLS with client authentication
+
+#### EXPOSURE
+
+Only the Raspberry Pi client addresses or dedicated trusted subnet
+
+### REQUIREMENTS
+
+- Use explicit TCP port mappings by default.
+- Detect and report port conflicts before deployment.
+- Do not expose either service to the public internet.
+- Document TrueNAS and upstream firewall requirements.
+- Allow the management and NBD bind addresses and ports to be configured independently.
+
+## COMPOSE DELIVERABLES
+
+- deploy/truenas/compose.yaml
+- deploy/truenas/compose.example.yaml
+- deploy/truenas/.env.example
+- deploy/truenas/config.example.yaml
+- deploy/truenas/README.md
+- deploy/truenas/preflight.sh
+- deploy/truenas/validate-compose.sh
+- deploy/truenas/upgrade.md
+- deploy/truenas/rollback.md
+- deploy/truenas/backup-restore.md
+- deploy/truenas/uninstall.md
+
+## COMPOSE REQUIREMENTS
+
+- Use the Compose services key and syntax accepted by the detected TrueNAS Custom App interface.
+- Use an immutable image digest in the production example.
+- Use read-only bind mounting for /library.
+- Use persistent host-path datasets for /config, /data, /logs, and /backups.
+- Mount /certs read-only during normal runtime.
+- Set restart behavior appropriate for a continuously running service.
+- Set a healthcheck.
+- Drop capabilities and enable no-new-privileges.
+- Avoid unsupported or unnecessary Compose features.
+- Do not embed secrets directly in the Compose YAML.
+
+## VALIDATION AND ACCEPTANCE
+
+- Validate the Compose YAML with an independent Compose parser before TrueNAS deployment.
+- Deploy it through the TrueNAS Install via YAML workflow.
+- Confirm the application reaches a healthy state.
+- Confirm the management UI is reachable on the intended LAN address and port.
+- Confirm the NBD TLS port is reachable only from the permitted Pi client network.
+- Confirm the library dataset is read-only from inside the container.
+- Restart the app and confirm active configuration and metadata persist.
+- Replace or upgrade the container and confirm persistent data remains intact.
+- Roll back to the previous image digest and confirm the metadata remains usable.
+- Confirm no WBFS payload copy or complete raw payload image appears in application datasets.
+- Capture sanitized TrueNAS app logs, container inspect data, mount information, health state, and network listeners as evidence.
+
+# HARDWARE TARGETS
+
+## MANDATORY FIRMWARE BUILDS
+
+-
+  #### BOARD
+
+  Raspberry Pi Zero W
+
+  #### ARCHITECTURE
+
+  armhf
+
+  #### USERSPACE BITS
+
+  32
+
+  #### NETWORK
+
+  2.4 GHz Wi-Fi
+
+  #### USB GADGET CONNECTOR
+
+  USB data micro-USB port
+
+  #### RELEASE ARTIFACT
+
+  wiibridge-<version>-zero-w-armhf.img.xz
+
+  #### STATUS POLICY
+
+  Build and offline validation are mandatory. Final status is hardware-unverified.
+
+-
+  #### BOARD
+
+  Raspberry Pi 4 Model B
+
+  #### ARCHITECTURE
+
+  arm64
+
+  #### USERSPACE BITS
+
+  64
+
+  #### NETWORK
+
+  Wired Ethernet preferred; Wi-Fi supported
+
+  #### USB GADGET CONNECTOR
+
+  USB-C peripheral/data connection using a separately validated power arrangement
+
+  #### RELEASE ARTIFACT
+
+  wiibridge-<version>-pi4-arm64.img.xz
+
+  #### STATUS POLICY
+
+  Build and board-specific offline validation are mandatory. Final status is hardware-unverified.
+
+-
+  #### BOARD
+
+  Raspberry Pi 5
+
+  #### ARCHITECTURE
+
+  arm64
+
+  #### USERSPACE BITS
+
+  64
+
+  #### NETWORK
+
+  Wired Ethernet preferred; Wi-Fi supported
+
+  #### USB GADGET CONNECTOR
+
+  USB-C peripheral/data connection using a separately validated power arrangement
+
+  #### RELEASE ARTIFACT
+
+  wiibridge-<version>-pi5-arm64.img.xz
+
+  #### STATUS POLICY
+
+  Build and board-specific offline validation are mandatory. Final status is hardware-unverified.
+
+## RULE
+
+Build outputs, checksums, and offline validation are recorded independently for Zero W, Pi 4, and Pi 5. Physical validation is deferred for every board.
+
+# SOURCE LIBRARY
+
+## SUPPORTED V1
+
+- Single .wbfs files
+- Existing .wbfs/.wbf1/.wbf2 split sets
+- Nested USB Loader GX-style directories
+
+## EXCLUDED V1
+
+- ISO or RVZ conversion
+- GameCube content
+- EmuNAND
+- Installing, deleting, or renaming games from the Wii
+
+## SCANNER REQUIREMENTS
+
+- Do not trust extensions alone; validate WBFS metadata and game IDs.
+- Detect truncation, malformed split sets, missing segments, and duplicates.
+- Detect duplicate game IDs and unsafe case-insensitive name collisions.
+- Reject path traversal, symlink escape, special files, and unsafe names.
+- Never modify source files.
+- Produce deterministic results and a machine-readable manifest.
+
+# VIRTUAL DISK
+
+## TYPE
+
+Read-only synthesized whole-disk block device
+
+## DEFAULT PROFILE
+
+### LOGICAL SECTOR SIZE
+
+512
+
+### PARTITION TABLE
+
+MBR
+
+### PARTITIONS
+
+1
+
+### FILESYSTEM
+
+FAT32
+
+### ROOT DIRECTORY
+
+/wbfs
+
+## METADATA ONLY STORAGE
+
+### PERSIST
+
+- MBR and FAT32 metadata sectors
+- Directory metadata
+- Cluster allocation maps
+- Source extent maps
+- Catalog and snapshot manifests
+- Checksums or fingerprints
+
+### PROHIBIT
+
+- A full raw image containing WBFS payload data
+- A full local payload mirror
+
+## SECTOR MAPPING
+
+### METADATA SECTOR
+
+Return synthesized immutable metadata bytes.
+
+### GAME DATA SECTOR
+
+Read the exact mapped byte range from the source WBFS file.
+
+### FREE SECTOR
+
+Return deterministic zero-filled bytes.
+
+### OUT OF RANGE
+
+Return an I/O error.
+
+### WRITES
+
+Reject writes, trims, discards, resize, and write-zero requests.
+
+## FAT32 LARGE FILE HANDLING
+
+When a source WBFS file exceeds FAT32's per-file limit, expose virtual GAMEID.wbfs, GAMEID.wbf1, GAMEID.wbf2, and later segments. Map each virtual segment to the appropriate byte range in the original source file. Do not physically split or duplicate the source file. Verify the exact boundaries and naming against USB Loader GX through tests.
+
+## STABILITY
+
+- Reported capacity cannot change during an active session.
+- MBR, FAT, directory entries, filenames, and cluster chains cannot change.
+- Catalog switching requires USB detach, NBD disconnect, validation, and reattach.
+
+# CATALOGS
+
+## PURPOSE
+
+Support libraries with more than 1,000 games and libraries exceeding tested MBR, FAT32, Wii, or USB Loader GX limits.
+
+## FEATURES
+
+- One complete catalog when size and game count pass physical testing.
+- Multiple selectable catalogs referencing the same WBFS files without copying.
+- Rules by title range, genre, folder, favorites, or explicit selection.
+- One active catalog and one USB LUN initially.
+
+## EXAMPLES
+
+- All
+- Favorites
+- A-F
+- G-M
+- N-S
+- T-Z
+- Family
+- Racing
+- RPG
+
+# SNAPSHOTS
+
+## MODEL
+
+Versioned immutable metadata snapshots
+
+## SNAPSHOT FIELDS
+
+- snapshot_id
+- catalog_id
+- virtual_disk_size
+- filesystem_metadata_hash
+- source path and extent mappings
+- source file identity, size, and modification metadata
+- application version
+- creation timestamp
+
+## PUBLISHING FLOW
+
+- Build a new snapshot separately.
+- Validate every virtual path, allocation, and source mapping.
+- Publish metadata atomically.
+- Keep active clients pinned to the old snapshot.
+- Make the new snapshot available only to new sessions or explicit switches.
+
+## SOURCE MUTATION POLICY
+
+- Open sources read-only.
+- Require administrators not to modify active files in place.
+- Detect identity, size, and modification changes.
+- Periodically verify active sources.
+- Never combine old metadata with changed source bytes.
+- Fail affected reads and mark the snapshot unhealthy.
+- Optionally integrate with ZFS, Btrfs, LVM, or NAS snapshots.
+- Add games as complete new files, then create a new metadata snapshot.
+
+# NETWORK BLOCK PROTOCOL
+
+## PROTOCOL
+
+NBD over TLS
+
+## DEFAULT PORT
+
+10809
+
+## SERVER ENGINE
+
+### PREFERRED
+
+Use nbdkit for the NBD protocol, concurrency, and TLS, with a custom read-only WiiBridge plugin implementing virtual sector reads.
+
+### ALTERNATIVE
+
+A standalone NBD implementation is allowed only with a documented reason and full interoperability, TLS, timeout, concurrency, and fuzz testing.
+
+## SECURITY
+
+### TLS
+
+required
+
+### PLAINTEXT FALLBACK
+
+forbidden
+
+### PREFERRED AUTHENTICATION
+
+Mutual X.509
+
+### ACCEPTABLE AUTHENTICATION
+
+TLS PSK with secure provisioning and rotation
+
+### REQUIREMENTS
+
+- Verify server and client identity.
+- Restrict exports per authorized client.
+- Bind only to intended interfaces and configure a firewall.
+- Never log certificates, private keys, PSKs, or credentials.
+
+## EXPORT FEATURES
+
+### READ ONLY
+
+True
+
+### FLUSH
+
+unsupported_or_noop
+
+### TRIM
+
+unsupported
+
+### WRITE ZEROES
+
+unsupported
+
+### MULTI CONN
+
+Enable only after consistency and performance tests.
+
+### BLOCK SIZES
+
+Advertise tested minimum, preferred, and maximum values.
+
+# SERVER APPLICATION
+
+## DELIVERABLES
+
+- wiibridge-host daemon
+- wiibridge-host CLI
+- Custom nbdkit plugin
+- Web administration interface
+- Versioned API
+- OCI container image for the detected TrueNAS host architecture, normally amd64
+- TrueNAS Custom App Docker Compose YAML
+- TrueNAS environment and application configuration templates
+- Dockerfile and local Docker Compose development configuration
+- SQLite schema and migrations
+- TLS provisioning and rotation utilities
+- Structured logs, metrics, health checks, and diagnostic export
+
+## WEB PAGES
+
+- Login and dashboard
+- Source library configuration
+- Scan results and rejected files
+- Catalog editor
+- Snapshot build, validation, publish, and retirement
+- Active NBD sessions and clients
+- TLS credentials
+- Performance metrics, logs, and diagnostics
+
+## WEB OPERATIONS
+
+- Scan and validate library
+- Create or modify catalog definitions
+- Build and publish a metadata snapshot
+- Select active snapshot for new sessions
+- Disconnect a client safely
+- Rotate credentials
+- Export sanitized diagnostics
+
+## RESTRICTIONS
+
+- No arbitrary shell command execution.
+- No paths outside configured roots.
+- No source-file modification endpoint.
+- No dependency installation into the TrueNAS host operating system.
+- No production dependency on a host-level systemd service.
+- No access to the Docker socket.
+- No privileged container mode.
+
+## IMPLEMENTATION
+
+### CONTROL PLANE
+
+Rust or Go
+
+### NBD PLUGIN
+
+Rust or C using the official nbdkit plugin API
+
+### DATABASE
+
+SQLite with transactions and schema versioning
+
+### DECISION RULE
+
+Select languages based on safety, mature libraries, packaging, performance, Raspberry Pi support, and maintainability. Document the decision.
+
+## PERFORMANCE
+
+- Use offset-based pread operations; never read full WBFS files unnecessarily.
+- Use bounded worker pools, request coalescing, and bounded caches.
+- Expose latency, throughput, active request, and error metrics.
+
+## DEPLOYMENT PRIORITY
+
+TrueNAS Community Edition Custom App
+
+# RASPBERRY PI BRIDGE
+
+## OS
+
+### DELIVERABLE DEFINITION
+
+Each firmware deliverable is a complete bootable Raspberry Pi OS Lite microSD image, not merely an application package, boot overlay, kernel module, or update archive.
+
+### BASE
+
+Customized Raspberry Pi OS Lite
+
+### BUILD SYSTEM
+
+Official pi-gen pinned to exact immutable commits
+
+### MANDATORY OUTPUTS
+
+- wiibridge-<version>-zero-w-armhf.img.xz
+- wiibridge-<version>-pi4-arm64.img.xz
+- wiibridge-<version>-pi5-arm64.img.xz
+
+### BUILD COMMANDS
+
+- make firmware-zero-w
+- make firmware-pi4
+- make firmware-pi5
+- make firmware-all
+- make validate-firmware
+
+### COMMON IMAGE CONTENTS
+
+- Raspberry Pi boot firmware and bootloader files supplied by the pinned Raspberry Pi OS repositories
+- Board-compatible Linux kernel and modules
+- Required device-tree blobs and overlays
+- WiiBridge Pi bridge services
+- NBD or managed block client
+- Linux ConfigFS USB gadget support
+- First-run provisioning and recovery mode
+- Local HTTPS management interface
+- TLS trust and client credential provisioning
+- Bounded cache support
+- Health monitoring, structured logging, and diagnostics
+- Hardened systemd services
+- Build identity, package manifest, and board target metadata
+
+### IDENTITY AND FIRST BOOT
+
+- Generate a unique machine ID on first boot.
+- Generate unique SSH host keys on first boot if SSH is enabled.
+- Generate or provision unique client TLS identity; never embed one shared private key in all images.
+- Detect the actual board model and refuse to run when an image is flashed to the wrong unsupported board.
+- Display the expected target board in the local status interface and diagnostic report.
+
+## BLOCK CLIENT
+
+### BASELINE
+
+Linux NBD client exposing /dev/nbdN read-only
+
+### MANAGED FALLBACK
+
+If baseline NBD cannot meet latency, recovery, cache, or observability requirements, implement libnbd plus ublk as a managed read-only block client.
+
+### REQUIREMENTS
+
+- Require TLS and authentication.
+- Verify export name, size, and snapshot identity before attachment.
+- Use request deadlines proven by tests.
+- Reject changed export identity after reconnection.
+
+## USB GADGET
+
+### FRAMEWORK
+
+Linux ConfigFS mass-storage gadget
+
+### BACKING DEVICE
+
+Selected /dev/nbdN or /dev/ublkbN device
+
+### REQUIREMENTS
+
+- Set the LUN read-only.
+- Use stable descriptors and a device-specific serial number.
+- Use only authorized development or production VID/PID values.
+- Do not mount the block device locally while attached.
+- Detach before catalog switching or backend replacement.
+
+## FIRST RUN
+
+- Secure setup interface
+- Ethernet-first setup for Pi 4 and Pi 5
+- Wi-Fi setup where required
+- Server hostname, port, export, and TLS credentials
+- Connection, authentication, and sample block-read tests
+- Recovery provisioning mode
+
+## DASHBOARD
+
+### SHOW
+
+- Network and server state
+- TLS and NBD state
+- Selected catalog and snapshot
+- Virtual capacity and game count
+- USB gadget state
+- Throughput, latency, cache rate, retries, and errors
+
+### ACTIONS
+
+- Test server
+- Refresh export list
+- Select catalog
+- Connect or disconnect block export
+- Attach or detach USB
+- Clear bounded cache
+- Export diagnostics
+- Restart or shut down
+
+# CACHE
+
+## PRINCIPLE
+
+Cache is optional, read-through, snapshot-aware, and strictly bounded.
+
+## SERVER CACHE
+
+### ALLOWED
+
+True
+
+### PREFERRED CONTENT
+
+FAT32 metadata and frequently requested source ranges
+
+## PI RAM CACHE
+
+### ALLOWED
+
+True
+
+### STRICT MAXIMUM
+
+True
+
+## PI DISK CACHE
+
+### ALLOWED
+
+True
+
+### DEFAULT
+
+disabled
+
+### WRITE BACK
+
+False
+
+### REQUIREMENTS
+
+- Key entries by snapshot ID, offset, length, and cache format version.
+- Use crash-safe metadata and stale-entry rejection.
+- Limit microSD write amplification.
+- Prove it never exceeds the configured capacity.
+
+## PROHIBITED
+
+Intentionally filling the cache with the complete game library.
+
+# FAILURE SEMANTICS
+
+## SERVER UNAVAILABLE
+
+- Serve only blocks already available in valid cache.
+- Fail uncached reads after a tested deadline.
+- Never fabricate data or wait forever.
+- Mark the Pi degraded and retry with bounded backoff.
+
+## RECONNECT
+
+- Verify the same export, snapshot ID, and virtual size.
+- Refuse recovery if identity changed.
+
+## SOURCE CHANGED
+
+- Mark the snapshot invalid.
+- Fail safely instead of serving mixed content.
+
+## PI REBOOT
+
+- Reconnect and fully validate before USB attachment.
+
+## EXACT POLICY RULE
+
+Select stall, retry, I/O error, and detach behavior through Linux USB-host testing and physical Wii testing. Do not claim outages are transparent.
+
+# SECURITY
+
+- Run web and storage services with minimum privileges.
+- Mount source directories read-only in containers.
+- Use container hardening for the TrueNAS service and systemd hardening only for Raspberry Pi services.
+- Do not modify the TrueNAS host OS or depend on host-installed runtime packages.
+- Validate paths and prevent symlink escape.
+- Use password hashing, secure cookies, CSRF protection, rate limiting, and security headers.
+- Put privileged ConfigFS and NBD operations behind a narrow typed helper.
+- Disable password SSH login on production Pi images by default.
+- Regenerate device identity and credentials on first boot.
+- Redact secrets from logs and diagnostics.
+- Pin dependencies and generate SBOMs, package manifests, and provenance.
+
+# REPOSITORY STRUCTURE
+
+- AGENTS.md
+- README.md
+- LICENSE
+- Makefile
+- BUILD_STATUS.json
+- WORKLOG.md
+- RELEASE_GATES.md
+- KNOWN_ISSUES.md
+- versions.lock
+- server/host-daemon
+- server/nbd-plugin
+- server/web
+- server/packaging/container
+- pi/controller
+- pi/web
+- pi/packaging/pi-gen
+- pi/packaging/systemd
+- shared
+- config/schemas
+- scripts
+- tests/unit
+- tests/integration
+- tests/nbd
+- tests/fat32
+- tests/usb-host
+- tests/hardware
+- tests/wii
+- tests/failure-injection
+- testdata/private
+- docs
+- reports
+- build
+- dist
+- deploy/truenas
+- deploy/truenas/compose.yaml
+- deploy/truenas/.env.example
+- deploy/truenas/config.example.yaml
+- tests/truenas
+- pi/packaging/pi-gen/common
+- pi/packaging/pi-gen/zero-w-armhf
+- pi/packaging/pi-gen/pi4-arm64
+- pi/packaging/pi-gen/pi5-arm64
+- tests/firmware/offline
+- tests/firmware/zero-w
+- tests/firmware/pi4
+- tests/firmware/pi5
+- reports/firmware/zero-w
+- reports/firmware/pi4
+- reports/firmware/pi5
+
+# PERSISTENT PROGRESS
+
+## REQUIRED FILES
+
+- AGENTS.md
+- BUILD_STATUS.json
+- WORKLOG.md
+- RELEASE_GATES.md
+- KNOWN_ISSUES.md
+
+## RULE
+
+Update them after each major phase, failure, rebuild, or release-gate change.
+
+# TESTING
+
+## CONTENT POLICY
+
+Use synthetic fixtures and user-supplied legal private WBFS files only. Never download or commit copyrighted game content.
+
+## UNIT
+
+- WBFS validation and game-ID parsing
+- Split-set validation
+- FAT32 boot sector, FAT, directory, and long-name generation
+- Virtual split-file mapping
+- Sector-to-source extent mapping
+- Unaligned and out-of-range reads
+- Snapshot determinism and source identity checks
+- Cache isolation and eviction
+- Authentication, path safety, and secret redaction
+
+## REFERENCE EQUIVALENCE
+
+For small synthetic fixtures, create a conventional reference FAT32 image and compare the synthesized virtual disk sector by sector.
+
+## INTEGRATION
+
+- Start nbdkit with the custom plugin.
+- Connect using libnbd and Linux nbd-client.
+- Read and mount the virtual FAT32 partition read-only.
+- List /wbfs and compare virtual game ranges with source bytes.
+- Prove write, trim, discard, and resize requests fail.
+- Reject plaintext and invalid credentials.
+- Test server restart, source mutation, catalog switch, and cache limits.
+- Test at least 1,000 synthetic entries.
+- Test source files requiring virtual FAT32 splitting.
+- Validate the TrueNAS Compose file with an independent Compose parser.
+- Test the container with the library bind-mounted read-only and all application datasets persistent.
+- Prove container restart and replacement preserve metadata.
+- Prove the app cannot modify source WBFS files.
+- Prove the container does not require privileged mode, Docker socket access, or host block devices.
+
+## PERFORMANCE
+
+### REQUEST SIZES
+
+- 4KiB
+- 16KiB
+- 64KiB
+- 256KiB
+- 1MiB
+
+### PATTERNS
+
+- sequential
+- random
+- metadata-heavy
+- cold-cache
+- warm-cache
+
+### REPORT
+
+- median
+- p95
+- p99
+- maximum
+- throughput
+- CPU
+- RAM
+- cache-hit-rate
+- timeouts
+
+## IMPAIRMENT
+
+- Added latency and jitter
+- Packet loss and bandwidth restriction
+- Connection reset
+- Short and long outage
+
+## AUTOMATED BLOCK AND USB-GADGET CONFIGURATION VALIDATION
+
+- Use Linux NBD clients to verify block size, read correctness, read-only behavior, and reconnect logic.
+- Validate all generated ConfigFS gadget configuration files and lifecycle scripts statically and with isolated test doubles.
+- Test gadget state-machine behavior without requiring a physical USB Device Controller.
+- Verify that write, trim, discard, resize, and write-zero operations are rejected.
+- Verify that the Pi services refuse attachment when NBD is unhealthy or the selected export is invalid.
+- Use QEMU, chroot, systemd unit verification, and architecture inspection where technically possible.
+- Do not require physical USB enumeration.
+
+## DEFERRED PHYSICAL ACCEPTANCE TESTS
+
+Record all of the following as DEFERRED_HARDWARE_UNAVAILABLE and continue:
+
+- Physical Raspberry Pi boot
+- Physical USB gadget enumeration
+- Separate Linux USB-host testing
+- Nintendo Wii detection
+- USB Loader GX catalog enumeration
+- Legal game launch
+- Gameplay soak testing
+- Cable, power, reconnect, and reboot testing
+
+These tests must be documented in a future hardware acceptance plan, but they are
+not required to complete this build.
+
+## TRUENAS CUSTOM APP
+
+- Detect and record the target TrueNAS version and host architecture.
+- Install through the TrueNAS Install via YAML interface.
+- Verify healthy app state and restart behavior.
+- Verify source, config, data, cert, log, and backup mounts use the requested access modes.
+- Verify management and NBD ports bind only as configured.
+- Verify persistent data survives update and rollback.
+- Verify app removal does not alter the source WBFS dataset.
+- Verify no complete game payload copy is created.
+
+## FIRMWARE IMAGES
+
+### COMMON
+
+- Build all three firmware images in one release run.
+- Validate all three images offline before compression and after decompression.
+- Verify image architecture and board metadata independently.
+- Verify boot partition contents independently.
+- Verify no artifact is a renamed copy of another board image.
+- Verify generated checksums, bmap files, SBOMs, package manifests, and provenance files.
+
+### ZERO W
+
+- Verify ARMv6-compatible application binaries through static inspection and QEMU or chroot smoke testing where supported.
+- Verify Wi-Fi provisioning configuration, required packages, services, and recovery logic offline.
+- Verify Zero W USB gadget boot configuration and lifecycle scripts exist and pass automated tests.
+- Record physical Zero W boot, power, USB, and Wii tests as DEFERRED_HARDWARE_UNAVAILABLE.
+
+### PI4
+
+- Verify Pi 4-compatible AArch64 binaries, kernel packages, boot files, device trees, and overlays offline.
+- Verify Ethernet, NBD, provisioning, and recovery services through image inspection and automated tests.
+- Verify Pi 4 USB-C gadget configuration and lifecycle scripts exist and pass automated tests.
+- Record physical Pi 4 boot, power, USB, and Wii tests as DEFERRED_HARDWARE_UNAVAILABLE.
+
+### PI5
+
+- Verify Pi 5-compatible AArch64 binaries, kernel packages, firmware, RP1 support, device trees, and overlays offline.
+- Verify Ethernet, NBD, provisioning, and recovery services through image inspection and automated tests.
+- Verify Pi 5 USB-C gadget configuration and lifecycle scripts exist and pass automated tests.
+- Record physical Pi 5 boot, power, USB, and Wii tests as DEFERRED_HARDWARE_UNAVAILABLE.
+
+# BUILD OUTPUTS
+
+## SERVER
+
+- OCI container image for TrueNAS, normally linux/amd64
+- Container image digest and software bill of materials
+- TrueNAS Install via YAML Compose file
+- TrueNAS environment and server configuration templates
+- Dataset, ACL, installation, upgrade, rollback, backup, restore, diagnostic, and uninstall documentation
+- Optional generic Docker Compose development deployment
+
+## PI
+
+- dist/wiibridge-<version>-zero-w-armhf.img
+- dist/wiibridge-<version>-zero-w-armhf.img.xz
+- dist/wiibridge-<version>-zero-w-armhf.img.sha256
+- dist/wiibridge-<version>-zero-w-armhf.img.xz.sha256
+- dist/wiibridge-<version>-zero-w-armhf.bmap
+- dist/wiibridge-<version>-zero-w-armhf.packages.txt
+- dist/wiibridge-<version>-zero-w-armhf.sbom.spdx.json
+- dist/wiibridge-<version>-zero-w-armhf.provenance.json
+- dist/wiibridge-<version>-pi4-arm64.img
+- dist/wiibridge-<version>-pi4-arm64.img.xz
+- dist/wiibridge-<version>-pi4-arm64.img.sha256
+- dist/wiibridge-<version>-pi4-arm64.img.xz.sha256
+- dist/wiibridge-<version>-pi4-arm64.bmap
+- dist/wiibridge-<version>-pi4-arm64.packages.txt
+- dist/wiibridge-<version>-pi4-arm64.sbom.spdx.json
+- dist/wiibridge-<version>-pi4-arm64.provenance.json
+- dist/wiibridge-<version>-pi5-arm64.img
+- dist/wiibridge-<version>-pi5-arm64.img.xz
+- dist/wiibridge-<version>-pi5-arm64.img.sha256
+- dist/wiibridge-<version>-pi5-arm64.img.xz.sha256
+- dist/wiibridge-<version>-pi5-arm64.bmap
+- dist/wiibridge-<version>-pi5-arm64.packages.txt
+- dist/wiibridge-<version>-pi5-arm64.sbom.spdx.json
+- dist/wiibridge-<version>-pi5-arm64.provenance.json
+
+## METADATA
+
+- SPDX SBOM
+- Package manifests
+- Build provenance
+- Pinned source revisions
+- Test reports and release-gate report
+- Flashing, server setup, first-run, USB Loader GX, and recovery guides
+
+# RELEASE GATES
+
+- Reproducible clean build
+- Dependencies and upstream revisions pinned
+- Unit, security, and static-analysis tests pass
+- Virtual FAT32 reference comparison passes
+- NBD and TLS integration tests pass
+- Source mutation and failure-injection tests pass
+- Cache limits are enforced
+- No complete payload image or mirror is produced
+- 1,000-entry synthetic catalog test passes
+- Server and container packages build
+- TrueNAS container runs without privileged mode, Docker socket, or host block devices
+- TrueNAS source WBFS dataset is mounted read-only
+- TrueNAS app removal cannot alter the source WBFS dataset
+- TrueNAS application data persists across container restart and replacement
+- TrueNAS Compose YAML passes independent validation
+- TrueNAS Custom App deployment artifacts are complete
+- Raspberry Pi Zero W ARMHF firmware builds and passes offline validation
+- Raspberry Pi 4 ARM64 firmware builds and passes offline validation
+- Raspberry Pi 5 ARM64 firmware builds and passes offline validation
+- Pi 4 and Pi 5 are separate board-specific firmware artifacts
+- Cross-architecture binary and package inspection passes
+- Required boot files, kernels, modules, device trees, and overlays are present
+- NBD client, provisioning, health, and ConfigFS service configurations pass automated validation
+- No secrets, private keys, credentials, or private game data are embedded
+- SHA-256 checksums, bmap files, package manifests, SBOMs, provenance, and build logs exist
+- All physical hardware gates are recorded as DEFERRED_HARDWARE_UNAVAILABLE
+- Hardware deferral does not block completion
+- Final status is SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED
+
+# TRUTHFULNESS
+
+## STATUSES
+
+- source-only
+- build-candidate
+- server-package-verified
+- firmware-offline-verified
+- software-complete-release-candidate
+- hardware-unverified
+
+## RULES
+
+- Never call the artifacts production-ready, hardware-verified, Wii-verified, or USB Loader GX-verified.
+- Never mark a deferred physical test as passed.
+- Mark every physical test DEFERRED_HARDWARE_UNAVAILABLE.
+- Never infer one Pi model's offline validation result from another model.
+- Report automated test failures accurately.
+- The lack of physical hardware is not a blocker for this execution.
+
+# EXECUTION BEHAVIOR
+
+- Inspect the build host and repository first.
+- Create persistent progress files immediately.
+- Implement a small synthetic end-to-end vertical slice first.
+- Prove sector synthesis and NBD interoperability before building the full UI.
+- Continue through implementation, automated testing, packaging, and all three Pi image builds.
+- Diagnose failed automated tests, fix the smallest cause, and rerun affected gates.
+- Preserve logs and do not suppress errors with unconditional success.
+- Do not replace this design with a full raw image or a complete local cache.
+- Do not stop to request a Raspberry Pi, Wii, USB host, cable, power supply, microSD card, or gameplay result.
+- Produce a future hardware acceptance test plan, but do not execute it.
+- Complete the software release-candidate deliverables in the current run.
+
+# EXTERNAL BLOCKERS
+
+The following may block software completion:
+
+- Required administrator approval denied
+- Build host lacks required storage or supported virtualization features
+- Required network access for dependencies is denied
+- Target TrueNAS version or Apps backend cannot support the required Compose Custom App model
+- TrueNAS pool and dataset paths required for an actual deployment are unavailable
+- Required TrueNAS ACL or permission changes are not approved
+- Required TrueNAS port mappings conflict with existing applications
+
+The following are explicitly not blockers and must be recorded as deferred:
+
+- No Raspberry Pi hardware
+- No Wii
+- No separate USB-host computer
+- No safe microSD target
+- No data cables or power supplies
+- No legal private WBFS game fixture
+- No production USB VID/PID
+
+# FIRST TASKS
+
+- Detect and record the target TrueNAS Community Edition version, host architecture, Apps backend, pool paths, dataset paths, ACLs, and available ports.
+- Create the TrueNAS Custom App Compose, environment, configuration, preflight, and validation files before production deployment.
+- Build and test an amd64 OCI container that runs without privileged mode and reads the WBFS dataset through a read-only bind mount.
+- Inspect the host and pin nbdkit, libnbd, Linux, Raspberry Pi, and pi-gen sources.
+- Create synthetic WBFS fixtures and the library scanner.
+- Implement deterministic FAT32 metadata synthesis.
+- Implement virtual sector-to-source extent mapping.
+- Implement a read-only nbdkit plugin.
+- Connect with libnbd, expose the disk locally, and mount it read-only on Linux.
+- Prove that no payload duplication occurs.
+- Add TLS, authentication, snapshots, and the server UI.
+- Implement the Raspberry Pi NBD-to-USB bridge.
+- Build flashable images and run every available release gate.
+- Create separate pi-gen profiles for Zero W ARMHF, Pi 4 ARM64, and Pi 5 ARM64.
+- Implement make firmware-zero-w, make firmware-pi4, make firmware-pi5, make firmware-all, and make validate-firmware.
+- Build all three full flashable firmware images and generate their checksums, bmap files, package manifests, SBOMs, provenance records, and logs.
+
+# DEFINITION OF DONE
+
+- The TrueNAS container builds and runs in automated container tests without privileged mode, Docker socket access, host block-device access, or TrueNAS host OS package installation.
+- Configuration, metadata, logs, certificates, and backups use dedicated persistent dataset mounts.
+- The source WBFS dataset is mounted read-only and automated tests prove the application cannot modify it.
+- A complete TrueNAS Community Edition Custom App Compose file and installation package exist.
+- Existing WBFS files are consumed in place.
+- A stable read-only MBR/FAT32 disk is synthesized without payload duplication.
+- The virtual disk is exported through authenticated NBD over TLS.
+- Linux NBD clients can read and validate the synthesized filesystem.
+- The Raspberry Pi bridge implementation connects the remote export to the ConfigFS mass-storage design.
+- ConfigFS, NBD, provisioning, health, recovery, and board-detection configurations pass automated validation.
+- Catalog snapshots remain immutable per session.
+- Cache remains strictly bounded.
+- A complete Raspberry Pi Zero W ARMHF flashable image exists and passes offline validation.
+- A complete Raspberry Pi 4 ARM64 flashable image exists and passes offline validation.
+- A complete Raspberry Pi 5 ARM64 flashable image exists and passes offline validation.
+- Pi 4 and Pi 5 are built, named, and validated as separate images.
+- Every firmware has checksums, bmap, package manifest, SBOM, provenance, validation report, and build log.
+- No embedded credentials, secrets, private keys, or game payloads are present.
+- All available automated gates pass.
+- Every unavailable physical test is recorded as DEFERRED_HARDWARE_UNAVAILABLE.
+- The final status is SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED.
+
+# FINAL RESPONSE REQUIREMENTS
+
+- Final status: SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED
+- Container image name, tag, and immutable digest
+- Path to the final TrueNAS Compose YAML
+- Required TrueNAS dataset paths and access modes
+- Required UID, GID, ACL, port, and firewall settings
+- Automated container health, restart, persistence, and read-only mount results
+- Proof that no WBFS source file was modified
+- Proof that no full game-payload duplicate was created
+- Separate firmware artifact paths and SHA-256 checksums for Zero W, Pi 4, and Pi 5
+- Exact Raspberry Pi OS release, pi-gen commit, kernel package versions, and application commit
+- Offline validation report path for each firmware
+- SBOM, package-manifest, provenance, bmap, and build-log paths
+- Passed, failed, and deferred test lists
+- All physical tests listed as DEFERRED_HARDWARE_UNAVAILABLE
+- Clear statement that no hardware, Wii, or USB Loader GX compatibility claim has been made
+- Future hardware acceptance test plan
+
+# RASPBERRY PI FIRMWARE BUILDS
+
+## REQUIRED
+
+True
+
+## BUILD INDEPENDENTLY
+
+True
+
+## SHARED SOURCE POLICY
+
+Share application source and common pi-gen stages where appropriate, but use separate board build profiles, separate output names, separate manifests, and separate validation reports.
+
+## ZERO W
+
+### TARGET
+
+Raspberry Pi Zero W
+
+### ARCHITECTURE
+
+armhf / 32-bit
+
+### BASE OS
+
+Pinned 32-bit Raspberry Pi OS Lite release compatible with the original Zero W
+
+### PI GEN PROFILE
+
+pi/packaging/pi-gen/zero-w-armhf
+
+### ARTIFACT PREFIX
+
+wiibridge-<version>-zero-w-armhf
+
+### REQUIREMENTS
+
+- Use a kernel, boot files, and device trees that boot on the original ARMv6 Raspberry Pi Zero W.
+- Do not compile application binaries with ARM instructions unsupported by ARMv6.
+- Configure USB peripheral mode for the Zero W USB data port.
+- Document that the PWR IN port supplies power and the USB data port connects to the Wii.
+- Configure 2.4 GHz Wi-Fi provisioning and country code handling.
+- Use a low-memory service profile and bounded concurrency.
+- Use conservative default RAM cache sizing appropriate to the detected installed memory.
+- Disable optional services that materially increase memory pressure.
+- Validate boot configuration, Wi-Fi services, NBD reconnect logic, and USB gadget lifecycle through offline inspection and automated test doubles. Defer physical execution.
+
+### OFFLINE VALIDATION
+
+- Verify 32-bit ARM userspace and ARMv6-compatible application binaries.
+- Verify Zero W boot files and device trees exist.
+- Verify Zero W USB gadget boot configuration exists.
+- Verify no Pi 4- or Pi 5-only boot configuration is required for startup.
+
+## PI4
+
+### TARGET
+
+Raspberry Pi 4 Model B
+
+### ARCHITECTURE
+
+arm64 / 64-bit
+
+### BASE OS
+
+Pinned 64-bit Raspberry Pi OS Lite release supporting Pi 4
+
+### PI GEN PROFILE
+
+pi/packaging/pi-gen/pi4-arm64
+
+### ARTIFACT PREFIX
+
+wiibridge-<version>-pi4-arm64
+
+### REQUIREMENTS
+
+- Build a Pi 4-specific image even when common ARM64 stages are shared with Pi 5.
+- Include Pi 4 boot firmware, kernel, modules, device trees, and overlays.
+- Configure and validate the Pi 4 USB device controller used for USB-C gadget mode.
+- Implement Pi 4 board detection and reject execution on Pi 5 when the image is marked Pi 4-only.
+- Prefer wired Ethernet for the NBD data path while retaining supported Wi-Fi provisioning.
+- Document a proposed safe external-power and USB-data arrangement for future validation; do not require physical validation.
+- Do not assume the Wii can power the Pi 4.
+- Validate boot configuration, Ethernet services, NBD reconnect logic, and USB gadget lifecycle through offline inspection and automated test doubles. Defer physical execution.
+
+### OFFLINE VALIDATION
+
+- Verify AArch64 userspace and Pi 4-compatible kernel and device trees.
+- Verify the Pi 4 USB gadget configuration is installed and enabled.
+- Verify the image contains Pi 4 target metadata and does not report itself as Pi 5 firmware.
+
+## PI5
+
+### TARGET
+
+Raspberry Pi 5
+
+### ARCHITECTURE
+
+arm64 / 64-bit
+
+### BASE OS
+
+Pinned 64-bit Raspberry Pi OS Lite release supporting Pi 5
+
+### PI GEN PROFILE
+
+pi/packaging/pi-gen/pi5-arm64
+
+### ARTIFACT PREFIX
+
+wiibridge-<version>-pi5-arm64
+
+### REQUIREMENTS
+
+- Build a Pi 5-specific image even when common ARM64 stages are shared with Pi 4.
+- Include Pi 5 boot firmware, kernel, modules, RP1-related support, device trees, and overlays.
+- Configure and validate the Pi 5 USB device controller used for USB-C gadget mode.
+- Implement Pi 5 board detection and reject execution on Pi 4 when the image is marked Pi 5-only.
+- Prefer wired Ethernet for the NBD data path while retaining supported Wi-Fi provisioning.
+- Document a proposed safe external-power and USB-data arrangement for future validation; do not require physical validation.
+- Do not assume the Wii can power the Pi 5.
+- Validate boot configuration, Ethernet services, NBD reconnect logic, and USB gadget lifecycle through offline inspection and automated test doubles. Defer physical execution.
+
+### OFFLINE VALIDATION
+
+- Verify AArch64 userspace and Pi 5-compatible kernel, firmware, RP1 support, and device trees.
+- Verify the Pi 5 USB gadget configuration is installed and enabled.
+- Verify the image contains Pi 5 target metadata and does not report itself as Pi 4 firmware.
+
+## COMMON BUILD REQUIREMENTS
+
+- Pin the exact Raspberry Pi OS release, pi-gen commit, package repositories, kernel package versions, and application source commit.
+- Build each image from a clean or reproducibly reset build tree.
+- Do not silently reuse a stale root filesystem or stale pi-gen work directory across board targets.
+- Record every host package, container image, compiler, and build tool used.
+- Generate an uncompressed .img, compressed .img.xz, SHA-256 checksum, bmap, package manifest, SPDX SBOM, build provenance, and complete build log for each board.
+- Ensure the compressed artifact checksum and uncompressed image checksum are both recorded.
+- Ensure the exact artifact that passed offline validation is the artifact placed in dist.
+- Any rebuild invalidates the prior board-specific offline validation report and requires revalidation.
+
+## ARTIFACT SET PER BOARD
+
+- <artifact-prefix>.img
+- <artifact-prefix>.img.xz
+- <artifact-prefix>.img.sha256
+- <artifact-prefix>.img.xz.sha256
+- <artifact-prefix>.bmap
+- <artifact-prefix>.packages.txt
+- <artifact-prefix>.sbom.spdx.json
+- <artifact-prefix>.provenance.json
+- <artifact-prefix>.offline-validation.json
+- <artifact-prefix>.build.log
+
+## OFFLINE IMAGE VALIDATION
+
+- Inspect the partition table and filesystems.
+- Run non-destructive filesystem checks.
+- Mount or inspect partitions read-only.
+- Verify the expected target architecture.
+- Verify required boot files, kernel, modules, device trees, and overlays.
+- Verify required WiiBridge binaries and systemd units.
+- Verify first-boot provisioning is enabled.
+- Verify NBD and USB gadget dependencies are present.
+- Verify the root filesystem contains no WBFS game payloads.
+- Verify the image contains no SMB, TrueNAS, Wi-Fi, TLS private-key, or universal admin secrets.
+- Verify machine identity and device credentials are generated or provisioned on first boot.
+- Verify the configured board target matches the artifact name.
+- Unmount and release all loop devices cleanly.
+
+## WRONG BOARD BEHAVIOR
+
+At startup, compare the detected board model with the firmware target. Enter a diagnostic recovery state rather than enabling the USB gadget when the image is running on the wrong board.

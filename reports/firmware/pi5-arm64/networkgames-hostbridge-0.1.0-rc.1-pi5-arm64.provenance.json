@@ -1,0 +1,54 @@
+{
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "subject": [
+    {
+      "name": "pi5-arm64.img",
+      "digest": {
+        "sha256": "910e8fca5b1d55f3e930d5acd2d479bf232ec7174fc37e535fd8509a25d6b426"
+      }
+    },
+    {
+      "name": "pi5-arm64.img.xz",
+      "digest": {
+        "sha256": "9a4b4f3eac95f4128d1d4bb6c05620c6db5a2a8911c745e0aa79da5afd1c2aac"
+      }
+    }
+  ],
+  "buildDefinition": {
+    "buildType": "networkgames/pi-gen",
+    "externalParameters": {
+      "target": "pi5-arm64"
+    },
+    "resolvedDependencies": [
+      {
+        "uri": "git+https://github.com/RPi-Distro/pi-gen@master",
+        "digest": {
+          "gitCommit": "314262cb286b8f33327a6f0cbabe14c625021ca0"
+        }
+      },
+      {
+        "uri": "git+https://github.com/RPi-Distro/pi-gen@arm64",
+        "digest": {
+          "gitCommit": "ca8aeed0ae300c2a89f55ce9617d5f96a27e99e5"
+        }
+      },
+      {
+        "uri": "git+local:networkgames",
+        "digest": {
+          "gitCommit": "83df1d8c9da0488f7b32a9311e763809a329ed89",
+          "sourceTreeSha256": "3c975e55e3558cd4c129a3841936d46c623bb0334817687c31ee1a89476c4910"
+        }
+      }
+    ]
+  },
+  "runDetails": {
+    "builder": {
+      "id": "networkgames-build-firmware.sh"
+    },
+    "metadata": {
+      "invocationId": "pi5-arm64-20260724",
+      "finishedOn": "2026-07-24T10:50:06Z",
+      "sourceWorktreeDirty": true
+    }
+  }
+}

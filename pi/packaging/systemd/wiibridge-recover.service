@@ -1,0 +1,11 @@
+[Unit]
+Description=WiiBridge ensure USB gadget is detached during recovery
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wiibridge-helper detach
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

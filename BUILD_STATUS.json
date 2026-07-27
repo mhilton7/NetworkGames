@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "project_version": "0.1.0-rc.1",
+  "prompt_version": 3,
+  "status": "hardware-validation-in-progress",
+  "final_label": "PHYSICAL WII BANNER AND GAME LAUNCH PASS — GAMEPLAY SOAK PENDING",
+  "application_commit": "74dfb5bb2d66c2a558c9de7690ee89c0c31daa70",
+  "build_host": {
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.12.96+deb13-amd64",
+    "architecture": "x86_64",
+    "available_bytes": 179314884608
+  },
+  "truenas_target": {
+    "version": null,
+    "apps_backend": null,
+    "architecture": null,
+    "pool_paths": [],
+    "dataset_paths": [],
+    "acls": null,
+    "ports": {
+      "https": 8445,
+      "nbd_tls": 10809,
+      "availability_verified_on_target": true
+    },
+    "state": "LIVE_WBFS_ARCHIVE_ATTRIBUTE_AND_READONLY_NBD_VERIFIED"
+  },
+  "phases": {
+    "baseline": "complete",
+    "server": "wbfs-fat-attribute-compatibility-repair-live-verified",
+    "container": "ghcr-wbfsattrfix1-live-verified",
+    "pi_bridge": "strict-readonly-live-wii-launch-verified",
+    "firmware_zero_w": "server-wait-cleanup-vidpid-export-installed-offline-verified",
+    "firmware_pi4": "firmware-offline-verified",
+    "firmware_pi5": "firmware-offline-verified",
+    "release": "release-candidate-physical-game-launch-pass-gameplay-soak-pending"
+  },
+  "physical_tests": "10-minute-solution-banner-and-game-launch-pass",
+  "updated_utc": "2026-07-25T09:10:27Z"
+}

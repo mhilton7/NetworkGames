@@ -1,0 +1,141 @@
+#!/bin/sh
+set -eu
+
+action=${1:-}
+config=/etc/wiibridge/bridge.env
+run=/run/wiibridge
+mkdir -p "$run"
+
+require_nbd() {
+  if ! test -d /sys/module/nbd || ! test -b /dev/nbd0; then
+    echo "NBD kernel module is not preloaded; install the WiiBridge NBD boot configuration and reboot" >&2
+    exit 23
+  fi
+}
+
+# These cleanup operations must remain available before initial provisioning
+# and while recovering from a damaged or incomplete configuration.
+case "$action" in
+  detach)
+    /usr/libexec/wiibridge-gadget stop
+    rm -f "$run/usb-attached"
+    exit 0
+    ;;
+  disconnect)
+    "$0" detach || true
+    nbd-client -d /dev/nbd0 2>/dev/null || true
+    rm -f "$run/nbd-connected" "$run/export-mode"
+    exit 0
+    ;;
+  poweroff)
+    "$0" disconnect || true
+    sync
+    systemctl poweroff --no-block
+    exit 0
+    ;;
+  clear-cache)
+    test ! -e "$run/usb-attached"
+    find /var/cache/wiibridge -xdev -type f -delete
+    exit 0
+    ;;
+esac
+
+board_target=$(cat /usr/share/wiibridge/board-target)
+model=$(tr -d '\000' < /proc/device-tree/model 2>/dev/null || true)
+case "$board_target:$model" in
+  zero-w-armhf:*"Zero W"*) ;;
+  pi4-arm64:*"Raspberry Pi 4 Model B"*) ;;
+  pi5-arm64:*"Raspberry Pi 5"*) ;;
+  *) echo "wrong board; recovery state" >&2; exit 20 ;;
+esac
+test -r "$config" || {
+  echo "not provisioned" >&2
+  exit 21
+}
+# shellcheck disable=SC1090
+. "$config"
+export WIIBRIDGE_USB_VID WIIBRIDGE_USB_PID
+: "${NBD_HOST:?missing NBD_HOST}"
+: "${NBD_PORT:=10809}"
+: "${NBD_EXPORT:?missing NBD_EXPORT}"
+: "${TLS_CA:?missing TLS_CA}"
+: "${TLS_CERT:?missing TLS_CERT}"
+: "${TLS_KEY:?missing TLS_KEY}"
+case "$NBD_HOST" in *[!A-Za-z0-9.:-]*) echo "invalid NBD host" >&2; exit 22;; esac
+case "$NBD_PORT" in *[!0-9]*) echo "invalid NBD port" >&2; exit 22;; esac
+case "$action" in
+  auto-attach-ready)
+    test -e /etc/wiibridge/auto-attach
+    case "${WIIBRIDGE_USB_VID:-}:${WIIBRIDGE_USB_PID:-}" in
+      0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]:0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) ;;
+      *) exit 1 ;;
+    esac
+    exit 0
+    ;;
+  test)
+    test ! -e "$run/usb-attached"
+    test ! -e "$run/nbd-connected"
+    require_nbd
+    nbd-client -x -F "$TLS_CERT" -K "$TLS_KEY" -A "$TLS_CA" \
+      -H "$NBD_HOST" -N "$NBD_EXPORT" -R "$NBD_HOST" "$NBD_PORT" /dev/nbd0
+    wait_count=0
+    while ! test -b /dev/nbd0p1 && test "$wait_count" -lt 50; do
+      sleep 0.1
+      wait_count=$((wait_count + 1))
+    done
+    if ! test -b /dev/nbd0p1 ||
+      ! dd if=/dev/nbd0 of=/dev/null bs=512 count=1 status=none ||
+      ! dd if=/dev/nbd0p1 of=/dev/null bs=512 count=1 status=none; then
+      nbd-client -d /dev/nbd0 2>/dev/null || true
+      exit 1
+    fi
+    nbd-client -d /dev/nbd0
+    ;;
+  connect|connect-wii|connect-gamecube-physical|connect-gamecube-emulated)
+    test ! -e "$run/usb-attached"
+    test ! -e "$run/nbd-connected"
+    require_nbd
+    if nbd-client -c /dev/nbd0 >/dev/null 2>&1; then
+      echo "NBD device is already connected; disconnect it before reconnecting" >&2
+      exit 24
+    fi
+    nbd-client -d /dev/nbd0 2>/dev/null || true
+    nbd-client -x -F "$TLS_CERT" -K "$TLS_KEY" -A "$TLS_CA" \
+      -H "$NBD_HOST" -N "$NBD_EXPORT" -R "$NBD_HOST" "$NBD_PORT" /dev/nbd0
+    mode=wii
+    case "$action" in
+      connect-gamecube-physical) mode=gamecube-physical ;;
+      connect-gamecube-emulated) mode=gamecube-emulated ;;
+    esac
+    if test "$mode" = gamecube-emulated; then
+      blockdev --setrw /dev/nbd0
+      test "$(blockdev --getro /dev/nbd0)" = 0
+    else
+      blockdev --setro /dev/nbd0
+      test "$(blockdev --getro /dev/nbd0)" = 1
+    fi
+    printf '%s\n' "$mode" > "$run/export-mode"
+    touch "$run/nbd-connected"
+    ;;
+  attach)
+    test -e "$run/nbd-connected"
+    mode=$(cat "$run/export-mode" 2>/dev/null || printf wii)
+    case "$mode:$(blockdev --getro /dev/nbd0)" in
+      wii:1|gamecube-physical:1|gamecube-emulated:0) ;;
+      *) echo "NBD write mode does not match selected export mode" >&2; exit 25 ;;
+    esac
+    /usr/libexec/wiibridge-gadget start "$mode"
+    touch "$run/usb-attached"
+    ;;
+  auto-attach)
+    test -e /etc/wiibridge/auto-attach
+    "$0" auto-attach-ready
+    "$0" test
+    "$0" connect
+    if ! "$0" attach; then
+      "$0" disconnect
+      exit 1
+    fi
+    ;;
+  *) echo "unsupported action" >&2; exit 64 ;;
+esac

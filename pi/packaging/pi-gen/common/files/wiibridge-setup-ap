@@ -1,0 +1,41 @@
+#!/bin/sh
+set -eu
+
+country=US
+if test -r /boot/firmware/wiibridge-country; then
+  country=$(tr -d '[:space:]' < /boot/firmware/wiibridge-country)
+fi
+case "$country" in
+  [A-Z][A-Z]) ;;
+  *) echo "invalid Wi-Fi regulatory country" >&2; exit 1 ;;
+esac
+
+iw reg set "$country"
+rfkill unblock wifi
+nmcli networking on
+nmcli radio wifi on
+nmcli connection reload
+systemctl stop wiibridge-setup-dnsmasq.service \
+  wiibridge-setup-hostapd.service 2>/dev/null || true
+
+force_recovery=false
+test ! -e /boot/firmware/wiibridge-recovery || force_recovery=true
+if test "$force_recovery" = false &&
+   test -e /etc/wiibridge/wifi-provisioned &&
+   nmcli --terse --fields NAME connection show |
+     grep -Fqx 'wiibridge-client'; then
+  nmcli device set wlan0 managed yes
+  if nmcli --wait 30 connection up wiibridge-client >/dev/null 2>&1; then
+    exit 0
+  fi
+  echo "configured Wi-Fi unavailable; returning to setup access point" >&2
+fi
+
+nmcli device disconnect wlan0 >/dev/null 2>&1 || true
+nmcli device set wlan0 managed no
+ip link set wlan0 down
+ip address flush dev wlan0
+ip address add 10.77.0.1/24 dev wlan0
+ip link set wlan0 up
+systemctl start wiibridge-setup-hostapd.service
+systemctl start wiibridge-setup-dnsmasq.service

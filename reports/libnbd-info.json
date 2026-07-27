@@ -1,0 +1,19 @@
+protocol: newstyle-fixed with TLS, using simple packets
+export="all":
+	export-size: 269979648 (263652K)
+	content: DOS/MBR boot sector; partition 1 : ID=0xc, start-CHS (0x0,32,33), end-CHS (0x3ff,254,63), startsector 2048, 525256 sectors, extended partition table (last)
+	uri: nbds://pi-interop@localhost:21089/all?tls-certificates=/tmp/tmp.OugpYlL4OU/client
+	is_rotational: false
+	is_read_only: true
+	can_block_status_payload: false
+	can_cache: false
+	can_df: false
+	can_fast_zero: false
+	can_flush: true
+	can_fua: false
+	can_multi_conn: false
+	can_trim: false
+	can_zero: false
+	block_size_minimum: 512
+	block_size_preferred: 65536 (64K)
+	block_size_maximum: 1048576 (1M)
