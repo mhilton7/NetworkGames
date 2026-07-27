@@ -15,7 +15,9 @@ case "$action" in
       echo "authorized USB VID/PID not provisioned" >&2
       exit 30
     }
-    modprobe libcomposite
+    if ! test -d /sys/module/libcomposite; then
+      modprobe libcomposite
+    fi
     mkdir -p "$g"
     printf '%s' "$WIIBRIDGE_USB_VID" > "$g/idVendor"
     printf '%s' "$WIIBRIDGE_USB_PID" > "$g/idProduct"

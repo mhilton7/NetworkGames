@@ -51,6 +51,10 @@ if grep -q 'modprobe nbd' pi/packaging/pi-gen/common/files/wiibridge-helper; the
 fi
 grep -qx 'nbd' \
   pi/packaging/pi-gen/common/files/wiibridge-modules-load.conf
+grep -qx 'libcomposite' \
+  pi/packaging/pi-gen/common/files/wiibridge-modules-load.conf
+grep -qx 'usb_f_mass_storage' \
+  pi/packaging/pi-gen/common/files/wiibridge-modules-load.conf
 grep -qx 'options nbd nbds_max=1' \
   pi/packaging/pi-gen/common/files/wiibridge-modprobe.conf
 grep -q 'ProtectKernelModules=yes' \
