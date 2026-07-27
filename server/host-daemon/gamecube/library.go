@@ -23,6 +23,7 @@ import (
 
 const (
 	LibrarySchema          = 2
+	libraryFileCacheLimit  = 32
 	libraryMinimumSize     = int64(8 << 30)
 	libraryAlignment       = int64(1 << 30)
 	libraryMetadataReserve = int64(256 << 20)
@@ -105,18 +106,21 @@ type LibraryManifest struct {
 }
 
 type LibraryBuildProgress struct {
-	State          string    `json:"state"`
-	GamesCompleted int       `json:"titles_processed"`
-	TotalGames     int       `json:"total_titles"`
-	DiscsCompleted int       `json:"discs_processed"`
-	TotalDiscs     int       `json:"total_discs"`
-	FilesMapped    int       `json:"files_mapped"`
-	CurrentTitle   string    `json:"current_title,omitempty"`
-	Phase          string    `json:"metadata_generation"`
-	Validation     string    `json:"validation_state"`
-	Started        time.Time `json:"started,omitempty"`
-	Completed      time.Time `json:"completed,omitempty"`
-	Error          string    `json:"error,omitempty"`
+	State              string    `json:"state"`
+	GamesCompleted     int       `json:"titles_processed"`
+	TotalGames         int       `json:"total_titles"`
+	DiscsCompleted     int       `json:"discs_processed"`
+	TotalDiscs         int       `json:"total_discs"`
+	FilesMapped        int       `json:"files_mapped"`
+	CurrentTitle       string    `json:"current_title,omitempty"`
+	Phase              string    `json:"current_phase"`
+	MetadataGeneration string    `json:"metadata_generation"`
+	MetadataBytes      int64     `json:"metadata_bytes_generated"`
+	ExtentCount        int       `json:"extent_count"`
+	Validation         string    `json:"validation_state"`
+	Started            time.Time `json:"started,omitempty"`
+	Completed          time.Time `json:"completed,omitempty"`
+	Error              string    `json:"error,omitempty"`
 }
 
 type LibraryManager struct {
@@ -162,8 +166,12 @@ func NewLibraryManager(root string, config LibraryConfig) (*LibraryManager, erro
 		manager.progress = LibraryBuildProgress{
 			State: "Ready", GamesCompleted: active.TitleCount, TotalGames: active.TitleCount,
 			DiscsCompleted: active.DiscCount, TotalDiscs: active.DiscCount,
-			FilesMapped: active.MappedFileCount, Phase: "complete",
+			FilesMapped: active.MappedFileCount, Phase: "Ready",
+			MetadataGeneration: "Ready", ExtentCount: active.MappedExtentCount,
 			Validation: "validated", Completed: active.Created,
+		}
+		if info, statErr := os.Stat(active.MetadataPath); statErr == nil {
+			manager.progress.MetadataBytes = info.Size()
 		}
 		_ = manager.prune(active.GenerationID)
 	}
@@ -216,7 +224,8 @@ func (manager *LibraryManager) StartBuild(ctx context.Context, games []Game) err
 	}
 	manager.progress = LibraryBuildProgress{
 		State: "Building", TotalGames: len(games), TotalDiscs: totalDiscs,
-		Phase: "source validation", Validation: "pending", Started: time.Now().UTC(),
+		Phase: "Fingerprinting", MetadataGeneration: "Fingerprinting",
+		Validation: "pending", Started: time.Now().UTC(),
 	}
 	manager.mu.Unlock()
 	go func() {
@@ -227,7 +236,7 @@ func (manager *LibraryManager) StartBuild(ctx context.Context, games []Game) err
 		manager.progress.Completed = time.Now().UTC()
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				manager.progress.State = "Not built"
+				manager.progress.State = "Canceled"
 				manager.progress.Error = "build canceled"
 			} else {
 				manager.progress.State = "Failed"
@@ -240,7 +249,8 @@ func (manager *LibraryManager) StartBuild(ctx context.Context, games []Game) err
 		manager.progress.DiscsCompleted = manifest.DiscCount
 		manager.progress.FilesMapped = manifest.MappedFileCount
 		manager.progress.CurrentTitle = ""
-		manager.progress.Phase = "complete"
+		manager.progress.Phase = "Ready"
+		manager.progress.MetadataGeneration = "Ready"
 		manager.progress.Validation = "validated"
 	}()
 	return nil
@@ -270,6 +280,16 @@ func (manager *LibraryManager) setProgress(title, phase string, games, discs, fi
 	manager.progress.DiscsCompleted = discs
 	manager.progress.FilesMapped = files
 	manager.progress.Phase = phase
+	manager.progress.MetadataGeneration = phase
+}
+
+func (manager *LibraryManager) setLayoutProgress(phase string, metadataBytes int64, extents int) {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	manager.progress.Phase = phase
+	manager.progress.MetadataGeneration = phase
+	manager.progress.MetadataBytes = metadataBytes
+	manager.progress.ExtentCount = extents
 }
 
 func (manager *LibraryManager) Build(ctx context.Context, games []Game) (LibraryManifest, error) {
@@ -293,6 +313,17 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 		if game.Validation != "valid" || len(game.Discs) == 0 || len(game.Discs) > 2 {
 			return LibraryManifest{}, fmt.Errorf("%s is not a validated one- or two-disc title", game.ID)
 		}
+		if game.DiscCount != len(game.Discs) {
+			return LibraryManifest{}, fmt.Errorf("%s has an incomplete disc set", game.ID)
+		}
+		for discIndex, disc := range game.Discs {
+			if disc.Number != byte(discIndex) || disc.ID != game.ID ||
+				disc.Revision != game.Revision || disc.Validation != "valid" ||
+				(disc.Format != "iso" && disc.Format != "gcm" &&
+					disc.Format != "ciso" && disc.Format != "fst") {
+				return LibraryManifest{}, fmt.Errorf("%s has inconsistent disc metadata", game.ID)
+			}
+		}
 		var err error
 		hashed[index], err = hashGameSources(game)
 		if err != nil {
@@ -311,6 +342,7 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 			payloadBytes += disc.PhysicalSize
 			totalDiscs++
 		}
+		manager.setProgress(game.Title, "Fingerprinting", index+1, totalDiscs, 0)
 	}
 	sort.Slice(hashed, func(i, j int) bool {
 		if hashed[i].ID == hashed[j].ID {
@@ -331,16 +363,19 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 		return LibraryManifest{}, err
 	}
 	defer os.RemoveAll(staging)
+	manager.setProgress("", "Planning filesystem", len(hashed), totalDiscs, 0)
 	files, titles, err := manager.mapFiles(ctx, hashed)
 	if err != nil {
 		return LibraryManifest{}, err
 	}
-	manager.setProgress("", "metadata generation", len(hashed), totalDiscs, len(files))
+	manager.setProgress("", "Generating FAT metadata", len(hashed), totalDiscs, len(files))
 	layout, metadata, err := fat32virtual.Build(virtualSize, "WIIBRIDGE", fingerprint, files)
 	if err != nil {
 		return LibraryManifest{}, err
 	}
 	files = layout.Files
+	manager.setLayoutProgress("Generating FAT metadata", int64(len(metadata)),
+		len(layout.SourceExtents))
 	layoutPath := filepath.Join(staging, "layout.bin")
 	metadataPath := filepath.Join(staging, "metadata.bin")
 	layoutData, err := json.MarshalIndent(layout, "", "  ")
@@ -378,7 +413,7 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 	}
 	staged := manifest
 	staged.LayoutPath, staged.MetadataPath = layoutPath, metadataPath
-	manager.setProgress("", "layout validation", len(hashed), totalDiscs, len(files))
+	manager.setProgress("", "Validating generation", len(hashed), totalDiscs, len(files))
 	if err = ValidateLibraryManifest(manager.root, staged); err != nil {
 		return LibraryManifest{}, err
 	}
@@ -448,7 +483,7 @@ func (manager *LibraryManager) mapFiles(ctx context.Context, games []Game) (
 				})
 			}
 			discsCompleted++
-			manager.setProgress(game.Title, "source mapping", gameIndex,
+			manager.setProgress(game.Title, "Mapping sources", gameIndex,
 				discsCompleted, len(files))
 		}
 		for _, file := range files[firstMapped:] {
@@ -463,7 +498,7 @@ func (manager *LibraryManager) mapFiles(ctx context.Context, games []Game) (
 			Region: game.Region, Format: game.Format, DiscCount: len(game.Discs),
 			OutputDir: outputDir, PreparedID: hex.EncodeToString(prepared.Sum(nil)),
 		})
-		manager.setProgress(game.Title, "source mapping", gameIndex+1,
+		manager.setProgress(game.Title, "Mapping sources", gameIndex+1,
 			discsCompleted, len(files))
 	}
 	return files, titles, nil
@@ -873,7 +908,7 @@ func OpenLibraryBackend(root string, manifest LibraryManifest) (*fat32virtual.Ba
 	if err = json.Unmarshal(layoutData, &layout); err != nil {
 		return nil, err
 	}
-	return fat32virtual.Open(layout, metadata, 16)
+	return fat32virtual.Open(layout, metadata, libraryFileCacheLimit)
 }
 
 func (manager *LibraryManager) Current(games []Game) (bool, error) {
@@ -967,19 +1002,34 @@ func StorageReport(manifest LibraryManifest) (map[string]int64, error) {
 	for _, file := range manifest.Files {
 		sourceBytes += file.LogicalSize
 	}
-	var allocated int64
-	for _, name := range []string{manifest.LayoutPath, manifest.MetadataPath,
+	var metadataApparent, metadataAllocated int64
+	generationFiles := []string{manifest.LayoutPath, manifest.MetadataPath,
 		filepath.Join(filepath.Dir(manifest.LayoutPath), "manifest.json"),
-		filepath.Join(filepath.Dir(manifest.LayoutPath), "checksums.json")} {
+		filepath.Join(filepath.Dir(manifest.LayoutPath), "checksums.json")}
+	for _, name := range generationFiles {
 		info, err := os.Stat(name)
 		if err != nil {
 			return nil, err
 		}
+		metadataApparent += info.Size()
 		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-			allocated += stat.Blocks * 512
+			metadataAllocated += stat.Blocks * 512
 		} else {
-			allocated += info.Size()
+			metadataAllocated += info.Size()
 		}
+	}
+	var overlayApparent, overlayAllocated int64
+	overlay := filepath.Join(filepath.Dir(manifest.LayoutPath), "overlay.bin")
+	if info, overlayErr := os.Lstat(overlay); overlayErr == nil &&
+		info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
+		overlayApparent = info.Size()
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			overlayAllocated = stat.Blocks * 512
+		} else {
+			overlayAllocated = info.Size()
+		}
+	} else if overlayErr != nil && !os.IsNotExist(overlayErr) {
+		return nil, overlayErr
 	}
 	var legacyBytes int64
 	generations := filepath.Dir(filepath.Dir(manifest.LayoutPath))
@@ -1003,12 +1053,23 @@ func StorageReport(manifest LibraryManifest) (map[string]int64, error) {
 		}
 	}
 	return map[string]int64{
+		"combined_source_gamecube_payload_bytes": sourceBytes,
+		"virtual_gamecube_disk_size":             manifest.VolumeSize,
+		"generated_metadata_apparent_bytes":      metadataApparent,
+		"generated_metadata_allocated_bytes":     metadataAllocated,
+		"overlay_apparent_bytes":                 overlayApparent,
+		"overlay_allocated_bytes":                overlayAllocated,
+		"legacy_copied_generation_bytes":         legacyBytes,
+		"mapped_title_count":                     int64(manifest.TitleCount),
+		"mapped_disc_count":                      int64(manifest.DiscCount),
+		"mapped_virtual_file_count":              int64(manifest.MappedFileCount),
+		"mapped_extent_count":                    int64(manifest.MappedExtentCount),
+		// Compatibility aliases retained for existing report consumers.
 		"combined_source_payload_bytes":             sourceBytes,
 		"new_generation_apparent_virtual_size":      manifest.VolumeSize,
-		"new_generation_physically_allocated_bytes": allocated,
-		"legacy_copied_generation_bytes":            legacyBytes,
-		"mapped_files":                              int64(manifest.MappedFileCount),
-		"mapped_extents":                            int64(manifest.MappedExtentCount),
-		"overlay_bytes":                             0,
+		"new_generation_physically_allocated_bytes": metadataAllocated,
+		"mapped_files":   int64(manifest.MappedFileCount),
+		"mapped_extents": int64(manifest.MappedExtentCount),
+		"overlay_bytes":  overlayAllocated,
 	}, nil
 }

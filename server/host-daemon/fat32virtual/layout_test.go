@@ -97,6 +97,56 @@ func TestDuplicatePathsAndOverlappingExtentsRejected(t *testing.T) {
 	}
 }
 
+func TestExtentAndMetadataBoundsRejected(t *testing.T) {
+	file := testFile(t, t.TempDir(), "source.iso", 4096)
+	base, metadata, err := Build(8<<30, "WIIBRIDGE", "stable", []File{file})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCases := []struct {
+		name   string
+		change func(*Layout, *[]byte)
+	}{
+		{
+			name: "extent beyond source",
+			change: func(layout *Layout, _ *[]byte) {
+				layout.SourceExtents[0].SourceOffset = 1
+			},
+		},
+		{
+			name: "extent beyond virtual disk",
+			change: func(layout *Layout, _ *[]byte) {
+				layout.SourceExtents[0].VirtualOffset = layout.VirtualSize - 1
+			},
+		},
+		{
+			name: "metadata overlaps payload",
+			change: func(layout *Layout, data *[]byte) {
+				*data = append(*data, make([]byte, 512)...)
+				layout.MetadataExtents = append(layout.MetadataExtents, MetadataExtent{
+					VirtualOffset: layout.SourceExtents[0].VirtualOffset,
+					Length:        512, StorageOffset: int64(len(*data) - 512),
+				})
+			},
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			layout := base
+			layout.SourceExtents = append([]Extent(nil), base.SourceExtents...)
+			layout.MetadataExtents = append([]MetadataExtent(nil), base.MetadataExtents...)
+			data := append([]byte(nil), metadata...)
+			test.change(&layout, &data)
+			layout.ExtentMapHash = hashExtents(layout.SourceExtents)
+			sum := sha256.Sum256(data)
+			layout.MetadataHash = hex.EncodeToString(sum[:])
+			if _, openErr := Open(layout, data, 2); openErr == nil {
+				t.Fatal("invalid virtual layout was accepted")
+			}
+		})
+	}
+}
+
 func BenchmarkReadManyExtents(b *testing.B) {
 	root := b.TempDir()
 	var files []File

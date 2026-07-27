@@ -27,6 +27,15 @@ type Backend struct {
 	cache    map[string]*list.Element
 	lru      *list.List
 	closed   bool
+	stats    Stats
+}
+
+type Stats struct {
+	SourceOpens   uint64
+	SourceReads   uint64
+	CacheHits     uint64
+	PeakOpenFiles int
+	CachedFiles   int
 }
 
 func Open(layout Layout, metadata []byte, cacheLimit int) (*Backend, error) {
@@ -59,6 +68,14 @@ func (b *Backend) Size() int64                        { return b.size }
 func (b *Backend) ReadOnly() bool                     { return true }
 func (b *Backend) WriteAt([]byte, int64) (int, error) { return 0, os.ErrPermission }
 func (b *Backend) Sync() error                        { return nil }
+
+func (b *Backend) Stats() Stats {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	result := b.stats
+	result.CachedFiles = len(b.cache)
+	return result
+}
 
 func (b *Backend) ReadAt(buffer []byte, offset int64) (int, error) {
 	if offset < 0 || int64(len(buffer)) > b.size-offset {
@@ -95,6 +112,7 @@ func (b *Backend) ReadAt(buffer []byte, offset int64) (int, error) {
 			if err != nil {
 				return done, err
 			}
+			b.stats.SourceReads++
 			read, readErr := readFullAt(file, buffer[done:done+count],
 				item.SourceOffset+position-item.VirtualOffset)
 			done += read
@@ -162,21 +180,28 @@ func verifyIdentity(path string, expected Identity) error {
 
 func (b *Backend) open(path string) (*os.File, error) {
 	if element := b.cache[path]; element != nil {
+		b.stats.CacheHits++
 		b.lru.MoveToFront(element)
 		return element.Value.(*cacheEntry).file, nil
+	}
+	if b.lru.Len() >= b.limit {
+		oldest := b.lru.Back()
+		entry := oldest.Value.(*cacheEntry)
+		delete(b.cache, entry.path)
+		b.lru.Remove(oldest)
+		if err := entry.file.Close(); err != nil {
+			return nil, err
+		}
 	}
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	b.stats.SourceOpens++
 	element := b.lru.PushFront(&cacheEntry{path: path, file: file})
 	b.cache[path] = element
-	if b.lru.Len() > b.limit {
-		oldest := b.lru.Back()
-		entry := oldest.Value.(*cacheEntry)
-		delete(b.cache, entry.path)
-		b.lru.Remove(oldest)
-		_ = entry.file.Close()
+	if len(b.cache) > b.stats.PeakOpenFiles {
+		b.stats.PeakOpenFiles = len(b.cache)
 	}
 	return file, nil
 }

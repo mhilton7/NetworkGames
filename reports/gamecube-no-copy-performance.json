@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "measured_utc": "2026-07-27T23:39:37Z",
+  "host_cpu": "redacted host CPU",
+  "goos": "linux",
+  "goarch": "amd64",
+  "cache_limit": 32,
+  "ten_thousand_extent_memory_test": {
+    "mapped_extents": 10000,
+    "peak_heap_growth_bytes": 2320520,
+    "source_open_count": 32,
+    "source_read_count": 10000,
+    "cache_hit_count": 9968,
+    "cache_hit_percent": 99.68,
+    "peak_open_file_count": 32
+  },
+  "benchmarks": [
+    {
+      "name": "sequential_reads_one_iso_128k",
+      "ns_per_op": 28516,
+      "operations_per_second": 35068,
+      "bytes_per_op": 288,
+      "allocations_per_op": 2,
+      "source_reads_per_op": 1,
+      "source_open_count": 1,
+      "cache_hit_percent": 100
+    },
+    {
+      "name": "random_reads_one_iso_4k",
+      "ns_per_op": 25614,
+      "operations_per_second": 39041,
+      "bytes_per_op": 272,
+      "allocations_per_op": 2,
+      "source_reads_per_op": 1,
+      "source_open_count": 1,
+      "cache_hit_percent": 100
+    },
+    {
+      "name": "switching_32_sources_4k",
+      "ns_per_op": 25481,
+      "operations_per_second": 39245,
+      "bytes_per_op": 288,
+      "allocations_per_op": 2,
+      "source_reads_per_op": 1,
+      "source_open_count": 32,
+      "cache_hit_percent": 99.93,
+      "peak_open_file_count": 32
+    },
+    {
+      "name": "extent_lookup_10000",
+      "ns_per_op": 10.51,
+      "operations_per_second": 95147479,
+      "bytes_per_op": 0,
+      "allocations_per_op": 0
+    },
+    {
+      "name": "extracted_fst_5000_files",
+      "ns_per_op": 25652,
+      "operations_per_second": 38983,
+      "bytes_per_op": 288,
+      "allocations_per_op": 2,
+      "source_reads_per_op": 1,
+      "source_open_count": 1,
+      "cache_hit_percent": 100
+    },
+    {
+      "name": "read_crossing_two_source_extents_128k",
+      "ns_per_op": 54738,
+      "operations_per_second": 18269,
+      "bytes_per_op": 576,
+      "allocations_per_op": 4,
+      "source_reads_per_op": 2,
+      "source_open_count": 2,
+      "cache_hit_percent": 100
+    },
+    {
+      "name": "concurrent_reads_4k",
+      "ns_per_op": 29444,
+      "operations_per_second": 33963,
+      "bytes_per_op": 273,
+      "allocations_per_op": 2,
+      "source_reads_per_op": 1,
+      "source_open_count": 1,
+      "cache_hit_percent": 100
+    }
+  ],
+  "limitations": [
+    "Host microbenchmarks do not prove Raspberry Pi, USB gadget, Wii, USB Loader GX, or Nintendont performance.",
+    "No local mutual-TLS NBD client throughput comparison was run in this measurement."
+  ]
+}
