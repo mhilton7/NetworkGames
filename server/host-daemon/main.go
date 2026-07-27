@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -460,9 +461,9 @@ func (a *app) importGameCube(w http.ResponseWriter, r *http.Request) {
 		}
 		a.imports[key] = importJob{Status: "ready", Manifest: &manifest}
 	}()
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	writeJSON(w, map[string]string{"cache_key": key, "status": "queued"})
+	respondAction(w, r, http.StatusAccepted,
+		map[string]string{"cache_key": key, "status": "queued"},
+		"GameCube export preparation was queued.", "gamecube")
 }
 
 func (a *app) saveGameCubeSettings(w http.ResponseWriter, r *http.Request) {
@@ -513,7 +514,8 @@ func (a *app) saveGameCubeSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(w, settings)
+	respondAction(w, r, http.StatusOK, settings,
+		"Compatibility settings saved.", "gamecube")
 }
 
 func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
@@ -592,7 +594,9 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	writeJSON(w, map[string]any{"platform": a.exports.Platform(), "state": a.exports.State()})
+	respondAction(w, r, http.StatusOK,
+		map[string]any{"platform": a.exports.Platform(), "state": a.exports.State()},
+		"Host export switched to "+platform+".", platform)
 }
 
 func (a *app) restoreGameCubeSave(w http.ResponseWriter, r *http.Request) {
@@ -639,7 +643,9 @@ func (a *app) restoreGameCubeSave(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "save restore failed: "+err.Error(), http.StatusConflict)
 		return
 	}
-	writeJSON(w, map[string]string{"status": "restored", "state": string(a.exports.State())})
+	respondAction(w, r, http.StatusOK,
+		map[string]string{"status": "restored", "state": string(a.exports.State())},
+		"Latest validated memory-card backup restored.", "gamecube")
 }
 
 func (a *app) persistSnapshot() error {
@@ -672,8 +678,36 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 	snapshot := a.disk.Snapshot().SnapshotID
 	wiiGames := append([]model.Game(nil), a.scan.Games...)
 	gameCubeGames := append([]gamecube.Game(nil), a.gcScan.Games...)
+	wiiRejected := len(a.scan.Rejected)
+	gameCubeRejected := len(a.gcScan.Rejected)
+	imports := make(map[string]importJob, len(a.imports))
+	for key, job := range a.imports {
+		imports[key] = job
+	}
 	csrf := a.csrf
 	a.mu.RUnlock()
+	totalWii, totalGameCube := len(wiiGames), len(gameCubeGames)
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query != "" {
+		matches := func(title, id string) bool {
+			return strings.Contains(strings.ToLower(title), strings.ToLower(query)) ||
+				strings.Contains(strings.ToLower(id), strings.ToLower(query))
+		}
+		filteredWii := wiiGames[:0]
+		for _, game := range wiiGames {
+			if matches(game.Title, game.ID) {
+				filteredWii = append(filteredWii, game)
+			}
+		}
+		wiiGames = filteredWii
+		filteredGameCube := gameCubeGames[:0]
+		for _, game := range gameCubeGames {
+			if matches(game.Title, game.ID) {
+				filteredGameCube = append(filteredGameCube, game)
+			}
+		}
+		gameCubeGames = filteredGameCube
+	}
 	type gameCubeRow struct {
 		gamecube.Game
 		Backups  []gamecube.SaveBackup
@@ -699,47 +733,80 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 	if filter != "wii" && filter != "gamecube" {
 		filter = "all"
 	}
+	importActive, importReady, importFailed := 0, 0, 0
+	for _, job := range imports {
+		switch job.Status {
+		case "queued", "building":
+			importActive++
+		case "ready":
+			importReady++
+		case "failed":
+			importFailed++
+		}
+	}
 	data := map[string]any{
 		"Version": version, "Snapshot": snapshot,
 		"Wii": wiiGames, "GameCube": rows, "Filter": filter,
 		"CSRF": csrf, "Platform": a.exports.Platform(), "State": a.exports.State(),
+		"Query": query, "Notice": strings.TrimSpace(r.URL.Query().Get("notice")),
+		"TotalWii": totalWii, "TotalGameCube": totalGameCube,
+		"Rejected":     wiiRejected + gameCubeRejected,
+		"ImportActive": importActive, "ImportReady": importReady, "ImportFailed": importFailed,
 	}
 	if err := hostDashboard.Execute(w, data); err != nil {
 		slog.Warn("dashboard render failed", "error", err)
 	}
 }
 
-var hostDashboard = template.Must(template.New("host").Parse(`<!doctype html>
-<meta charset=utf-8><title>WiiBridge Host</title>
-<style>body{font:16px system-ui;max-width:1100px;margin:2rem auto;padding:0 1rem}nav a{margin-right:1rem}table{border-collapse:collapse;width:100%}th,td{padding:.45rem;border-bottom:1px solid #ccc;text-align:left}form{display:inline}button,select{padding:.35rem}</style>
-<h1>WiiBridge Host</h1>
-<p>Version {{.Version}} · export <strong>{{.Platform}}</strong> ({{.State}})</p>
-<nav><a href="?platform=all">All</a><a href="?platform=wii">Wii</a><a href="?platform=gamecube">GameCube</a></nav>
-{{if ne .Filter "gamecube"}}<h2>Wii</h2><p>{{len .Wii}} titles. Wii remains the default export.</p>
-<table><tr><th>Platform</th><th>Title</th><th>ID</th><th>Size</th></tr>
-{{range .Wii}}<tr><td>Wii</td><td>{{.Title}}</td><td>{{.ID}}</td><td>{{.Size}}</td></tr>{{end}}</table>{{end}}
-{{if ne .Filter "wii"}}<h2>GameCube</h2>
-<table><tr><th>Platform</th><th>Title</th><th>ID</th><th>Region</th><th>Format</th><th>Discs</th><th>Status</th><th>Save health</th><th>Actions</th></tr>
-{{range .GameCube}}<tr><td>GameCube</td><td>{{.Title}}</td><td>{{.ID}}</td><td>{{.Region}}</td><td>{{.Format}}</td><td>{{.DiscCount}}</td><td>{{.Validation}}</td><td>
-{{if .Backups}}{{len .Backups}} validated backups; latest {{(index .Backups 0).Created}}{{else}}No validated backup yet{{end}}</td><td>
-<form method=post action=/api/v1/gamecube/import><input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=id value="{{.ID}}"><input type=hidden name=revision value="{{.Revision}}"><button>Import</button></form>
-<form method=post action=/api/v1/export/gamecube><input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=id value="{{.ID}}"><input type=hidden name=revision value="{{.Revision}}"><button>Select</button></form>
-{{if .Backups}}{{$latest := index .Backups 0}}<form method=post action=/api/v1/gamecube/saves/restore><input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=backup value="{{$latest.Path}}"><input type=hidden name=name value="{{$latest.Name}}"><button>Restore latest</button></form>{{end}}
-<details><summary>Per-game Nintendont settings</summary><form method=post action=/api/v1/gamecube/settings>
-<input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=id value="{{.ID}}"><input type=hidden name=revision value="{{.Revision}}">
-<label>Memory card <select name=memory_card><option value=physical {{if eq .Settings.MemoryCard "physical"}}selected{{end}}>Physical</option><option value=emulated {{if eq .Settings.MemoryCard "emulated"}}selected{{end}}>Emulated</option></select></label>
-<label>Card size <select name=memory_card_size><option value=0 {{if eq .Settings.MemoryCardSize 0}}selected{{end}}>59 blocks</option><option value=1 {{if eq .Settings.MemoryCardSize 1}}selected{{end}}>123 blocks</option><option value=2 {{if eq .Settings.MemoryCardSize 2}}selected{{end}}>251 blocks</option><option value=3 {{if eq .Settings.MemoryCardSize 3}}selected{{end}}>507 blocks</option><option value=4 {{if eq .Settings.MemoryCardSize 4}}selected{{end}}>1019 blocks</option><option value=5 {{if eq .Settings.MemoryCardSize 5}}selected{{end}}>2043 blocks</option></select></label>
-<label>Video <select name=video_mode><option {{if eq .Settings.VideoMode "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.VideoMode "disc"}}selected{{end}}>disc</option><option {{if eq .Settings.VideoMode "ntsc"}}selected{{end}}>ntsc</option><option {{if eq .Settings.VideoMode "pal50"}}selected{{end}}>pal50</option><option {{if eq .Settings.VideoMode "pal60"}}selected{{end}}>pal60</option><option {{if eq .Settings.VideoMode "mpal"}}selected{{end}}>mpal</option></select></label>
-<label>Controller <select name=controller_mode><option {{if eq .Settings.ControllerMode "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.ControllerMode "native"}}selected{{end}}>native</option><option {{if eq .Settings.ControllerMode "hid"}}selected{{end}}>hid</option></select></label>
-<label>Disc speed <select name=disc_speed><option {{if eq .Settings.DiscSpeed "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.DiscSpeed "original"}}selected{{end}}>original</option></select></label>
-<input type=hidden name=return_to_loader value=1><button>Save settings</button></form></details>
-</td></tr>{{end}}</table>{{end}}
-<h2>Platform switch</h2><p>Detach USB and disconnect Pi NBD before switching.</p>
-<form method=post action=/api/v1/export/wii><input type=hidden name=csrf value="{{.CSRF}}"><button>Return to Wii mode</button></form>`))
+func humanBytes(size int64) string {
+	const unit = int64(1024)
+	if size < unit {
+		return fmt.Sprintf("%d B", size)
+	}
+	div, exponent := unit, 0
+	for value := size / unit; value >= unit && exponent < 4; value /= unit {
+		div *= unit
+		exponent++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(size)/float64(div), "KMGTPE"[exponent])
+}
+
+var hostDashboard = template.Must(template.New("host").Funcs(template.FuncMap{
+	"bytes": humanBytes,
+	"time": func(value time.Time) string {
+		return value.UTC().Format("2006-01-02 15:04 UTC")
+	},
+}).Parse(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WiiBridge Host</title>
+<style>
+:root{color-scheme:dark;--bg:#080b12;--panel:#111724;--panel2:#161e2e;--line:#273349;--text:#f4f7fb;--muted:#9eabc0;--blue:#56a8ff;--cyan:#55e2d5;--green:#71e39a;--amber:#ffc766;--red:#ff7b87;--shadow:0 20px 50px #0007}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#12315c66,transparent 32rem),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}a{color:inherit}.shell{max-width:1240px;margin:auto;padding:28px 22px 64px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:13px}.mark{display:grid;place-items:center;width:44px;height:44px;border:1px solid #70b8ff66;border-radius:14px;background:linear-gradient(145deg,#173861,#0d1c31);box-shadow:inset 0 1px #ffffff24,0 8px 30px #2d83dc33;font-weight:850;color:#8dc9ff}.brand h1{font-size:20px;line-height:1.1;margin:0}.brand p,.muted{color:var(--muted);margin:3px 0 0}.status{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#0d1320}.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:18px;margin-bottom:18px}.card{border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,#151d2bfa,#0d121dfa);box-shadow:var(--shadow)}.hero-main{padding:28px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.hero h2{font-size:clamp(27px,4vw,44px);line-height:1.05;letter-spacing:-.04em;margin:12px 0}.hero p{max-width:680px;color:var(--muted);font-size:16px}.snapshot{padding:24px}.snapshot code{display:block;overflow:hidden;text-overflow:ellipsis;color:#b9c6da;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric{padding:18px}.metric strong{display:block;font-size:28px;letter-spacing:-.04em}.metric span{color:var(--muted);font-size:13px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:24px 0 16px}.tabs{display:flex;gap:6px;padding:5px;border:1px solid var(--line);border-radius:14px;background:#0d131e}.tab{padding:8px 14px;border-radius:10px;text-decoration:none;color:var(--muted);font-weight:700}.tab.active,.tab:hover{background:#1d2a3d;color:var(--text)}.search{display:flex;gap:8px;min-width:min(100%,350px)}input,select{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a101a;color:var(--text);padding:10px 12px}button,.button{appearance:none;border:1px solid #3a7fc5;border-radius:10px;background:linear-gradient(#2786db,#1762a5);color:white;padding:9px 13px;font-weight:750;cursor:pointer;text-decoration:none}button:hover{filter:brightness(1.12)}button.secondary{border-color:var(--line);background:#172131}.notice{margin:16px 0;padding:13px 16px;border:1px solid #347f7566;border-radius:13px;background:#14332e;color:#9ff4dc}.section-head{display:flex;justify-content:space-between;align-items:end;margin:28px 0 12px}.section-head h2{margin:0;font-size:22px}.section-head p{margin:0;color:var(--muted)}.table-wrap{overflow:auto}.library{width:100%;border-collapse:collapse}.library th{color:#91a2ba;font-size:11px;text-transform:uppercase;letter-spacing:.1em}.library th,.library td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line)}.library tr:last-child td{border:0}.title{font-weight:750}.tag{display:inline-flex;padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:#b8c7da;background:#111a29;font-size:12px}.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}.game{padding:20px}.game-top{display:flex;justify-content:space-between;gap:12px}.game h3{margin:5px 0 2px;font-size:19px}.metadata{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.health{padding:11px 12px;border-radius:11px;background:#0b111b;color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.actions form{margin:0}details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;color:#b9c9dc;font-weight:700}.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.settings label{color:var(--muted);font-size:12px}.settings button{grid-column:1/-1}.empty{padding:28px;text-align:center;color:var(--muted)}.switcher{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px;margin-top:24px}.switcher h2{margin:0;font-size:18px}.switcher p{margin:4px 0 0;color:var(--muted)}footer{margin-top:30px;color:#718096;font-size:12px}
+@media(max-width:760px){.hero{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.toolbar,.topbar,.switcher{align-items:stretch;flex-direction:column}.search{min-width:0}.tabs{overflow:auto}.library th:nth-child(1),.library td:nth-child(1){display:none}.shell{padding:18px 14px 45px}}
+</style></head><body><main class="shell">
+<header class="topbar"><div class="brand"><div class="mark" aria-hidden="true">WB</div><div><h1>WiiBridge Host</h1><p>Private game-library bridge</p></div></div><div class="status"><span class="dot"></span><span><strong>{{.Platform}}</strong> · {{.State}}</span></div></header>
+{{if .Notice}}<div class="notice" role="status">{{.Notice}}</div>{{end}}
+<section class="hero"><div class="card hero-main"><span class="eyebrow">Direct Pi-to-Wii storage</span><h2>Your library, ready at the console.</h2><p>Browse validated Wii and GameCube backups, prepare Nintendont exports, and control the active read-only storage profile without changing source media.</p></div><aside class="card snapshot"><span class="eyebrow">Published snapshot</span><h3>Catalog is synchronized</h3><code title="{{.Snapshot}}">{{.Snapshot}}</code><p class="muted">Host version {{.Version}}</p></aside></section>
+<section class="metrics" aria-label="Library summary"><div class="card metric"><strong>{{.TotalWii}}</strong><span>Wii titles</span></div><div class="card metric"><strong>{{.TotalGameCube}}</strong><span>GameCube titles</span></div><div class="card metric"><strong>{{.ImportReady}}</strong><span>Ready imports</span></div><div class="card metric"><strong>{{.Rejected}}</strong><span>Needs review</span></div></section>
+<div class="toolbar"><nav class="tabs" aria-label="Platform filter"><a class="tab {{if eq .Filter "all"}}active{{end}}" href="?platform=all{{if .Query}}&q={{.Query}}{{end}}">All</a><a class="tab {{if eq .Filter "wii"}}active{{end}}" href="?platform=wii{{if .Query}}&q={{.Query}}{{end}}">Wii</a><a class="tab {{if eq .Filter "gamecube"}}active{{end}}" href="?platform=gamecube{{if .Query}}&q={{.Query}}{{end}}">GameCube</a></nav><form class="search" method=get><input type=hidden name=platform value="{{.Filter}}"><input name=q value="{{.Query}}" placeholder="Search title or game ID" aria-label="Search title or game ID"><button type=submit>Search</button>{{if .Query}}<a class="button secondary" href="?platform={{.Filter}}">Clear</a>{{end}}</form></div>
+{{if ne .Filter "gamecube"}}<section><div class="section-head"><div><h2>Wii library</h2><p>Wii remains the safe default export.</p></div><span class="tag">{{len .Wii}} shown</span></div><div class="card table-wrap">{{if .Wii}}<table class=library><thead><tr><th>Platform</th><th>Title</th><th>Game ID</th><th>Virtual size</th></tr></thead><tbody>{{range .Wii}}<tr><td><span class=tag>Wii</span></td><td class=title>{{.Title}}</td><td><code>{{.ID}}</code></td><td>{{bytes .Size}}</td></tr>{{end}}</tbody></table>{{else}}<div class=empty>No Wii titles match this view.</div>{{end}}</div></section>{{end}}
+{{if ne .Filter "wii"}}<section><div class="section-head"><div><h2>GameCube library</h2><p>{{if .ImportActive}}{{.ImportActive}} import in progress · {{end}}{{if .ImportFailed}}{{.ImportFailed}} failed import{{else}}Nintendont-compatible exports{{end}}</p></div><span class=tag>{{len .GameCube}} shown</span></div><div class=games>{{range .GameCube}}<article class="card game"><div class=game-top><div><span class=eyebrow>GameCube</span><h3>{{.Title}}</h3><code>{{.ID}} · revision {{.Revision}}</code></div><span class=tag>{{.Validation}}</span></div><div class=metadata><span class=tag>{{.Region}}</span><span class=tag>{{.Format}}</span><span class=tag>{{.DiscCount}} disc{{if ne .DiscCount 1}}s{{end}}</span></div><div class=health>{{if .Backups}}<strong>{{len .Backups}} validated save backups</strong><br>Latest {{time (index .Backups 0).Created}}{{else}}No emulated-memory-card backup recorded yet.{{end}}</div><div class=actions>
+<form method=post action=/api/v1/gamecube/import><input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=id value="{{.ID}}"><input type=hidden name=revision value="{{.Revision}}"><button>Prepare export</button></form>
+<form method=post action=/api/v1/export/gamecube><input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=id value="{{.ID}}"><input type=hidden name=revision value="{{.Revision}}"><button class=secondary>Select</button></form>
+{{if .Backups}}{{$latest := index .Backups 0}}<form method=post action=/api/v1/gamecube/saves/restore><input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=backup value="{{$latest.Path}}"><input type=hidden name=name value="{{$latest.Name}}"><button class=secondary>Restore save</button></form>{{end}}</div>
+<details><summary>Compatibility settings</summary><form class=settings method=post action=/api/v1/gamecube/settings><input type=hidden name=csrf value="{{$.CSRF}}"><input type=hidden name=id value="{{.ID}}"><input type=hidden name=revision value="{{.Revision}}">
+<label>Memory card<select name=memory_card><option value=physical {{if eq .Settings.MemoryCard "physical"}}selected{{end}}>Physical</option><option value=emulated {{if eq .Settings.MemoryCard "emulated"}}selected{{end}}>Emulated</option></select></label>
+<label>Card size<select name=memory_card_size><option value=0 {{if eq .Settings.MemoryCardSize 0}}selected{{end}}>59 blocks</option><option value=1 {{if eq .Settings.MemoryCardSize 1}}selected{{end}}>123 blocks</option><option value=2 {{if eq .Settings.MemoryCardSize 2}}selected{{end}}>251 blocks</option><option value=3 {{if eq .Settings.MemoryCardSize 3}}selected{{end}}>507 blocks</option><option value=4 {{if eq .Settings.MemoryCardSize 4}}selected{{end}}>1019 blocks</option><option value=5 {{if eq .Settings.MemoryCardSize 5}}selected{{end}}>2043 blocks</option></select></label>
+<label>Video mode<select name=video_mode><option {{if eq .Settings.VideoMode "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.VideoMode "disc"}}selected{{end}}>disc</option><option {{if eq .Settings.VideoMode "ntsc"}}selected{{end}}>ntsc</option><option {{if eq .Settings.VideoMode "pal50"}}selected{{end}}>pal50</option><option {{if eq .Settings.VideoMode "pal60"}}selected{{end}}>pal60</option><option {{if eq .Settings.VideoMode "mpal"}}selected{{end}}>mpal</option></select></label>
+<label>Controller<select name=controller_mode><option {{if eq .Settings.ControllerMode "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.ControllerMode "native"}}selected{{end}}>native</option><option {{if eq .Settings.ControllerMode "hid"}}selected{{end}}>hid</option></select></label>
+<label>Disc speed<select name=disc_speed><option {{if eq .Settings.DiscSpeed "auto"}}selected{{end}}>auto</option><option {{if eq .Settings.DiscSpeed "original"}}selected{{end}}>original</option></select></label><input type=hidden name=return_to_loader value=1><button>Save settings</button></form></details></article>{{else}}<div class="card empty">No GameCube titles match this view.</div>{{end}}</div></section>{{end}}
+<section class="card switcher"><div><h2>Return to Wii mode</h2><p>Detach USB and disconnect Pi NBD before switching the host export.</p></div><form method=post action=/api/v1/export/wii><input type=hidden name=csrf value="{{.CSRF}}"><button>Use Wii export</button></form></section>
+<footer>WiiBridge keeps source libraries immutable. Hardware deployment and write-enabled GameCube saves remain explicit operator actions.</footer>
+</main></body></html>`))
 
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
@@ -750,5 +817,16 @@ func securityHeaders(next http.Handler) http.Handler {
 
 func writeJSON(w http.ResponseWriter, value any) {
 	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(value)
+}
+
+func respondAction(w http.ResponseWriter, r *http.Request, status int, value any, notice, platform string) {
+	if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		query := url.Values{"notice": {notice}, "platform": {platform}}
+		http.Redirect(w, r, "/?"+query.Encode(), http.StatusSeeOther)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }
