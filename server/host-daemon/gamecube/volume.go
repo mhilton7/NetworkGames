@@ -23,8 +23,11 @@ import (
 )
 
 const (
-	VolumeSchema      = 2
-	VolumeSize        = int64(33 << 30)
+	VolumeSchema = 3
+	// Keep the exported disk below the 32 GiB boundary used by older 32-bit
+	// NBD clients while retaining ample room for two GameCube discs and saves.
+	VolumeSize        = int64(8 << 30)
+	VolumeClusterSize = 4 << 10
 	VolumeSectorSize  = int64(512)
 	VolumeStartSector = uint32(2048)
 )
@@ -57,7 +60,7 @@ func CacheKey(game Game, mode MemoryCardMode) string {
 	for _, disc := range game.Discs {
 		fmt.Fprintf(hash, "\x00%d\x00%s\x00%s", disc.Number, disc.Format, disc.SHA256)
 	}
-	return "gc-v2-" + hex.EncodeToString(hash.Sum(nil)[:16])
+	return fmt.Sprintf("gc-v%d-%s", VolumeSchema, hex.EncodeToString(hash.Sum(nil)[:16]))
 }
 
 func BuildVolume(ctx context.Context, cacheRoot string, game Game, mode MemoryCardMode) (VolumeManifest, error) {
@@ -101,7 +104,7 @@ func BuildVolume(ctx context.Context, cacheRoot string, game Game, mode MemoryCa
 	}
 	manifest := VolumeManifest{
 		Schema: VolumeSchema, CacheKey: key, ImagePath: filepath.Join(ready, "gamecube.img"),
-		Game: game, Mode: mode, VolumeSize: VolumeSize, ClusterSize: 32 << 10,
+		Game: game, Mode: mode, VolumeSize: VolumeSize, ClusterSize: VolumeClusterSize,
 		Created: time.Now().UTC(), Complete: true,
 	}
 	titleDir := volumeTitle(game)
@@ -361,7 +364,7 @@ func ValidateVolume(path string, manifest VolumeManifest) (VolumeValidation, err
 	bytesPerSector := int(binary.LittleEndian.Uint16(boot[11:13]))
 	sectorsPerCluster := int(boot[13])
 	clusterSize := bytesPerSector * sectorsPerCluster
-	if bytesPerSector != 512 || clusterSize != 32<<10 ||
+	if bytesPerSector != 512 || clusterSize != VolumeClusterSize ||
 		string(boot[82:90]) != "FAT32   " || binary.LittleEndian.Uint32(boot[28:32]) != start {
 		return VolumeValidation{}, errors.New("invalid FAT32 geometry")
 	}
