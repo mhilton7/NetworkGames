@@ -152,6 +152,7 @@ Authenticate with the configured administrator token. The dashboard provides:
 - title and game-ID search.
 - active export and snapshot status.
 - optional authenticated one-button Wii/GameCube platform switching.
+- explicitly confirmed safe Raspberry Pi reboot and shutdown controls.
 - validated GameCube import and selection actions.
 - per-title Nintendont compatibility settings.
 - memory-card backup health and restore actions.

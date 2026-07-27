@@ -19,9 +19,11 @@ Pi detach USB
 → Pi attaches USB
 ```
 
-The Host permits only `detach`, `disconnect`, `connect-wii`,
+For platform transitions, the Host permits only `detach`, `disconnect`, `connect-wii`,
 `connect-gamecube-physical`, `connect-gamecube-emulated`, and `attach`. It
-cannot invoke poweroff, provisioning, cache deletion, or arbitrary commands.
+cannot invoke provisioning, cache deletion, or arbitrary commands. Separate,
+explicitly confirmed power controls may invoke only the typed `reboot` and
+`poweroff` helpers.
 
 If preparation or disconnection fails, the Host export is not changed. If
 reconnection or attachment fails, WiiBridge performs a best-effort detach and
@@ -67,6 +69,30 @@ re-enumeration.
 
 All Wii titles remain together in the normal Wii catalog. This feature does not
 switch individual Wii titles. Current GameCube cache behavior is unchanged.
+
+## Pi power controls
+
+When automatic coordination is configured, the Host dashboard displays a
+collapsed **Pi power controls** panel. Reboot and shutdown each require their
+own confirmation checkbox and an authenticated CSRF-protected POST request.
+Both actions run the Pi's fixed helper, which:
+
+1. detaches the USB gadget;
+2. disconnects NBD;
+3. calls `sync`;
+4. requests either `systemctl reboot --no-block` or
+   `systemctl poweroff --no-block`.
+
+The API equivalents are:
+
+```text
+POST /api/v1/pi/reboot    confirm=reboot
+POST /api/v1/pi/shutdown  confirm=shutdown
+```
+
+These controls require a Pi firmware/controller package containing the typed
+`reboot` helper and its exact sudoers rule. Shutdown uses the existing typed
+poweroff helper. No arbitrary action name or command text is accepted.
 
 ## Disable or recover
 
