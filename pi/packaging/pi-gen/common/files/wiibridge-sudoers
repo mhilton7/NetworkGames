@@ -1,4 +1,7 @@
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper connect
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper connect-wii
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper connect-gamecube-physical
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper connect-gamecube-emulated
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper disconnect
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper attach
 wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper detach
