@@ -23,6 +23,7 @@ services:
       WIIBRIDGE_PI_URL: ""
       WIIBRIDGE_PI_ADMIN_TOKEN: ""
       WIIBRIDGE_PI_CERT: ""
+      GOMEMLIMIT: 384MiB
     ports:
       - "CHANGE_ME_TRUENAS_LAN_IP:8445:8445/tcp"
       - "CHANGE_ME_TRUENAS_PI_IP:10809:10809/tcp"
@@ -42,5 +43,5 @@ services:
       start_period: 20s
     stop_grace_period: 30s
     pids_limit: 256
-    mem_limit: 1g
+    mem_limit: 512m
     cpus: 2.0

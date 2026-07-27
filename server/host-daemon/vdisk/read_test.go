@@ -2,6 +2,7 @@ package vdisk
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"io"
 	"os"
@@ -130,6 +131,48 @@ func TestIndependentDisksAllowConcurrentSelectionAndReads(t *testing.T) {
 		}
 	}
 	wg.Wait()
+}
+
+func TestLargeVirtualFATIsSynthesizedInsteadOfResident(t *testing.T) {
+	const payloadSize = int64(8 << 30)
+	game := model.Game{
+		ID: "MEM001", Size: payloadSize,
+		Sources: []model.Source{{
+			Path: "/synthetic/not-opened", Length: payloadSize, Size: payloadSize,
+		}},
+	}
+	disk, err := Build("memory-bound", []model.Game{game}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disk.fatSectors < 16_000 {
+		t.Fatalf("fixture FAT is too small to exercise memory behavior: %d sectors",
+			disk.fatSectors)
+	}
+	if len(disk.metadata) > 32 {
+		t.Fatalf("FAT sectors were materialized in metadata: %d resident sectors",
+			len(disk.metadata))
+	}
+	if len(disk.fatChains) > 16 {
+		t.Fatalf("FAT chain representation scales with clusters: %d chains",
+			len(disk.fatChains))
+	}
+	t.Logf("8 GiB fixture: virtual FAT sectors per copy=%d compact chains=%d resident metadata sectors=%d",
+		disk.fatSectors, len(disk.fatChains), len(disk.metadata))
+	first := make([]byte, sectorSize)
+	second := make([]byte, sectorSize)
+	if _, err = disk.ReadAt(first, disk.fatStart*sectorSize); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = disk.ReadAt(second,
+		(disk.fatStart+disk.fatSectors)*sectorSize); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, second) ||
+		binary.LittleEndian.Uint32(first[:4]) != 0x0ffffff8 ||
+		binary.LittleEndian.Uint32(first[4:8]) != 0xffffffff {
+		t.Fatal("synthetic FAT copies differ or have invalid reserved entries")
+	}
 }
 
 func writeSource(t *testing.T, path string, data []byte) model.Source {

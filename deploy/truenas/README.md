@@ -58,6 +58,15 @@ Paste the resolved Compose YAML into Install via YAML. After installation,
 confirm healthy state, then capture `docker inspect`/Apps details, mounts,
 listeners, and sanitized logs using `tests/truenas/capture-evidence.sh`.
 
+The supplied Compose configuration limits the container to 512 MiB and sets
+Go's managed-heap target to 384 MiB. The Wii FAT is generated sector-by-sector
+from compact cluster-chain descriptors, so its RAM use no longer grows with
+the apparent FAT size of a multi-terabyte library. Do not remove these limits
+to mask a startup problem. If a deployment has a measured need for more
+headroom, raise `WIIBRIDGE_GO_MEMORY_LIMIT` and `WIIBRIDGE_MEMORY_LIMIT`
+together while leaving at least 128 MiB between the Go target and container
+limit for stacks, binaries, TLS, and kernel-backed buffers.
+
 Take frequent ZFS snapshots of config and data, daily snapshots of logs if
 required, and replicate backups off-system. The source dataset follows its
 existing game-library snapshot policy. Removing the app must never select

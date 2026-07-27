@@ -662,3 +662,33 @@
   no module-file change is required.
 - No physical GameCube Wii/USB Loader GX/Nintendont test hardware was available:
   `DEFERRED_HARDWARE_UNAVAILABLE`.
+
+## 2026-07-27 — TrueNAS Host memory bound
+
+- Diagnosed the 6+ GiB resident-memory growth as the Wii builder retaining both
+  FAT copies in a `map[int64][]byte`, one separate 512-byte allocation per FAT
+  sector. The allocation scaled with total virtual library capacity.
+- Replaced resident FAT sectors with compact cluster-chain descriptors and
+  sector synthesis during reads. MBR, BPB, FAT chains, directory entries,
+  payload offsets, read-only behavior, and metadata hashing remain covered by
+  the existing FAT32 and integration suites.
+- An 8 GiB synthetic fixture uses 16,385 virtual sectors per FAT copy. The old
+  representation required at least 16,778,240 raw resident FAT bytes before Go
+  map/object overhead; the new representation retains five chain descriptors
+  and 21 non-FAT metadata sectors (10,752 bytes).
+- TrueNAS Compose now sets `GOMEMLIMIT=384MiB` inside a 512 MiB hard container
+  limit. Full tests, static analysis, Compose validation, race tests, OCI
+  packaging, and whitespace checks pass. Measurement evidence is in
+  `reports/truenas-memory-optimization.json`.
+- Completed the mandatory GameCube hot-path acceptance pass. The backend uses
+  binary search over 10,000 sorted extents, a strict 32-handle read-only LRU,
+  one source `ReadAt` for a 1 MiB request contained in one extent, and closes
+  all handles on backend close. A 10,000-read multi-source test measured
+  2,320,520 bytes peak heap growth, 32 source opens, 9,968 cache hits, and a
+  peak of 32 open files.
+- Host benchmark results include 10.51 ns/op and zero allocations for lookup
+  among 10,000 extents; 25.6–28.5 microseconds per cached single-source read;
+  54.7 microseconds for a request crossing two real source extents; and
+  29.4 microseconds under concurrent callers. Full results and limitations are
+  recorded in `reports/gamecube-no-copy-performance.json`. No physical hardware
+  performance claim is made.

@@ -90,5 +90,12 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | GameCube source integrity and read-through | PASS | ISO/GCM/CISO/two-disc/FST reads match original sources; size, hash, symlink, escape, overlap, duplicate-path, and changed-FST checks pass |
 | GameCube physical memory-card mode | PASS | Backend and NBD profile are read-only and every write is rejected |
 | GameCube emulated memory-card overlay | DEFERRED | Startup is explicitly rejected; no copied-image fallback is present |
-| Wii synthetic disk regression | PASS | Full repository tests pass and `server/host-daemon/vdisk` has no implementation diff |
+| Wii synthetic disk regression | PASS | FAT32, integration, unit, and race suites pass after replacing resident FAT storage with byte-compatible on-demand synthesis |
 | Physical GameCube Wii/Nintendont acceptance | DEFERRED_HARDWARE_UNAVAILABLE | Host-side FAT32 and storage behavior pass; no claim of physical compatibility is made |
+| TrueNAS multi-terabyte Wii FAT memory | PASS | 8 GiB fixture retains 5 chain descriptors and 10,752 non-FAT metadata bytes instead of at least 16,778,240 resident raw FAT bytes; representation scales with files rather than clusters |
+| TrueNAS container memory bound | PASS | Compose parser accepts a 384 MiB Go target inside a 512 MiB hard limit |
+| GameCube 10,000-extent lookup | PASS | Binary search benchmark: 10.51 ns/op, approximately 95.1 million lookups/s, 0 B/op, 0 allocs/op |
+| GameCube source-handle bound | PASS | Repeated reads reuse one handle; 40-source test and 10,000-read test never exceed the 32-handle LRU limit; close releases all handles |
+| GameCube read coalescing | PASS | A 1 MiB request inside one ISO produces one source ReadAt; a 128 KiB request crossing two source extents produces exactly two |
+| GameCube host performance matrix | PASS | Sequential, random, 32-source switching, 5,000-file FST, boundary, and concurrent benchmarks recorded in `reports/gamecube-no-copy-performance.json` |
+| End-to-end physical GameCube performance | DEFERRED_HARDWARE_UNAVAILABLE | Host benchmarks and mutual-TLS protocol tests do not prove Pi Zero W/Wii/Nintendont gameplay throughput |

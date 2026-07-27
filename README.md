@@ -201,6 +201,11 @@ while `/data` stores only compact FAT32 metadata, manifests, extent maps, and
 save data. Payload reads are served directly from the original read-only
 `/library` files.
 
+The Wii FAT is likewise synthesized on demand instead of being retained as
+millions of 512-byte heap objects. The supplied TrueNAS profile uses a 384 MiB
+Go heap target inside a 512 MiB container limit, including for multi-terabyte
+libraries.
+
 ## Safe platform switching
 
 Never replace a backing store while the gadget is attached:
