@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/FIX94/Nintendont",
+  "branch": "master",
+  "commit": "0f69235b99099ef2851a5f6b7b0e349c572237e8",
+  "retrieval_method": "copied from files tracked in the pinned official source checkout",
+  "license": "NOASSERTION; upstream has no single top-level license file",
+  "files": [
+    {
+      "path": "apps/Nintendont/boot.dol",
+      "upstream_path": "loader/loader.dol",
+      "sha256": "e6aaec18db139da234fac29036a3d00f4800ba2bff613b733ababb5dcce9e197"
+    },
+    {
+      "path": "apps/Nintendont/meta.xml",
+      "upstream_path": "nintendont/meta.xml",
+      "sha256": "32daae1ee5d0d38b0b5e5bbcdc9485d4c30de8b33164b06cbce6717010aa0008"
+    },
+    {
+      "path": "apps/Nintendont/icon.png",
+      "upstream_path": "nintendont/icon.png",
+      "sha256": "419d3c533dc53cc6c4228d7dd3e273cbf18082c5362e70b061c9af64180b4dc6"
+    }
+  ]
+}

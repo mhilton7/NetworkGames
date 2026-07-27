@@ -1,0 +1,423 @@
+WIIBRIDGE HOSTBRIDGE — COMPLETE PROJECT SETUP GUIDE
+=====================================================
+
+1. CURRENT PROJECT STATE
+------------------------
+
+The project currently has:
+
+- Source code and firmware releases on GitHub.
+- A passing Docker build workflow.
+- Raspberry Pi images for Zero W, Pi 4, and Pi 5.
+- A TrueNAS Compose template.
+- Software validation completed.
+
+Important: the current GitHub workflow only builds the Docker image to verify
+it. It does not yet publish that image to GHCR. TrueNAS needs a published
+container image before installation.
+
+No physical Raspberry Pi, Wii, USB cable, or USB Loader GX validation has been
+completed.
+
+
+2. REQUIRED EQUIPMENT
+---------------------
+
+You will need:
+
+- TrueNAS Community Edition system, normally x86-64.
+- One supported Raspberry Pi:
+  - Raspberry Pi Zero W
+  - Raspberry Pi 4
+  - Raspberry Pi 5
+- Correct microSD card for the selected Pi image.
+- Proper USB data cable.
+- Ethernet for Pi 4/5, preferably.
+- 2.4 GHz Wi-Fi for Zero W.
+- A legally obtained WBFS library stored on TrueNAS.
+- An authorized USB VID/PID pair.
+
+Do not use random production USB identifiers belonging to another vendor.
+
+
+3. PUBLISH THE DOCKER IMAGE
+---------------------------
+
+The next GitHub workflow change should publish:
+
+  ghcr.io/mhilton7/wiibridge-host
+
+The workflow will require:
+
+  permissions:
+    contents: read
+    packages: write
+
+It should authenticate to GHCR using GITHUB_TOKEN, then build and push the
+image.
+
+After publication, note the immutable digest:
+
+  ghcr.io/mhilton7/wiibridge-host:0.1.0-rc.1@sha256:...
+
+Use the digest-pinned reference in TrueNAS. Do not rely only on "latest".
+
+
+4. PREPARE THE TRUENAS DATASETS
+-------------------------------
+
+Create these datasets, replacing POOL and WII_DATASET:
+
+  /mnt/POOL/WII_DATASET
+  /mnt/POOL/apps/wiibridge/config
+  /mnt/POOL/apps/wiibridge/data
+  /mnt/POOL/apps/wiibridge/certs
+  /mnt/POOL/apps/wiibridge/logs
+  /mnt/POOL/apps/wiibridge/backups
+
+Place only your legal .wbfs files under:
+
+  /mnt/POOL/WII_DATASET
+
+The application must have:
+
+- Read and traverse access to the WBFS dataset.
+- No write, delete, ownership, or ACL modification rights on the WBFS dataset.
+- Read/write access to config, data, logs, and backups.
+- Read-only access to certs.
+
+Use a dedicated non-root UID/GID, such as 568:568, only if that identity is
+appropriate for your TrueNAS ACL configuration.
+
+
+5. GENERATE TLS CERTIFICATES
+----------------------------
+
+Run these commands on a secure administration machine with OpenSSL:
+
+  mkdir -p wiibridge-certs
+
+  ./scripts/tls-provision.sh \
+    init-ca \
+    wiibridge-certs
+
+  ./scripts/tls-provision.sh \
+    issue-server \
+    wiibridge-certs \
+    truenas-hostname-or-ip
+
+  ./scripts/tls-provision.sh \
+    issue-client \
+    wiibridge-certs \
+    pi-01
+
+The server certificate's DNS name or IP address must match exactly what the Pi
+uses for NBD_HOST. The provisioning helper emits a DNS subject-alternative-name
+for a hostname and an IP subject-alternative-name for an IPv4 address. It also
+adds IP `127.0.0.1`, which is required by the container's internal HTTPS health
+check.
+
+For TrueNAS, copy:
+
+  ca.crt
+  server.crt
+  server.key
+
+Also create:
+
+  cp wiibridge-certs/ca.crt wiibridge-certs/clients-ca.crt
+
+Copy these four files into the TrueNAS certificate dataset:
+
+  /mnt/POOL/apps/wiibridge/certs/ca.crt
+  /mnt/POOL/apps/wiibridge/certs/server.crt
+  /mnt/POOL/apps/wiibridge/certs/server.key
+  /mnt/POOL/apps/wiibridge/certs/clients-ca.crt
+
+Keep ca.key offline and private. Do not put it in TrueNAS Compose, GitHub, logs,
+or the Raspberry Pi.
+
+The Pi receives:
+
+  ca.crt
+  pi-01.crt
+  pi-01.key
+
+Each Pi should have its own client certificate.
+
+
+6. GENERATE THE ADMINISTRATOR TOKEN
+-----------------------------------
+
+Generate a random secret:
+
+  openssl rand -hex 32
+
+Store it securely. Never commit it to GitHub.
+
+
+7. RUN THE TRUENAS PREFLIGHT
+----------------------------
+
+On TrueNAS, prepare the required environment variables:
+
+  export WIIBRIDGE_LIBRARY_PATH=/mnt/POOL/WII_DATASET
+  export WIIBRIDGE_CONFIG_PATH=/mnt/POOL/apps/wiibridge/config
+  export WIIBRIDGE_DATA_PATH=/mnt/POOL/apps/wiibridge/data
+  export WIIBRIDGE_CERTS_PATH=/mnt/POOL/apps/wiibridge/certs
+  export WIIBRIDGE_LOGS_PATH=/mnt/POOL/apps/wiibridge/logs
+  export WIIBRIDGE_BACKUPS_PATH=/mnt/POOL/apps/wiibridge/backups
+  export WIIBRIDGE_HTTPS_BIND=YOUR_TRUENAS_LAN_IP
+  export WIIBRIDGE_NBD_BIND=YOUR_TRUENAS_LAN_IP
+
+Run:
+
+  sh deploy/truenas/preflight.sh preflight-report.json
+
+Proceed only if the report says:
+
+  COMPOSE_CUSTOM_APPS_CANDIDATE
+
+and:
+
+  "compatible": true
+
+
+8. PREPARE THE TRUENAS YAML
+---------------------------
+
+Start with:
+
+  deploy/truenas/compose.yaml
+
+Resolve these values before pasting it into TrueNAS:
+
+  WIIBRIDGE_IMAGE
+  WIIBRIDGE_UID
+  WIIBRIDGE_GID
+  WIIBRIDGE_LIBRARY_PATH
+  WIIBRIDGE_CONFIG_PATH
+  WIIBRIDGE_DATA_PATH
+  WIIBRIDGE_CERTS_PATH
+  WIIBRIDGE_LOGS_PATH
+  WIIBRIDGE_BACKUPS_PATH
+  WIIBRIDGE_HTTPS_BIND
+  WIIBRIDGE_NBD_BIND
+  WIIBRIDGE_ADMIN_TOKEN
+
+The most important value will be:
+
+  WIIBRIDGE_IMAGE=ghcr.io/mhilton7/wiibridge-host:0.1.0-rc.1@sha256:YOUR_DIGEST
+
+The library mount must remain:
+
+  read_only: true
+
+Do not add:
+
+- Privileged mode
+- Host networking
+- Docker socket access
+- Host devices
+- Additional Linux capabilities
+
+
+9. INSTALL ON TRUENAS
+---------------------
+
+In the TrueNAS interface:
+
+1. Open Apps.
+2. Select Discover Apps.
+3. Select Install via YAML.
+4. Give the app a name such as wiibridge-host.
+5. Paste the resolved Compose YAML.
+6. Install it.
+7. Wait for the health check to pass.
+
+Allow through your firewall:
+
+- TCP 8445 only from the management network.
+- TCP 10809 only from the Raspberry Pi network or explicit Pi addresses.
+- Neither port from the public internet.
+
+
+10. VERIFY THE TRUENAS SERVICE
+------------------------------
+
+Check:
+
+  https://YOUR_TRUENAS_HOST:8445/healthz
+
+The container should:
+
+- Run as the configured non-root UID/GID.
+- Have a read-only root filesystem.
+- Have no added capabilities.
+- Mount /library read-only.
+- Listen on HTTPS port 8445.
+- Listen on mutual-TLS NBD port 10809.
+
+Do not weaken certificate verification if the health check or Pi connection
+fails. Correct the certificate hostname, CA, or client credentials instead.
+
+
+11. DOWNLOAD THE CORRECT RASPBERRY PI IMAGE
+-------------------------------------------
+
+Download the image from:
+
+  https://github.com/mhilton7/WiiBridge/releases/tag/v0.1.0-rc.1
+
+Choose exactly one:
+
+  wiibridge-0.1.0-rc.1-zero-w-armhf.img.xz
+  wiibridge-0.1.0-rc.1-pi4-arm64.img.xz
+  wiibridge-0.1.0-rc.1-pi5-arm64.img.xz
+
+Also download the corresponding:
+
+  .img.xz.sha256
+
+Verify it:
+
+  sha256sum -c wiibridge-0.1.0-rc.1-TARGET.img.xz.sha256
+
+Never use the Pi 4 image on Pi 5 or vice versa.
+
+
+12. FLASH THE MICROSD CARD
+--------------------------
+
+Use Raspberry Pi Imager's custom-image feature, or:
+
+  xz -dc wiibridge-0.1.0-rc.1-TARGET.img.xz |
+    sudo dd of=/dev/EXPLICIT_MICROSD_DEVICE \
+      bs=4M oflag=direct status=progress
+
+  sync
+
+Confirm the destination device carefully. A wrong "of=" path can erase another
+disk.
+
+
+13. CONFIGURE THE RASPBERRY PI
+------------------------------
+
+Copy the Pi credentials securely:
+
+  ca.crt
+  pi-01.crt
+  pi-01.key
+
+Recommended destinations:
+
+  /etc/wiibridge/ca.crt
+  /etc/wiibridge/pi-01.crt
+  /etc/wiibridge/pi-01.key
+
+Create:
+
+  /etc/wiibridge/bridge.env
+
+with:
+
+  NBD_HOST=truenas-hostname
+  NBD_PORT=10809
+  NBD_EXPORT=all
+  TLS_CA=/etc/wiibridge/ca.crt
+  TLS_CERT=/etc/wiibridge/pi-01.crt
+  TLS_KEY=/etc/wiibridge/pi-01.key
+  WIIBRIDGE_USB_VID=YOUR_AUTHORIZED_VID
+  WIIBRIDGE_USB_PID=YOUR_AUTHORIZED_PID
+
+Secure the credentials:
+
+  sudo chown root:root \
+    /etc/wiibridge/bridge.env \
+    /etc/wiibridge/ca.crt \
+    /etc/wiibridge/pi-01.crt \
+    /etc/wiibridge/pi-01.key
+
+  sudo chmod 600 \
+    /etc/wiibridge/bridge.env \
+    /etc/wiibridge/pi-01.key
+
+  sudo chmod 644 \
+    /etc/wiibridge/ca.crt \
+    /etc/wiibridge/pi-01.crt
+
+For Pi 4/5, use Ethernet initially. For Zero W, configure the correct
+regulatory country and a 2.4 GHz Wi-Fi network.
+
+
+14. TEST THE NBD CONNECTION
+---------------------------
+
+Before connecting the Pi to the Wii, run the bridge's connection test:
+
+  sudo /usr/libexec/wiibridge-helper test
+
+Then connect the read-only export:
+
+  sudo /usr/libexec/wiibridge-helper connect
+
+Confirm /dev/nbd0 is read-only:
+
+  sudo blockdev --getro /dev/nbd0
+
+The result must be:
+
+  1
+
+Attach the USB gadget only after the NBD connection succeeds:
+
+  sudo /usr/libexec/wiibridge-helper attach
+
+To stop safely:
+
+  sudo /usr/libexec/wiibridge-helper detach
+  sudo /usr/libexec/wiibridge-helper disconnect
+
+Never disconnect NBD while the USB gadget remains attached.
+
+
+15. CONNECT TO THE WII
+----------------------
+
+After safe Linux USB-host testing:
+
+1. Power down or detach the gadget.
+2. Connect the Pi's USB data port to the Wii.
+3. Power the Pi appropriately for its model.
+4. Start the TrueNAS application.
+5. Connect NBD on the Pi.
+6. Attach the USB gadget.
+7. Start the Wii and USB Loader GX.
+8. Select the presented USB storage device.
+
+The device presents a read-only MBR/FAT32 disk containing /wbfs.
+
+Do not enable:
+
+- Game installation
+- Game deletion
+- Rename or filesystem repair operations
+- Any feature that expects writable storage
+
+
+16. CURRENT LIMITATION
+----------------------
+
+The Docker workflow now verifies that the image builds, but it still needs a
+GHCR publishing stage before the TrueNAS deployment can use a GitHub container
+URL.
+
+Physical USB enumeration, Wii recognition, USB Loader GX detection, game
+launch, and gameplay soak testing remain:
+
+  DEFERRED_HARDWARE_UNAVAILABLE
+
+Required release label:
+
+  SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED

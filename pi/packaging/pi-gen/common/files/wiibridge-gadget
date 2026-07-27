@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+g=/sys/kernel/config/usb_gadget/wiibridge
+action=${1:-}
+mode=${2:-wii}
+case "$action" in
+  start)
+    case "$mode:$(blockdev --getro /dev/nbd0)" in
+      wii:1|gamecube-physical:1) lun_ro=1 ;;
+      gamecube-emulated:0) lun_ro=0 ;;
+      *) echo "invalid gadget export mode" >&2; exit 31 ;;
+    esac
+    test -n "${WIIBRIDGE_USB_VID:-}" -a -n "${WIIBRIDGE_USB_PID:-}" || {
+      echo "authorized USB VID/PID not provisioned" >&2
+      exit 30
+    }
+    modprobe libcomposite
+    mkdir -p "$g"
+    printf '%s' "$WIIBRIDGE_USB_VID" > "$g/idVendor"
+    printf '%s' "$WIIBRIDGE_USB_PID" > "$g/idProduct"
+    mkdir -p "$g/strings/0x409"
+    machine=$(cat /etc/machine-id)
+    printf 'WiiBridge' > "$g/strings/0x409/manufacturer"
+    printf 'Read-only Wii Library' > "$g/strings/0x409/product"
+    # Keep the deployed serial byte-for-byte stable across the branding
+    # migration so the Wii does not treat this same physical bridge as a new
+    # USB device.
+    printf 'NG-%s' "$(printf '%s' "$machine" | cut -c1-16)" > "$g/strings/0x409/serialnumber"
+    mkdir -p "$g/configs/c.1/strings/0x409" "$g/functions/mass_storage.0"
+    printf 'WiiBridge read-only' > "$g/configs/c.1/strings/0x409/configuration"
+    printf '%s' "$lun_ro" > "$g/functions/mass_storage.0/lun.0/ro"
+    printf '0' > "$g/functions/mass_storage.0/lun.0/removable"
+    printf '/dev/nbd0' > "$g/functions/mass_storage.0/lun.0/file"
+    ln -s "$g/functions/mass_storage.0" "$g/configs/c.1/mass_storage.0"
+    udc=$(find /sys/class/udc -mindepth 1 -maxdepth 1 -printf '%f\n' | head -n1)
+    test -n "$udc"
+    printf '%s' "$udc" > "$g/UDC"
+    ;;
+  stop)
+    test -d "$g" || exit 0
+    printf '' > "$g/UDC"
+    rm -f "$g/configs/c.1/mass_storage.0"
+    rmdir "$g/functions/mass_storage.0" "$g/configs/c.1/strings/0x409" \
+      "$g/configs/c.1" "$g/strings/0x409" "$g"
+    ;;
+  *) exit 64 ;;
+esac

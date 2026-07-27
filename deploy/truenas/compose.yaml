@@ -1,0 +1,74 @@
+services:
+  wiibridge-host:
+    image: ${WIIBRIDGE_IMAGE:?set immutable image reference with sha256 digest}
+    user: "${WIIBRIDGE_UID:?set UID}:${WIIBRIDGE_GID:?set GID}"
+    restart: unless-stopped
+    read_only: true
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      WIIBRIDGE_LIBRARY: /library
+      WIIBRIDGE_DATA: /data
+      WIIBRIDGE_ADMIN_TOKEN: ${WIIBRIDGE_ADMIN_TOKEN:?set an admin token}
+      WIIBRIDGE_HTTPS_LISTEN: :8445
+      WIIBRIDGE_NBD_LISTEN: :10809
+      WIIBRIDGE_EXPORT: ${WIIBRIDGE_EXPORT:-all}
+      WIIBRIDGE_TLS_CERT: /certs/server.crt
+      WIIBRIDGE_TLS_KEY: /certs/server.key
+      WIIBRIDGE_TLS_CLIENT_CA: /certs/clients-ca.crt
+    ports:
+      - "${WIIBRIDGE_HTTPS_BIND:?set management bind IP}:${WIIBRIDGE_HTTPS_PORT:-8445}:8445/tcp"
+      - "${WIIBRIDGE_NBD_BIND:?set NBD bind IP}:${WIIBRIDGE_NBD_PORT:-10809}:10809/tcp"
+    volumes:
+      - type: bind
+        source: ${WIIBRIDGE_LIBRARY_PATH:?set WBFS dataset path}
+        target: /library
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${WIIBRIDGE_CONFIG_PATH:?set config dataset path}
+        target: /config
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${WIIBRIDGE_DATA_PATH:?set data dataset path}
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${WIIBRIDGE_CERTS_PATH:?set certificate dataset path}
+        target: /certs
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${WIIBRIDGE_LOGS_PATH:?set logs dataset path}
+        target: /logs
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${WIIBRIDGE_BACKUPS_PATH:?set backups dataset path}
+        target: /backups
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:size=32m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "/wiibridge-host", "healthcheck", "--url", "https://127.0.0.1:8445/healthz", "--ca", "/certs/ca.crt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    pids_limit: 256
+    mem_limit: ${WIIBRIDGE_MEMORY_LIMIT:-1g}
+    cpus: ${WIIBRIDGE_CPU_LIMIT:-2.0}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"

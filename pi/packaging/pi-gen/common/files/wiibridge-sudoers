@@ -1,0 +1,8 @@
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper connect
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper disconnect
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper attach
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper detach
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper clear-cache
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper test
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-helper poweroff
+wiibridge ALL=(root) NOPASSWD: /usr/libexec/wiibridge-provision

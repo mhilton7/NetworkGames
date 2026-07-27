@@ -1,0 +1,16 @@
+schema_version: 1
+library_root: /library
+data_root: /data
+default_catalog: all
+https:
+  listen: ":8445"
+nbd:
+  listen: ":10809"
+  require_tls: true
+  require_client_certificate: true
+  export: all
+  request_timeout: 30s
+  max_request_bytes: 1048576
+cache:
+  metadata_max_bytes: 67108864
+  payload_cache_enabled: false

@@ -1,0 +1,25 @@
+[Unit]
+Description=WiiBridge validated automatic server and USB attachment
+After=systemd-modules-load.service network-online.target wiibridge-recover.service wiibridge-setup-ap.service
+Wants=network-online.target
+ConditionPathExists=/etc/wiibridge/provisioned
+ConditionPathExists=/etc/wiibridge/auto-attach
+ConditionPathExists=!/boot/firmware/wiibridge-recovery
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/libexec/wiibridge-helper auto-attach-ready
+ExecStart=/usr/libexec/wiibridge-helper auto-attach
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=30s
+PrivateTmp=yes
+PrivateDevices=no
+ProtectSystem=strict
+ReadWritePaths=/run/wiibridge
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

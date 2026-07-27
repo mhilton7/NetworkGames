@@ -1,0 +1,42 @@
+# Replace every CHANGE_ME value and pin the image by the published digest.
+services:
+  wiibridge-host:
+    # Publish the supplied OCI layout under this name without altering it.
+    image: ghcr.io/CHANGE_ME/wiibridge-host:0.1.0-rc.1@sha256:14dfeb29b5ac206c479be45a32bb1752ab56951c099053e757ad8f2915b50461
+    user: "568:568"
+    restart: unless-stopped
+    read_only: true
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      WIIBRIDGE_LIBRARY: /library
+      WIIBRIDGE_DATA: /data
+      WIIBRIDGE_ADMIN_TOKEN: CHANGE_ME_USE_UI_SECRET_VALUE
+      WIIBRIDGE_HTTPS_LISTEN: :8445
+      WIIBRIDGE_NBD_LISTEN: :10809
+      WIIBRIDGE_EXPORT: all
+      WIIBRIDGE_TLS_CERT: /certs/server.crt
+      WIIBRIDGE_TLS_KEY: /certs/server.key
+      WIIBRIDGE_TLS_CLIENT_CA: /certs/clients-ca.crt
+    ports:
+      - "CHANGE_ME_TRUENAS_LAN_IP:8445:8445/tcp"
+      - "CHANGE_ME_TRUENAS_PI_IP:10809:10809/tcp"
+    volumes:
+      - {type: bind, source: /mnt/CHANGE_ME/WII_DATASET, target: /library, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: /mnt/CHANGE_ME/apps/wiibridge/config, target: /config, bind: {create_host_path: false}}
+      - {type: bind, source: /mnt/CHANGE_ME/apps/wiibridge/data, target: /data, bind: {create_host_path: false}}
+      - {type: bind, source: /mnt/CHANGE_ME/apps/wiibridge/certs, target: /certs, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: /mnt/CHANGE_ME/apps/wiibridge/logs, target: /logs, bind: {create_host_path: false}}
+      - {type: bind, source: /mnt/CHANGE_ME/apps/wiibridge/backups, target: /backups, bind: {create_host_path: false}}
+    tmpfs: [/tmp:size=32m,mode=1777,noexec,nosuid,nodev]
+    healthcheck:
+      test: [CMD, /wiibridge-host, healthcheck, --url, "https://127.0.0.1:8445/healthz", --ca, /certs/ca.crt]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 2.0
