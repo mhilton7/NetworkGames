@@ -145,6 +145,18 @@
     return `${amount.toFixed(1)} ${units[unit]}`;
   };
   const formatTime = (value) => value ? new Date(value).toLocaleString() : "Never";
+  const revisionSummary = (value) => {
+    const revision = String(value || "unknown");
+    return revision.length > 12 ? revision.slice(0, 12) : revision;
+  };
+  const versionRevision = (id, productVersion, revision) => {
+    const element = document.getElementById(id);
+    if (!element) return;
+    const version = productVersion || "unknown";
+    const fullRevision = revision || "unknown";
+    element.textContent = `${version} · ${revisionSummary(fullRevision)}`;
+    element.title = `${version} · ${fullRevision}`;
+  };
 
   const sourcePanel = document.getElementById("source-health");
   async function refreshSource() {
@@ -183,9 +195,9 @@
       const host = value.host || {};
       const firmware = value.firmware || {};
       text("compat-state", value.status || "unknown");
-      text("compat-host", `${host.productVersion || "unknown"} · ${host.revision || "unknown"}`);
+      versionRevision("compat-host", host.productVersion, host.revision);
       text("compat-host-protocol", `${host.protocolMin || "?"}–${host.protocolMax || "?"}`);
-      text("compat-firmware", `${firmware.productVersion || "unknown"} · ${firmware.revision || "unknown"}`);
+      versionRevision("compat-firmware", firmware.productVersion, firmware.revision);
       text("compat-board", firmware.board || "unknown");
       text("compat-firmware-protocol", firmware.protocolMin ?
         `${firmware.protocolMin}–${firmware.protocolMax}` : "unknown");

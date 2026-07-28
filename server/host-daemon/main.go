@@ -58,6 +58,14 @@ func buildVersion() string {
 		runtime.GOOS, runtime.GOARCH)
 }
 
+func displayRevision(revision string) string {
+	const displayLength = 12
+	if len(revision) <= displayLength {
+		return revision
+	}
+	return revision[:displayLength]
+}
+
 type app struct {
 	mu                   sync.RWMutex
 	switchMu             sync.Mutex
@@ -2312,6 +2320,7 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"DefaultPassword": a.browser.DefaultActive(),
 		"Source":          sourceRecord, "Compatibility": map[string]any{"Status": compatibilityState},
 		"HostRevision":       gitCommit,
+		"HostRevisionShort":  displayRevision(gitCommit),
 		"HostProtocol":       fmt.Sprintf("%d–%d", compat.ProtocolMin, compat.ProtocolMax),
 		"DashboardRefreshMS": max(a.dashboardRefresh.Milliseconds(), int64(2000)),
 	}

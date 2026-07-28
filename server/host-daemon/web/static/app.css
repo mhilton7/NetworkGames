@@ -228,8 +228,10 @@ a {
 }
 
 .compact div {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 16px;
+  align-items: start;
   border-bottom: 1px solid var(--line);
   padding: 8px 0;
 }
@@ -239,8 +241,11 @@ a {
 }
 
 .compact dd {
+  min-width: 0;
   margin: 0;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .callout {
@@ -648,6 +653,90 @@ footer {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  margin-top: 20px;
+}
+
+.feature-grid > .card {
+  min-width: 0;
+  padding: 22px;
+}
+
+.feature-grid .section-title > div {
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.actions form {
+  margin: 0;
+}
+
+.actions .button,
+.actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.feature-panel {
+  margin-top: 18px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.feature-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 58px;
+  padding: 12px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.feature-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.feature-panel > summary::after {
+  content: "+";
+  display: grid;
+  flex: 0 0 30px;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--cyan);
+  font-size: 20px;
+}
+
+.feature-panel[open] > summary::after {
+  content: "−";
+}
+
+.feature-panel > summary span {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.feature-panel > summary small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.feature-panel > .catalog-content {
+  padding-top: 6px;
 }
 
 .settings-grid {
@@ -676,7 +765,7 @@ footer {
 }
 
 .data-path span {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 7px 10px;
   background: var(--surface);
@@ -726,6 +815,12 @@ pre {
     gap: 2px;
   }
 
+  .feature-panel > summary span {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
   .power-actions .confirmed-action {
     flex-basis: 100%;
   }
@@ -756,5 +851,14 @@ pre {
 
   .confirm-toggle {
     min-height: 32px;
+  }
+
+  .compact div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .compact dd {
+    text-align: left;
   }
 }
