@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html"
 	"log/slog"
 	"net"
 	"net/http"
@@ -82,6 +83,55 @@ type importJob struct {
 	Status   string                   `json:"status"`
 	Error    string                   `json:"error,omitempty"`
 	Manifest *gamecube.VolumeManifest `json:"manifest,omitempty"`
+}
+
+type startupHandler struct {
+	mu    sync.RWMutex
+	phase string
+}
+
+func (h *startupHandler) SetPhase(phase string) {
+	h.mu.Lock()
+	h.phase = phase
+	h.mu.Unlock()
+	slog.Info("Host startup", "phase", phase)
+}
+
+func (h *startupHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.mu.RLock()
+	phase := h.phase
+	h.mu.RUnlock()
+	if r.URL.Path == "/healthz" {
+		writeJSON(w, map[string]string{"status": "starting", "phase": phase})
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = fmt.Fprintf(w, `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="5">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WiiBridge starting</title></head>
+<body><main><h1>WiiBridge is starting</h1><p>%s</p>
+<p>This page refreshes automatically. Wii and GameCube exports remain unavailable until scanning finishes.</p>
+</main></body></html>`, html.EscapeString(phase))
+}
+
+type switchingHandler struct {
+	mu      sync.RWMutex
+	handler http.Handler
+}
+
+func (h *switchingHandler) Set(handler http.Handler) {
+	h.mu.Lock()
+	h.handler = handler
+	h.mu.Unlock()
+}
+
+func (h *switchingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.mu.RLock()
+	handler := h.handler
+	h.mu.RUnlock()
+	handler.ServeHTTP(w, r)
 }
 
 type wiiExportProfile struct{ app *app }
@@ -157,6 +207,7 @@ func healthCLI(args []string) {
 }
 
 func serve() error {
+	hostStarted := time.Now()
 	root := env("WIIBRIDGE_LIBRARY", "/library")
 	dataDir := env("WIIBRIDGE_DATA", "/data")
 	token := os.Getenv("WIIBRIDGE_ADMIN_TOKEN")
@@ -169,18 +220,7 @@ func serve() error {
 	if err := os.MkdirAll(filepath.Join(dataDir, "snapshots"), 0o700); err != nil {
 		return err
 	}
-	result, err := scanner.Scan(root)
-	if err != nil {
-		return err
-	}
-	disk, err := vdisk.Build("all", result.Games, version)
-	if err != nil {
-		return err
-	}
-	gcResult, err := gamecube.Scan(root)
-	if err != nil {
-		return err
-	}
+	var err error
 	gcConfig := gamecube.DefaultLibraryConfig()
 	gcConfig.SourceRoot = root
 	gcConfig.HeadroomPercent, err = intEnv("WIIBRIDGE_GAMECUBE_HEADROOM_PERCENT", 5)
@@ -228,9 +268,58 @@ func serve() error {
 		return err
 	}
 	defer database.Close()
+	tlsConfig, err := mutualTLSConfig(
+		env("WIIBRIDGE_TLS_CERT", "/certs/server.crt"),
+		env("WIIBRIDGE_TLS_KEY", "/certs/server.key"),
+		env("WIIBRIDGE_TLS_CLIENT_CA", "/certs/clients-ca.crt"),
+	)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+	startup := &startupHandler{}
+	startup.SetPhase("Scanning Wii library")
+	handler := &switchingHandler{handler: startup}
+	errs := make(chan error, 2)
+	web := &http.Server{
+		Addr:    env("WIIBRIDGE_HTTPS_LISTEN", ":8445"),
+		Handler: securityHeaders(handler), TLSConfig: tlsConfig.Clone(),
+		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second,
+		WriteTimeout: 60 * time.Second, IdleTimeout: 60 * time.Second,
+		MaxHeaderBytes: 32 << 10,
+	}
+	web.TLSConfig.ClientAuth = tls.NoClientCert
+	web.TLSConfig.MinVersion = tls.VersionTLS13
+	web.TLSConfig.MaxVersion = 0
+	webListener, err := net.Listen("tcp", web.Addr)
+	if err != nil {
+		return err
+	}
+	go func() {
+		errs <- web.ServeTLS(webListener,
+			env("WIIBRIDGE_TLS_CERT", "/certs/server.crt"),
+			env("WIIBRIDGE_TLS_KEY", "/certs/server.key"))
+	}()
+
+	result, err := scanner.Scan(root)
+	if err != nil {
+		return err
+	}
+	startup.SetPhase("Building Wii virtual disk")
+	disk, err := vdisk.Build("all", result.Games, version)
+	if err != nil {
+		return err
+	}
+	startup.SetPhase("Scanning GameCube library")
+	gcResult, err := gamecube.Scan(root)
+	if err != nil {
+		return err
+	}
+	startup.SetPhase("Finalizing validated exports")
 	csrfSum := sha256.Sum256([]byte("wiibridge-host-csrf\x00" + token))
 	a := &app{root: root, dataDir: dataDir, disk: disk, scan: result, gcScan: gcResult,
-		tokenSum: sha256.Sum256([]byte(token)), started: time.Now(), store: database,
+		tokenSum: sha256.Sum256([]byte(token)), started: hostStarted, store: database,
 		failures: make(map[string]authFailure), csrf: hex.EncodeToString(csrfSum[:]),
 		imports: make(map[string]importJob), gcLibrary: gcLibrary, gcMode: gcConfig.Mode,
 		browser: browserAuth, web: renderer}
@@ -252,16 +341,6 @@ func serve() error {
 	if err := a.persistSnapshot(); err != nil {
 		return err
 	}
-	tlsConfig, err := mutualTLSConfig(
-		env("WIIBRIDGE_TLS_CERT", "/certs/server.crt"),
-		env("WIIBRIDGE_TLS_KEY", "/certs/server.key"),
-		env("WIIBRIDGE_TLS_CLIENT_CA", "/certs/clients-ca.crt"),
-	)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
 	if piManager != nil {
 		go piManager.Run(ctx)
 	}
@@ -274,7 +353,6 @@ func serve() error {
 		TLS:             tlsConfig, ExportName: env("WIIBRIDGE_EXPORT", "all"),
 		Deadline: 30 * time.Second, MaxRequest: 1 << 20,
 	}
-	errs := make(chan error, 2)
 	go func() { errs <- nbdServer.Serve(ctx, nbdListener) }()
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", a.health)
@@ -302,21 +380,9 @@ func serve() error {
 	mux.HandleFunc("POST /api/v1/pi/storage/{action}", a.auth(a.piStorageAction))
 	mux.HandleFunc("GET /metrics", a.auth(a.metrics))
 	mux.HandleFunc("GET /", a.auth(a.dashboard))
-	web := &http.Server{
-		Addr: env("WIIBRIDGE_HTTPS_LISTEN", ":8445"), Handler: securityHeaders(mux),
-		TLSConfig: tlsConfig.Clone(), ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout: 15 * time.Second, WriteTimeout: 60 * time.Second,
-		IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10,
-	}
-	web.TLSConfig.ClientAuth = tls.NoClientCert
-	web.TLSConfig.MinVersion = tls.VersionTLS13
-	web.TLSConfig.MaxVersion = 0
-	go func() {
-		errs <- web.ListenAndServeTLS(
-			env("WIIBRIDGE_TLS_CERT", "/certs/server.crt"),
-			env("WIIBRIDGE_TLS_KEY", "/certs/server.key"),
-		)
-	}()
+	handler.Set(mux)
+	slog.Info("Host startup complete", "wii_games", len(result.Games),
+		"gamecube_games", len(gcResult.Games))
 	select {
 	case <-ctx.Done():
 	case err = <-errs:
