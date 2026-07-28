@@ -58,6 +58,15 @@ Paste the resolved Compose YAML into Install via YAML. After installation,
 confirm healthy state, then capture `docker inspect`/Apps details, mounts,
 listeners, and sanitized logs using `tests/truenas/capture-evidence.sh`.
 
+The Host image reports its source identity with `/wiibridge-host version`.
+Compare that commit with both the expected source revision and the OCI
+`org.opencontainers.image.revision` label. A release tag alone is insufficient;
+pin the registry digest. `/healthz` is the container liveness check and returns
+HTTP 200 while scans are in progress. `/readyz` is deliberately not used by the
+container health check because it remains HTTP 503 until the Wii export is
+safe. Increasing `start_period` cannot correct a listener that was opened too
+late.
+
 The supplied Compose configuration limits the container to 512 MiB and sets
 Go's managed-heap target to 384 MiB. The Wii FAT is generated sector-by-sector
 from compact cluster-chain descriptors, so its RAM use no longer grows with

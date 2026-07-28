@@ -38,15 +38,31 @@ jobs:
           GOARCH: amd64
         run: |
           mkdir -p build/container-root
-          go build -trimpath -ldflags="-s -w -buildid=" \
+          BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '%s\n' "${BUILD_TIME}" > build/container-root/.build-time
+          go build -trimpath \
+            -ldflags="-s -w -buildid= -X main.gitCommit=${GITHUB_SHA} -X main.buildTime=${BUILD_TIME} -X main.buildDirty=false" \
             -o build/container-root/wiibridge-host \
             ./server/host-daemon
 
       - name: Build Docker image
         run: |
+          BUILD_TIME="$(cat build/container-root/.build-time)"
           docker build . \
             --file server/packaging/container/Dockerfile \
+            --build-arg "OCI_REVISION=${GITHUB_SHA}" \
+            --build-arg "OCI_VERSION=0.1.0-rc.1" \
+            --build-arg "OCI_CREATED=${BUILD_TIME}" \
+            --build-arg "OCI_SOURCE=https://github.com/OWNER/WiiBridge" \
             --tag "wiibridge-host:${GITHUB_SHA}"
+
+      - name: Verify binary and OCI identity
+        run: |
+          VERSION_OUTPUT="$(docker run --rm "wiibridge-host:${GITHUB_SHA}" version)"
+          printf '%s\n' "${VERSION_OUTPUT}"
+          printf '%s\n' "${VERSION_OUTPUT}" | grep -F "commit ${GITHUB_SHA}"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "wiibridge-host:${GITHUB_SHA}")" = "${GITHUB_SHA}"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.created" }}' "wiibridge-host:${GITHUB_SHA}")" = "$(cat build/container-root/.build-time)"
 
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

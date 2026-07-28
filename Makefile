@@ -1,5 +1,9 @@
 SHELL := /bin/bash
 VERSION := 0.1.0-rc.1
+BUILD_COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+BUILD_DIRTY := $(shell [ -z "$$(git status --porcelain --untracked-files=normal 2>/dev/null)" ] && echo false || echo true)
+HOST_LDFLAGS := -s -w -buildid= -X main.gitCommit=$(BUILD_COMMIT) -X main.buildTime=$(BUILD_TIME) -X main.buildDirty=$(BUILD_DIRTY)
 export GOCACHE ?= /tmp/wiibridge-go-cache
 export GOPATH ?= /tmp/wiibridge-gopath
 
@@ -19,7 +23,7 @@ static: server
 
 server:
 	mkdir -p build/bin
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -buildid=" -o build/bin/wiibridge-host ./server/host-daemon
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(HOST_LDFLAGS)" -o build/bin/wiibridge-host ./server/host-daemon
 
 oci:
 	./scripts/build-oci.sh

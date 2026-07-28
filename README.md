@@ -172,6 +172,12 @@ Authenticate with the configured administrator token. The dashboard provides:
 
 Keep the dashboard on a trusted management network.
 
+HTTPS and `/healthz` come online before library scanning. `/readyz` remains
+HTTP 503 until the Wii backend and NBD export manager are safe. GameCube deep
+validation runs independently after Wii readiness when its persisted
+validation receipt is missing or stale, so it cannot hold the dashboard or Wii
+startup closed.
+
 ## Normal operation
 
 ### Wii
@@ -188,8 +194,9 @@ GX. Game payloads and the Wii-facing LUN remain read-only.
 3. Choose **Build GameCube Library**. This builds compact FAT32 metadata and a
    source extent map; it does not copy game payloads.
 4. Choose **Activate GameCube Library**. The Host safely detaches USB,
-   disconnects NBD, validates every source, selects the complete synthetic
-   library, reconnects NBD, and reattaches USB.
+   disconnects NBD, verifies the validated generation receipt and current
+   source identities, selects the complete synthetic library, reconnects NBD,
+   and reattaches USB.
 5. Launch through USB Loader GX and Nintendont.
 
 Supported sources are `.iso`, `.gcm`, the documented CISO/CSO mapping, extracted

@@ -217,11 +217,51 @@ func inspectFST(root, path string) (Disc, error) {
 	if _, err = validateHeader(boot); err != nil {
 		return Disc{}, err
 	}
-	sum, physicalSize, err := hashTree(path)
+	physicalSize, err := measureTree(path)
 	if err != nil {
 		return Disc{}, err
 	}
-	return discFromHeader(boot, path, "fst", physicalSize, physicalSize, sum), nil
+	// Full-tree hashing is deliberately deferred to an explicit generation
+	// build or deep validation. Routine catalog startup only verifies the
+	// structure and records its apparent payload size.
+	return discFromHeader(boot, path, "fst", physicalSize, physicalSize, ""), nil
+}
+
+func measureTree(root string) (int64, error) {
+	var total int64
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if path == root {
+			return nil
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return errors.New("symlink forbidden in extracted FST")
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if !entry.Type().IsRegular() {
+			return errors.New("special file forbidden in extracted FST")
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if info.Size() > 0 && total > maxDiscSize-info.Size() {
+			return errors.New("extracted FST exceeds supported disc size")
+		}
+		total += info.Size()
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	if total <= 0 || total > maxDiscSize {
+		return 0, errors.New("invalid extracted FST size")
+	}
+	return total, nil
 }
 
 func readAndValidateHeader(reader io.ReaderAt, logicalSize int64) ([]byte, error) {

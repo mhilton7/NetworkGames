@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "captured_utc": "2026-07-28T02:59:00Z",
+  "source_base_commit": "43ccb384961097b1f82ed1735d0c711f72d77740",
+  "implementation_commit": null,
+  "known_revisions": {
+    "bounded_wii_startup": "7bb60d2deb0b867501d1673a448e4a880c2474c7",
+    "early_startup_page": "401176d9e17e7e6566790f4dd45d19d61ed00c55",
+    "both_are_ancestors_of_source_base": true
+  },
+  "last_container_identity_provided_by_operator": {
+    "image_reference": "ghcr.io/OWNER/wiibridge-host:sha-4a5ba332cd2c7caf4a16ee8eee05f60067f9d7c4",
+    "image_id": "sha256:1ebeaa015f6998f9993a2b45492c8cde4d3c5650db5a2213415fdba944375bcb",
+    "registry_digest": "sha256:1eb7ecb2954f1edac53e8abcbe255174533dbcbcc0d0ca2bf7db2f95e61ecd64",
+    "binary_version_output": "0.1.0-rc.1",
+    "oci_revision_label": null,
+    "restart_count": 0,
+    "oom_killed": false,
+    "health_status": "unhealthy",
+    "health_failures_observed": 15,
+    "health_failure_output": "",
+    "memory_limit_bytes": 0,
+    "contains_bounded_wii_startup_revision": false,
+    "contains_early_startup_page_revision": false
+  },
+  "newer_registry_image_inspected": {
+    "image_reference": "ghcr.io/OWNER/wiibridge-host:sha-43ccb384961097b1f82ed1735d0c711f72d77740",
+    "image_id": "sha256:a2b364d08bbb62921e90d40afbee5c3eb3118a112e6c273b0ccb96a7987cc028",
+    "registry_digest": "sha256:e2c9e1ce08c62a336396f39eef9f3186802f0560b1ed14729d2d44874d4f14df",
+    "binary_version_output": "0.1.0-rc.1",
+    "oci_revision_label": null,
+    "contains_bounded_wii_startup_revision": true,
+    "contains_early_startup_page_revision": true,
+    "confirmed_running_on_truenas": false
+  },
+  "source_evidence": {
+    "blocking_path": [
+      "serve",
+      "gamecube.NewLibraryManager",
+      "LibraryManager.Active",
+      "LoadAndValidateLibrary",
+      "ValidateLibraryManifest",
+      "hashFile or hashTree"
+    ],
+    "position_relative_to_https_listener": "before listener in source base",
+    "startup_cleanup": "NewLibraryManager also synchronously removed .building-* directories and pruned generations",
+    "bytes_read_by_old_deep_validation": "sum of all mapped ISO/GCM/CISO source sizes plus every mapped FST tree byte",
+    "production_bytes_measured": null,
+    "production_measurement_reason": "No TrueNAS runtime or production manifest was available to this workspace",
+    "wii_fat_identity_bounded": true,
+    "wii_regression_fixture_virtual_bytes": 549755813888,
+    "wii_regression_fixture_fat_sectors_per_copy": 1048577,
+    "wii_regression_fixture_build_nanoseconds": 672788
+  },
+  "root_cause": "The newer early-HTTPS change still constructed LibraryManager first. Its Active call performed deep generation validation, including complete source payload hashing, and startup generation cleanup. Therefore a valid no-copy GameCube catalog could hold the HTTPS listener closed for the duration of full-library reads.",
+  "correction": {
+    "https_before_library_manager": true,
+    "healthz_is_liveness": true,
+    "readyz_is_wii_readiness": true,
+    "wii_readiness_independent_of_gamecube_deep_validation": true,
+    "fast_validation_reads_payload_bytes": false,
+    "deep_validation_background_and_cancellable": true,
+    "validation_receipt_persisted": true,
+    "routine_iso_scan_full_hash": false,
+    "routine_fst_scan_full_hash": false,
+    "startup_recursive_generation_deletion": false,
+    "gamecube_disabled_until_receipt_current": true
+  },
+  "local_fast_validation_benchmark": {
+    "source_payload_bytes": 6291456,
+    "source_files": 3,
+    "median_nanoseconds_per_operation": 7815284,
+    "allocated_bytes_per_operation": 4494167,
+    "full_payload_bytes_hashed_per_operation": 0
+  },
+  "live_acceptance": {
+    "status": "PENDING_TRUENAS_ACCESS",
+    "required": [
+      "running binary version matches expected commit",
+      "container image ID and registry digest match the pinned image",
+      "OCI revision label matches binary commit",
+      "8445 accepts TLS promptly on two consecutive restarts",
+      "healthz reports starting during scans",
+      "readyz remains 503 until Wii is safe",
+      "Wii NBD becomes ready independently of GameCube validation",
+      "GameCube remains disabled until validation receipt is current"
+    ]
+  }
+}

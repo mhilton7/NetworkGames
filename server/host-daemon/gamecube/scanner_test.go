@@ -139,7 +139,8 @@ func TestScanExtractedFST(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Games) != 1 || result.Games[0].Format != "fst" ||
-		result.Games[0].Discs[0].PhysicalSize == 0 {
+		result.Games[0].Discs[0].PhysicalSize == 0 ||
+		result.Games[0].Discs[0].SHA256 != "" {
 		t.Fatalf("valid extracted FST was not accepted: %#v", result)
 	}
 }

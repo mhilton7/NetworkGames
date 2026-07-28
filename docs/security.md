@@ -3,13 +3,18 @@
 NBD plaintext export selection is refused until `NBD_OPT_STARTTLS` completes
 with TLS 1.3 and a client certificate chained to the configured client CA.
 Exports are read-only; write, trim, and write-zero requests return errors.
-GameCube sources are fully validated during build and activation. Bounded
-device/inode/size/mtime identity checks occur during payload reads, and a
-changed active source fails closed. Payload bytes are read directly from
+GameCube sources are fully validated during generation build and whenever a
+current deep-validation receipt is unavailable. Startup and activation verify
+compact generation checksums plus bounded device/inode/size/mtime source
+identities; they do not rehash every payload when the receipt and identities
+remain current. Deep validation runs in the background without blocking HTTPS,
+Wii readiness, or the Wii NBD export, and GameCube activation remains disabled
+until it succeeds. Bounded identity checks also occur during payload reads, and
+a changed active source fails closed. Payload bytes are read directly from
 read-only source extents and are never mirrored into `/data`.
 The active read path uses binary-search extent resolution and a bounded
 32-handle read-only LRU. Complete hashing, directory walks, manifest parsing,
-and catalog validation occur before activation rather than during block reads.
+and catalog validation never occur during block reads.
 
 The local HTTPS health check verifies the server certificate's complete
 server-auth chain against `/certs/ca.crt`. Because it connects only over

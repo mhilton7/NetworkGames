@@ -290,3 +290,10 @@
   Monitor the Apps memory graph during the first catalog rebuild and NBD
   session; raise both limits together only if the container reports an actual
   memory-limit termination.
+- The startup correction is host-validated but not yet deployed and measured
+  on the operator's TrueNAS system. The last container inspect supplied by the
+  operator identified the older `4a5ba33` image; a later statement that the new
+  image was selected did not include a second sanitized runtime inspect.
+  Therefore the final live digest, binary revision, OCI revision label,
+  production GameCube bytes hashed, and before/after restart timing remain
+  pending rather than inferred.

@@ -23,9 +23,15 @@ source_tree_sha=$(
   find server shared config scripts deploy docs -type f -print0 |
     sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1
 )
+if [ -z "$(git status --porcelain --untracked-files=normal)" ]; then
+  source_worktree_dirty=false
+else
+  source_worktree_dirty=true
+fi
 jq -n --arg digest "$manifest_digest" --arg commit "$(git rev-parse HEAD)" \
   --arg source_tree_sha "$source_tree_sha" \
   --arg finished_on "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --argjson source_worktree_dirty "$source_worktree_dirty" \
   '{predicateType:"https://slsa.dev/provenance/v1",
     subject:[{name:"wiibridge-host",digest:{sha256:($digest|sub("^sha256:";""))}}],
     buildDefinition:{buildType:"wiibridge/reproducible-oci-layout",
@@ -33,6 +39,7 @@ jq -n --arg digest "$manifest_digest" --arg commit "$(git rev-parse HEAD)" \
       resolvedDependencies:[{uri:"git+local:wiibridge",
         digest:{gitCommit:$commit,sourceTreeSha256:$source_tree_sha}}]},
     runDetails:{builder:{id:"scripts/build-oci.sh"},
-      metadata:{finishedOn:$finished_on,sourceWorktreeDirty:true}}}' \
+      metadata:{finishedOn:$finished_on,
+        sourceWorktreeDirty:$source_worktree_dirty}}}' \
   > "${prefix}.provenance.json"
 sha256sum "${prefix}.oci/index.json" > "${prefix}.oci.index.sha256"
