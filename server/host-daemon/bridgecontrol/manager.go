@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"wiibridge/shared/perf"
 )
 
 const (
@@ -30,7 +32,10 @@ type Manager struct {
 	address         string
 	status          Status
 	statusErr       error
+	metrics         perf.PiSnapshot
+	metricsErr      error
 	wake            chan struct{}
+	pollInterval    time.Duration
 }
 
 func NewManager(baseURL, token, certificatePath, addressPath string) (*Manager, error) {
@@ -69,9 +74,20 @@ func NewManager(baseURL, token, certificatePath, addressPath string) (*Manager, 
 	return &Manager{
 		client: client, token: token, certificatePath: certificatePath,
 		addressPath: addressPath, address: address,
-		statusErr: errors.New("Pi status has not been checked"),
-		wake:      make(chan struct{}, 1),
+		statusErr:  errors.New("Pi status has not been checked"),
+		metricsErr: errors.New("Pi metrics have not been checked"),
+		wake:       make(chan struct{}, 1), pollInterval: statusInterval,
 	}, nil
+}
+
+func (m *Manager) SetPollInterval(interval time.Duration) error {
+	if interval < 5*time.Second || interval > 5*time.Minute {
+		return errors.New("Pi metrics poll interval must be between 5 seconds and 5 minutes")
+	}
+	m.mu.Lock()
+	m.pollInterval = interval
+	m.mu.Unlock()
+	return nil
 }
 
 func managementURL(address string) string {
@@ -117,6 +133,12 @@ func (m *Manager) Status(context.Context) (Status, error) {
 	return m.status, m.statusErr
 }
 
+func (m *Manager) Metrics(context.Context) (perf.PiSnapshot, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.metrics, m.metricsErr
+}
+
 func (m *Manager) Address() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -140,6 +162,8 @@ func (m *Manager) SetAddress(_ context.Context, address string) error {
 	m.client = client
 	m.status = Status{}
 	m.statusErr = errors.New("Pi status is pending")
+	m.metrics = perf.PiSnapshot{}
+	m.metricsErr = errors.New("Pi metrics are pending")
 	m.mu.Unlock()
 	select {
 	case m.wake <- struct{}{}:
@@ -150,7 +174,10 @@ func (m *Manager) SetAddress(_ context.Context, address string) error {
 
 func (m *Manager) Run(ctx context.Context) {
 	m.poll(ctx)
-	ticker := time.NewTicker(statusInterval)
+	m.mu.RLock()
+	interval := m.pollInterval
+	m.mu.RUnlock()
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -166,6 +193,20 @@ func (m *Manager) Run(ctx context.Context) {
 
 func (m *Manager) poll(parent context.Context) {
 	_, _ = m.Probe(parent)
+	m.mu.RLock()
+	client := m.client
+	m.mu.RUnlock()
+	if client == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(parent, statusTimeout)
+	metrics, err := client.Metrics(ctx)
+	cancel()
+	m.mu.Lock()
+	if client == m.client {
+		m.metrics, m.metricsErr = metrics, err
+	}
+	m.mu.Unlock()
 }
 
 func persistAddress(path, address string) error {

@@ -18,6 +18,9 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"wiibridge/shared/compat"
+	"wiibridge/shared/perf"
 )
 
 const csrfPrefix = "wiibridge-setup-csrf\x00"
@@ -42,19 +45,20 @@ type Client struct {
 // controller. It intentionally mirrors only the controller's public status
 // document and never exposes provisioning values or credentials.
 type Status struct {
-	Target        string   `json:"target"`
-	Board         string   `json:"detected_board"`
-	BoardOK       bool     `json:"board_compatible"`
-	Provisioned   bool     `json:"provisioned"`
-	WiFiReady     bool     `json:"wifi_provisioned"`
-	AutoAttach    bool     `json:"auto_attach"`
-	NBDConnected  bool     `json:"nbd_connected"`
-	USBAttached   bool     `json:"usb_attached"`
-	ExportMode    string   `json:"export_mode"`
-	USBController string   `json:"usb_controller"`
-	USBState      string   `json:"usb_state"`
-	Addresses     []string `json:"addresses"`
-	State         string   `json:"state"`
+	Target        string            `json:"target"`
+	Board         string            `json:"detected_board"`
+	BoardOK       bool              `json:"board_compatible"`
+	Provisioned   bool              `json:"provisioned"`
+	WiFiReady     bool              `json:"wifi_provisioned"`
+	AutoAttach    bool              `json:"auto_attach"`
+	NBDConnected  bool              `json:"nbd_connected"`
+	USBAttached   bool              `json:"usb_attached"`
+	ExportMode    string            `json:"export_mode"`
+	USBController string            `json:"usb_controller"`
+	USBState      string            `json:"usb_state"`
+	Addresses     []string          `json:"addresses"`
+	State         string            `json:"state"`
+	Compatibility compat.Descriptor `json:"compatibility"`
 }
 
 func New(baseURL, token, certificatePath string) (*Client, error) {
@@ -175,4 +179,30 @@ func (c *Client) Status(ctx context.Context) (Status, error) {
 		return status, fmt.Errorf("decode Pi status: %w", err)
 	}
 	return status, nil
+}
+
+func (c *Client) Metrics(ctx context.Context) (perf.PiSnapshot, error) {
+	var metrics perf.PiSnapshot
+	if c == nil {
+		return metrics, errors.New("Pi switching is not configured")
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		c.baseURL+"/api/v1/metrics", nil)
+	if err != nil {
+		return metrics, err
+	}
+	request.SetBasicAuth("admin", c.token)
+	response, err := c.http.Do(request)
+	if err != nil {
+		return metrics, fmt.Errorf("Pi metrics request: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return metrics, fmt.Errorf("Pi metrics returned HTTP %d", response.StatusCode)
+	}
+	decoder := json.NewDecoder(io.LimitReader(response.Body, maxStatusResponse))
+	if err = decoder.Decode(&metrics); err != nil {
+		return metrics, fmt.Errorf("decode Pi metrics: %w", err)
+	}
+	return metrics, nil
 }

@@ -27,10 +27,12 @@ type Rejection struct {
 }
 
 type Result struct {
-	Games     []model.Game `json:"games"`
-	Rejected  []Rejection  `json:"rejected"`
-	Root      string       `json:"root"`
-	FileCount int          `json:"file_count"`
+	Games      []model.Game `json:"games"`
+	Rejected   []Rejection  `json:"rejected"`
+	Root       string       `json:"root"`
+	FileCount  int          `json:"file_count"`
+	Platform   string       `json:"platform"`
+	ScanStatus string       `json:"scan_status"`
 }
 
 func Scan(root string) (Result, error) {
@@ -46,8 +48,7 @@ func Scan(root string) (Result, error) {
 	var rejected []Rejection
 	err = filepath.WalkDir(realRoot, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			rejected = append(rejected, Rejection{path, walkErr.Error()})
-			return nil
+			return fmt.Errorf("SOURCE-PARTIAL-SCAN: %w", walkErr)
 		}
 		if path == realRoot {
 			return nil
@@ -98,7 +99,10 @@ func Scan(root string) (Result, error) {
 	}
 	sort.Slice(games, func(i, j int) bool { return games[i].ID < games[j].ID })
 	sort.Slice(rejected, func(i, j int) bool { return rejected[i].Path < rejected[j].Path })
-	return Result{Games: games, Rejected: rejected, Root: realRoot, FileCount: len(candidates)}, nil
+	return Result{
+		Games: games, Rejected: rejected, Root: realRoot, FileCount: len(candidates),
+		Platform: "wii", ScanStatus: "complete",
+	}, nil
 }
 
 func inspectSet(root, leader string) (model.Game, error) {

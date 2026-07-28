@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
 	"math"
 	"os"
@@ -455,6 +456,89 @@ func TestPhysicalLibraryRejectsWrites(t *testing.T) {
 	}
 }
 
+func TestEmulatedIndividualLibraryWritesOnlyTrustedSaveExtent(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)[:1]
+	sourceHash, err := hashFile(games[0].Discs[0].SourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := DefaultLibraryConfig()
+	config.SourceRoot = sourceRoot
+	config.SavesRoot = filepath.Join(root, "gamecube", "saves")
+	config.Mode = MemoryCardEmulatedIndividual
+	config.CardSize = 512 << 10
+	config.Application = "test"
+	manager, err := NewLibraryManager(filepath.Join(root, "gamecube", "library"), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := manager.Build(context.Background(), games)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.ReadOnly || manifest.SaveOverlayVersion != SaveOverlayFormatVersion ||
+		len(manifest.SaveObjects) != 1 || manifest.SaveExtentCount != 1 {
+		t.Fatalf("manifest=%#v", manifest)
+	}
+	layoutData, err := os.ReadFile(manifest.LayoutPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var layout struct {
+		SaveExtents []struct {
+			VirtualOffset int64 `json:"virtual_offset"`
+		} `json:"save_extents"`
+		SourceExtents []struct {
+			VirtualOffset int64 `json:"virtual_offset"`
+		} `json:"source_extents"`
+	}
+	if err = json.Unmarshal(layoutData, &layout); err != nil {
+		t.Fatal(err)
+	}
+	backend, err := OpenLibraryBackend(manager.Root(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saveOffset := layout.SaveExtents[0].VirtualOffset
+	payloadOffset := layout.SourceExtents[0].VirtualOffset
+	expected := bytes.Repeat([]byte{0x5c}, 1024)
+	if count, writeErr := backend.WriteAt(expected, saveOffset+512); writeErr != nil ||
+		count != len(expected) {
+		t.Fatalf("save write=%d err=%v", count, writeErr)
+	}
+	if _, writeErr := backend.WriteAt([]byte{1}, payloadOffset); writeErr == nil ||
+		!strings.Contains(writeErr.Error(), "SAVE-WRITE-OUTSIDE-EXTENT") {
+		t.Fatalf("payload write error=%v", writeErr)
+	}
+	if _, writeErr := backend.WriteAt(make([]byte, 1024),
+		saveOffset+manifest.SaveObjects[0].CardSize-512); writeErr == nil ||
+		!strings.Contains(writeErr.Error(), "SAVE-WRITE-CROSSES-BOUNDARY") {
+		t.Fatalf("boundary write error=%v", writeErr)
+	}
+	if err = backend.Sync(); err != nil {
+		t.Fatal(err)
+	}
+	if err = backend.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := OpenLibraryBackend(manager.Root(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	actual := make([]byte, len(expected))
+	if _, err = reopened.ReadAt(actual, saveOffset+512); err != nil ||
+		!bytes.Equal(actual, expected) {
+		t.Fatalf("save persistence mismatch: %v", err)
+	}
+	after, err := hashFile(games[0].Discs[0].SourcePath)
+	if err != nil || after != sourceHash {
+		t.Fatalf("game source changed: %s %v", after, err)
+	}
+}
+
 func errorsIsPermission(err error) bool {
 	return err == os.ErrPermission
 }
@@ -499,6 +583,65 @@ func TestSourceChangesInvalidateGeneration(t *testing.T) {
 				t.Fatal("changed source generation remained valid")
 			}
 		})
+	}
+}
+
+func TestOfflineSourceRetainsGenerationAndValidationReceipt(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), games[:1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := validationReceiptPath(manifest)
+	if err = os.Remove(manifest.Files[0].SourcePath); err != nil {
+		t.Fatal(err)
+	}
+	if err = manager.RecheckActive(); err == nil ||
+		!errors.Is(err, ErrGameCubeSourceUnavailable) {
+		t.Fatalf("offline recheck=%v", err)
+	}
+	if _, err = os.Stat(receipt); err != nil {
+		t.Fatalf("offline source removed validation receipt: %v", err)
+	}
+	managed, err := manager.ManagedActive()
+	if err != nil || managed.GenerationID != manifest.GenerationID {
+		t.Fatalf("generation was not retained: %#v %v", managed, err)
+	}
+}
+
+func TestChangedSourceRetainsGenerationButRevokesValidationReceipt(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), games[:1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.OpenFile(manifest.Files[0].SourcePath, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = file.Write([]byte{0}); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	if err = file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = manager.RecheckActive(); err == nil ||
+		!errors.Is(err, ErrGameCubeSourceChanged) {
+		t.Fatalf("changed recheck=%v", err)
+	}
+	if _, err = os.Stat(validationReceiptPath(manifest)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("changed source retained validation receipt: %v", err)
+	}
+	managed, err := manager.ManagedActive()
+	if err != nil || managed.GenerationID != manifest.GenerationID {
+		t.Fatalf("changed source destroyed generation: %#v %v", managed, err)
 	}
 }
 

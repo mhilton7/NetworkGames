@@ -33,6 +33,19 @@ snapshot identity, and virtual size validate again. A changed identity is never
 accepted as a reconnect. The local recovery service exposes diagnostics and
 network reprovisioning but does not attach the USB gadget on a wrong board.
 
+A failed source scan preserves the last complete catalog and marks affected
+games offline. Do not acknowledge missing games until the source is available
+and two complete scans have confirmed absence. An offline GameCube source
+retains its generation, validation receipt, and independent save association.
+A changed source revokes the receipt and requires validation/rebuild.
+
+For a blocked emulated card, keep GameCube detached and inspect the Save Overlay
+recovery state. Startup replays a complete journal or rolls an interrupted
+activation back to `.previous-confirmed.*`. `SAVE-RECOVERY-AMBIGUOUS` means
+more than one state could be authoritative: preserve the entire card directory
+and use a validated backup restore; do not delete journal or checkpoint files
+by hand. Wii and physical-card mode remain independent.
+
 If normal Wi-Fi is unavailable, the bridge automatically restores its
 device-unique setup access point. To force that behavior, shut the Pi down,
 insert the microSD card in a trusted computer, create an empty
@@ -65,14 +78,25 @@ certificates, database, GameCube generations, or save backups.
 
 To roll back the complete-library dashboard, safely detach USB, stop the Host,
 and restore the previous container digest or Git commit. The read-only source
-library and `/data/gamecube/save-backups` remain compatible. New
+library and `/data/gamecube/saves` remain preserved. Configure an older Host
+for `physical` because it cannot authorize format-1 save extents. New
 `/data/gamecube/library/generations` may be retained or removed while the Host
 is stopped; older Host versions ignore it. Wii remains the startup profile.
+
+Before the first schema-2 database transaction, an existing schema-1 database
+is checkpointed and copied atomically to
+`/data/wiibridge.sqlite3.pre-schema2.bak`; an existing backup is never
+overwritten. To roll the database back, keep USB detached, stop the Host, move
+the current `wiibridge.sqlite3` and any matching `-wal`/`-shm` files to a
+separate retained directory, copy the backup to `wiibridge.sqlite3` with mode
+`0600`, and then start the older Host. Do not replace the database while
+either Host version is running. The schema-2 save directories and performance
+checkpoint are independent and should be retained.
 
 Schema-1 GameCube generations can contain a full `library.img`. They are
 reported as legacy and are never deleted at startup. Reclaim their space only
 after a schema-2 no-copy generation validates: activate Wii, detach USB,
 disconnect NBD, stop the Host, verify the candidate is directly beneath
 `/data/gamecube/library/generations`, and remove that one legacy directory
-without following symlinks. Preserve `/data/gamecube/save-backups` and
+without following symlinks. Preserve `/data/gamecube/saves` and
 `/data/auth`.

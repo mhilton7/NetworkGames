@@ -14,3 +14,20 @@ nbd:
 cache:
   metadata_max_bytes: 67108864
   payload_cache_enabled: false
+gamecube_saves:
+  mode: physical
+  card_size_bytes: 16777216
+  auto_create: true
+  shared_card: shared
+  maximum_backups: 5
+  automatic_backup_interval: 0s
+performance:
+  enabled: true
+  session_history: true
+  maximum_sessions: 100
+  session_retention_days: 30
+  pi_poll_interval: 10s
+  dashboard_refresh_interval: 5s
+  persistence_interval: 1m
+  p99_warning: 100ms
+  memory_warning_percent: 85

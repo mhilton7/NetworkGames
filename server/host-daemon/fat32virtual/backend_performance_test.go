@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"testing"
+
+	"wiibridge/shared/perf"
 )
 
 func performanceSource(t testing.TB, root string, index int, size int64) File {
@@ -165,6 +167,67 @@ func TestTenThousandExtentReadsStayMemoryBounded(t *testing.T) {
 		growth, stats.SourceOpens, stats.SourceReads, stats.CacheHits, stats.PeakOpenFiles)
 }
 
+func TestSourceReadFailuresAreRateLimitedAndClassified(t *testing.T) {
+	source := performanceSource(t, t.TempDir(), 0, 4096)
+	layout := performanceLayout([]File{source}, 1, source.LogicalSize)
+	backend, err := Open(layout, nil, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Close()
+	var calls atomic.Int64
+	code := ""
+	backend.SetSourceFailureHandler(func(value string) {
+		code = value
+		calls.Add(1)
+	})
+	if err = os.Remove(source.SourcePath); err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]byte, 512)
+	for attempt := 0; attempt < 3; attempt++ {
+		_, _ = backend.ReadAt(buffer, layout.SourceExtents[0].VirtualOffset)
+	}
+	if calls.Load() != 1 || code != "SOURCE-READ-FAILED" {
+		t.Fatalf("calls=%d code=%q", calls.Load(), code)
+	}
+}
+
+func TestUnchangedSourceReconnectDropsStaleHandleAndReopensSafely(t *testing.T) {
+	root := t.TempDir()
+	source := performanceSource(t, root, 0, 4096)
+	layout := performanceLayout([]File{source}, 1, source.LogicalSize)
+	backend, err := Open(layout, nil, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Close()
+	buffer := make([]byte, 512)
+	offset := layout.SourceExtents[0].VirtualOffset
+	if _, err = backend.ReadAt(buffer, offset); err != nil {
+		t.Fatal(err)
+	}
+	offline := filepath.Join(root, "temporarily-offline")
+	if err = os.Rename(source.SourcePath, offline); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = backend.ReadAt(buffer, offset); err == nil {
+		t.Fatal("offline source read succeeded")
+	}
+	if stats := backend.Stats(); stats.CachedFiles != 0 {
+		t.Fatalf("stale source handle retained: %#v", stats)
+	}
+	if err = os.Rename(offline, source.SourcePath); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = backend.ReadAt(buffer, offset); err != nil {
+		t.Fatalf("unchanged reconnect did not recover: %v", err)
+	}
+	if stats := backend.Stats(); stats.SourceOpens != 2 || stats.CachedFiles != 1 {
+		t.Fatalf("reconnect stats=%#v", stats)
+	}
+}
+
 func reportBackendMetrics(b *testing.B, backend *Backend) {
 	stats := backend.Stats()
 	b.ReportMetric(float64(stats.SourceOpens), "source-opens")
@@ -196,6 +259,43 @@ func BenchmarkSequentialReadsOneISO(b *testing.B) {
 	}
 	b.StopTimer()
 	reportBackendMetrics(b, backend)
+}
+
+func BenchmarkReadPathMetrics(b *testing.B) {
+	for _, enabled := range []bool{false, true} {
+		name := "disabled"
+		if enabled {
+			name = "enabled"
+		}
+		b.Run(name, func(b *testing.B) {
+			source := performanceSource(b, b.TempDir(), 0, 4<<20)
+			layout := performanceLayout([]File{source}, 1, source.LogicalSize)
+			backend, err := OpenWithOptions(layout, nil, OpenOptions{
+				CacheLimit: 4,
+				Metrics: perf.New(perf.Config{
+					Enabled: enabled,
+				}),
+			})
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer backend.Close()
+			buffer := make([]byte, 64<<10)
+			if _, err = backend.ReadAt(buffer, layout.SourceExtents[0].VirtualOffset); err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			b.SetBytes(int64(len(buffer)))
+			b.ResetTimer()
+			for index := 0; index < b.N; index++ {
+				offset := layout.SourceExtents[0].VirtualOffset +
+					int64(index%32)*int64(len(buffer))
+				if _, err = backend.ReadAt(buffer, offset); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
 }
 
 func BenchmarkRandomReadsOneISO(b *testing.B) {

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"wiibridge/server/host-daemon/fat32virtual"
+	"wiibridge/shared/perf"
 )
 
 const (
@@ -31,6 +32,11 @@ const (
 	fat32MaximumFileSize    = int64(1<<32 - 1)
 )
 
+var (
+	ErrGameCubeSourceUnavailable = errors.New("GameCube source unavailable")
+	ErrGameCubeSourceChanged     = errors.New("GameCube source identity changed")
+)
+
 type LibraryConfig struct {
 	HeadroomPercent int
 	SaveReserveMiB  int64
@@ -38,12 +44,20 @@ type LibraryConfig struct {
 	Mode            MemoryCardMode
 	Retention       int
 	SourceRoot      string
+	SavesRoot       string
+	CardSize        int64
+	AutoCreateCards bool
+	SharedCardName  string
+	MaxSaveBackups  int
+	Application     string
 }
 
 func DefaultLibraryConfig() LibraryConfig {
 	return LibraryConfig{
 		HeadroomPercent: 5, SaveReserveMiB: 1024,
 		Mode: MemoryCardPhysical, Retention: 2,
+		CardSize: DefaultLibraryCardSize, AutoCreateCards: true,
+		MaxSaveBackups: DefaultSaveBackupRetention,
 	}
 }
 
@@ -58,10 +72,25 @@ func (config LibraryConfig) Validate() error {
 		return errors.New("invalid GameCube maximum volume")
 	}
 	if config.Mode == MemoryCardEmulated {
-		return errors.New("GameCube emulated memory-card mode is unavailable with the no-copy library backend")
+		return errors.New("legacy copied-volume emulated mode is unavailable; select emulated-individual or emulated-shared")
 	}
-	if config.Mode != MemoryCardPhysical {
+	if config.Mode != MemoryCardPhysical && !config.Mode.IsLibraryEmulated() {
 		return errors.New("invalid GameCube library memory-card mode")
+	}
+	if config.Mode.IsLibraryEmulated() {
+		if config.SavesRoot == "" {
+			return errors.New("GameCube emulated mode requires managed save storage")
+		}
+		if !SupportedSaveCardSize(config.CardSize) {
+			return errors.New("GameCube memory-card size is unsupported")
+		}
+		if config.Mode == MemoryCardEmulatedShared &&
+			!sharedCardPattern.MatchString(config.SharedCardName) {
+			return errors.New("GameCube shared memory-card selection is invalid")
+		}
+	}
+	if config.MaxSaveBackups < 1 || config.MaxSaveBackups > 100 {
+		return errors.New("GameCube save backup retention must be between 1 and 100")
 	}
 	if config.Retention < 1 || config.Retention > 20 {
 		return errors.New("GameCube generation retention must be between 1 and 20")
@@ -104,6 +133,13 @@ type LibraryManifest struct {
 	Files              []fat32virtual.File   `json:"virtual_files"`
 	Complete           bool                  `json:"complete"`
 	LegacyImagePath    string                `json:"image_path,omitempty"`
+	SaveOverlayVersion int                   `json:"save_overlay_format_version,omitempty"`
+	SaveObjects        []SaveObject          `json:"save_objects,omitempty"`
+	SaveExtentCount    int                   `json:"writable_save_extent_count,omitempty"`
+	SaveExtentHash     string                `json:"writable_save_extent_hash,omitempty"`
+	LayoutChecksum     string                `json:"layout_checksum,omitempty"`
+	MaxSaveBackups     int                   `json:"maximum_save_backups,omitempty"`
+	Application        string                `json:"application_version,omitempty"`
 }
 
 type LibraryBuildProgress struct {
@@ -166,7 +202,19 @@ func NewLibraryManager(root string, config LibraryConfig) (*LibraryManager, erro
 	if config.SourceRoot != "" {
 		config.SourceRoot, err = trustedRoot(config.SourceRoot)
 		if err != nil {
-			return nil, fmt.Errorf("GameCube source root: %w", err)
+			// Keep authoritative generation metadata available while a source
+			// mount is offline. Fast generation validation will safely block
+			// activation until the same source identity returns.
+			config.SourceRoot, err = filepath.Abs(config.SourceRoot)
+			if err != nil {
+				return nil, fmt.Errorf("GameCube source root: %w", err)
+			}
+		}
+	}
+	if config.SavesRoot != "" {
+		config.SavesRoot, err = filepath.Abs(config.SavesRoot)
+		if err != nil {
+			return nil, fmt.Errorf("GameCube save root: %w", err)
 		}
 	}
 	if err = os.MkdirAll(filepath.Join(clean, "generations"), 0o700); err != nil {
@@ -180,11 +228,13 @@ func NewLibraryManager(root string, config LibraryConfig) (*LibraryManager, erro
 		return nil, err
 	}
 	manager.legacy = manager.detectLegacy(entries)
-	if active, activeErr := manager.activeFast(); activeErr == nil {
+	if active, activeErr := manager.activeManaged(); activeErr == nil {
 		validation := "pending"
 		state := "Validating"
 		phase := "Deep validation pending"
-		if receiptErr := validateReceipt(manager.root, active); receiptErr == nil {
+		if fastErr := ValidateLibraryManifestFast(manager.root, active); fastErr != nil {
+			validation, state, phase = "blocked", "Source unavailable", "Source validation blocked"
+		} else if receiptErr := validateReceipt(manager.root, active); receiptErr == nil {
 			validation, state, phase = "validated", "Ready", "Ready"
 			manager.validated = true
 		}
@@ -219,6 +269,46 @@ func trustedRoot(root string) (string, error) {
 }
 
 func (manager *LibraryManager) Root() string { return manager.root }
+
+func (manager *LibraryManager) ConfigureSaves(selection SaveSelection) error {
+	if err := selection.Validate(); err != nil {
+		return err
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if manager.cancel != nil {
+		return errors.New("GameCube library build is active")
+	}
+	next := manager.config
+	next.Mode = selection.Mode
+	next.CardSize = selection.CardSize
+	next.SharedCardName = selection.SharedCardName
+	next.AutoCreateCards = selection.AutomaticCreation
+	next.MaxSaveBackups = selection.MaximumRetainedBackups
+	if err := next.Validate(); err != nil {
+		return err
+	}
+	manager.config = next
+	return nil
+}
+
+func (manager *LibraryManager) EnsureSaveObjects(games []Game) ([]SaveObject, error) {
+	manager.mu.RLock()
+	config := manager.config
+	manager.mu.RUnlock()
+	objects, err := PlanSaveObjects(
+		config.Mode, games, config.SharedCardName, config.CardSize)
+	if err != nil {
+		return nil, err
+	}
+	// This is the explicit administrator "Create card" operation, so it
+	// intentionally creates missing cards even when automatic creation is off.
+	if err = EnsureSaveObjects(config.SavesRoot, objects, true,
+		config.Application, "unassigned"); err != nil {
+		return nil, err
+	}
+	return objects, nil
+}
 
 func (manager *LibraryManager) LegacyGenerations() []string {
 	manager.mu.RLock()
@@ -460,7 +550,7 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 		}
 		return hashed[i].ID < hashed[j].ID
 	})
-	fingerprint := catalogFingerprint(hashed)
+	fingerprint := manager.catalogFingerprint(hashed)
 	virtualSize, err := CalculateLibrarySize(payloadBytes, manager.config)
 	if err != nil {
 		return LibraryManifest{}, err
@@ -474,9 +564,25 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 	}
 	defer os.RemoveAll(staging)
 	manager.setProgress("", "Planning filesystem", len(hashed), totalDiscs, 0)
+	saveObjects, err := PlanSaveObjects(manager.config.Mode, hashed,
+		manager.config.SharedCardName, manager.config.CardSize)
+	if err != nil {
+		return LibraryManifest{}, err
+	}
+	if err = EnsureSaveObjects(manager.config.SavesRoot, saveObjects,
+		manager.config.AutoCreateCards, manager.config.Application, generationID); err != nil {
+		return LibraryManifest{}, err
+	}
 	files, titles, err := manager.mapFiles(ctx, hashed)
 	if err != nil {
 		return LibraryManifest{}, err
+	}
+	for _, object := range saveObjects {
+		files = append(files, fat32virtual.File{
+			VirtualPath: object.VirtualPath, LogicalSize: object.CardSize,
+			Writable: true, SaveObjectID: object.ID, CardSize: object.CardSize,
+			GenerationID: generationID, Format: "save", GameID: object.GameID,
+		})
 	}
 	manager.setProgress("", "Generating FAT metadata", len(hashed), totalDiscs, len(files))
 	layout, metadata, err := fat32virtual.Build(virtualSize, "WIIBRIDGE", fingerprint, files)
@@ -499,9 +605,11 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 		return LibraryManifest{}, err
 	}
 	checksums := map[string]string{
-		"layout_sha256":     hashBytes(layoutData),
-		"metadata_sha256":   layout.MetadataHash,
-		"extent_map_sha256": layout.ExtentMapHash,
+		"layout_sha256":          hashBytes(layoutData),
+		"metadata_sha256":        layout.MetadataHash,
+		"extent_map_sha256":      layout.ExtentMapHash,
+		"save_extent_map_sha256": layout.SaveExtentHash,
+		"layout_checksum":        layout.LayoutChecksum,
 	}
 	checksumData, _ := json.MarshalIndent(map[string]any{
 		"schema": LibrarySchema, "checksums": checksums,
@@ -513,13 +621,23 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 	manifest := LibraryManifest{
 		Schema: LibrarySchema, GenerationID: generationID, Created: time.Now().UTC(),
 		VolumeSize: virtualSize, Filesystem: "fat32", Geometry: layout.Geometry,
-		ClusterSize: layout.Geometry.ClusterSize, Mode: manager.config.Mode, ReadOnly: true,
+		ClusterSize: layout.Geometry.ClusterSize, Mode: manager.config.Mode,
+		ReadOnly:   manager.config.Mode == MemoryCardPhysical,
 		TitleCount: len(hashed), DiscCount: totalDiscs, MappedFileCount: len(files),
 		MappedExtentCount: len(layout.SourceExtents), CatalogFingerprint: fingerprint,
 		MetadataHash: layout.MetadataHash, ExtentMapHash: layout.ExtentMapHash,
 		LayoutPath:   filepath.Join(final, "layout.bin"),
 		MetadataPath: filepath.Join(final, "metadata.bin"),
 		LibraryRoot:  manager.config.SourceRoot, Titles: titles, Files: files, Complete: true,
+		SaveOverlayVersion: func() int {
+			if manager.config.Mode.IsLibraryEmulated() {
+				return SaveOverlayFormatVersion
+			}
+			return 0
+		}(),
+		SaveObjects: saveObjects, SaveExtentCount: len(layout.SaveExtents),
+		SaveExtentHash: layout.SaveExtentHash, LayoutChecksum: layout.LayoutChecksum,
+		MaxSaveBackups: manager.config.MaxSaveBackups, Application: manager.config.Application,
 	}
 	staged := manifest
 	staged.LayoutPath, staged.MetadataPath = layoutPath, metadataPath
@@ -758,6 +876,16 @@ func catalogFingerprint(games []Game) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+func (manager *LibraryManager) catalogFingerprint(games []Game) string {
+	base := catalogFingerprint(games)
+	if manager.config.Mode == MemoryCardPhysical {
+		return base
+	}
+	return hashBytes([]byte(fmt.Sprintf("%s\x00%s\x00%d\x00%s\x00%d",
+		base, manager.config.Mode, manager.config.CardSize,
+		manager.config.SharedCardName, SaveOverlayFormatVersion)))
+}
+
 func hashBytes(data []byte) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
@@ -828,7 +956,74 @@ func (manager *LibraryManager) Active() (LibraryManifest, error) {
 	return manifest, nil
 }
 
+func (manager *LibraryManager) ManagedActive() (LibraryManifest, error) {
+	return manager.activeManaged()
+}
+
+func (manager *LibraryManager) RecheckActive() error {
+	manifest, err := manager.activeFast()
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err != nil {
+		manager.validated = false
+		manager.progress.State = "Source unavailable"
+		if errors.Is(err, ErrGameCubeSourceChanged) {
+			manager.progress.State = "Source changed"
+		}
+		manager.progress.Validation = "blocked"
+		manager.progress.Phase = "Source validation blocked"
+		manager.progress.Error = boundedError(err)
+		// An offline source does not invalidate the last successful validation.
+		// Only a positively observed identity change revokes the receipt.
+		if errors.Is(err, ErrGameCubeSourceChanged) {
+			generationID := manifest.GenerationID
+			if generationID == "" {
+				generationID = manager.progress.GenerationID
+			}
+			receipt := validationReceiptPathForGeneration(manager.root, generationID)
+			if receipt != "" {
+				_ = os.Remove(receipt)
+				_ = syncDirectory(filepath.Dir(receipt))
+			}
+		}
+		return err
+	}
+	manager.active = &manifest
+	manager.progress.GenerationID = manifest.GenerationID
+	manager.progress.Error = ""
+	if err = validateReceipt(manager.root, manifest); err != nil {
+		manager.validated = false
+		manager.progress.State = "Validating"
+		manager.progress.Validation = "pending"
+		manager.progress.Phase = "Deep validation pending"
+		return err
+	}
+	manager.validated = true
+	manager.progress.State = "Ready"
+	manager.progress.Validation = "validated"
+	manager.progress.Phase = "Ready"
+	return nil
+}
+
+func validationReceiptPathForGeneration(root, generation string) string {
+	if !safeGenerationID(generation) {
+		return ""
+	}
+	return filepath.Join(root, "generations", generation, "validation.json")
+}
+
 func (manager *LibraryManager) activeFast() (LibraryManifest, error) {
+	manifest, err := manager.activeManaged()
+	if err != nil {
+		return LibraryManifest{}, err
+	}
+	if err = ValidateLibraryManifestFast(manager.root, manifest); err != nil {
+		return manifest, err
+	}
+	return manifest, nil
+}
+
+func (manager *LibraryManager) activeManaged() (LibraryManifest, error) {
 	data, err := os.ReadFile(filepath.Join(manager.root, "active.json"))
 	if err != nil {
 		return LibraryManifest{}, err
@@ -843,7 +1038,7 @@ func (manager *LibraryManager) activeFast() (LibraryManifest, error) {
 	if pointer.Schema != LibrarySchema || !safeGenerationID(pointer.GenerationID) {
 		return LibraryManifest{}, errors.New("invalid GameCube active-generation pointer")
 	}
-	return LoadLibraryFast(manager.root,
+	return LoadLibraryManaged(manager.root,
 		filepath.Join(manager.root, "generations", pointer.GenerationID, "manifest.json"))
 }
 
@@ -874,6 +1069,17 @@ func LoadLibraryFast(root, manifestPath string) (LibraryManifest, error) {
 	return manifest, nil
 }
 
+func LoadLibraryManaged(root, manifestPath string) (LibraryManifest, error) {
+	manifest, err := loadLibraryManifest(root, manifestPath)
+	if err != nil {
+		return LibraryManifest{}, err
+	}
+	if err = ValidateLibraryManifestManaged(root, manifest); err != nil {
+		return LibraryManifest{}, err
+	}
+	return manifest, nil
+}
+
 func loadLibraryManifest(root, manifestPath string) (LibraryManifest, error) {
 	rootAbsolute, err := filepath.Abs(root)
 	if err != nil {
@@ -899,25 +1105,36 @@ func loadLibraryManifest(root, manifestPath string) (LibraryManifest, error) {
 }
 
 func ValidateLibraryManifest(root string, manifest LibraryManifest) error {
-	return validateLibraryManifest(context.Background(), root, manifest, true, nil)
+	return validateLibraryManifest(context.Background(), root, manifest, true, true, nil)
 }
 
 func ValidateLibraryManifestFast(root string, manifest LibraryManifest) error {
-	return validateLibraryManifest(context.Background(), root, manifest, false, nil)
+	return validateLibraryManifest(context.Background(), root, manifest, false, true, nil)
+}
+
+func ValidateLibraryManifestManaged(root string, manifest LibraryManifest) error {
+	return validateLibraryManifest(context.Background(), root, manifest, false, false, nil)
 }
 
 func ValidateLibraryManifestDeep(ctx context.Context, root string,
 	manifest LibraryManifest, progress func(ValidationProgress),
 ) error {
-	return validateLibraryManifest(ctx, root, manifest, true, progress)
+	return validateLibraryManifest(ctx, root, manifest, true, true, progress)
 }
 
 func validateLibraryManifest(ctx context.Context, root string,
-	manifest LibraryManifest, deep bool, progress func(ValidationProgress),
+	manifest LibraryManifest, deep, checkSources bool, progress func(ValidationProgress),
 ) error {
+	validMode := manifest.Mode == MemoryCardPhysical || manifest.Mode.IsLibraryEmulated()
+	validWriteMode := (manifest.Mode == MemoryCardPhysical && manifest.ReadOnly &&
+		manifest.SaveOverlayVersion == 0 && len(manifest.SaveObjects) == 0 &&
+		manifest.SaveExtentCount == 0) ||
+		(manifest.Mode.IsLibraryEmulated() && !manifest.ReadOnly &&
+			manifest.SaveOverlayVersion == SaveOverlayFormatVersion &&
+			len(manifest.SaveObjects) > 0 && manifest.SaveExtentCount > 0)
 	if manifest.Schema != LibrarySchema || !manifest.Complete ||
 		!safeGenerationID(manifest.GenerationID) || manifest.Filesystem != "fat32" ||
-		!manifest.ReadOnly || manifest.Mode != MemoryCardPhysical {
+		!validMode || !validWriteMode {
 		return errors.New("stale or incomplete no-copy GameCube library manifest")
 	}
 	if manifest.TitleCount == 0 || manifest.TitleCount != len(manifest.Titles) ||
@@ -943,6 +1160,31 @@ func validateLibraryManifest(ctx context.Context, root string,
 		hashBytes(metadata) != manifest.MetadataHash {
 		return errors.New("GameCube no-copy layout checksum or geometry mismatch")
 	}
+	if manifest.Mode.IsLibraryEmulated() &&
+		(len(layout.SaveExtents) != manifest.SaveExtentCount ||
+			layout.SaveExtentHash != manifest.SaveExtentHash ||
+			layout.LayoutChecksum != manifest.LayoutChecksum) {
+		return errors.New("GameCube writable save extent map mismatch")
+	}
+	saveObjects := make(map[string]SaveObject, len(manifest.SaveObjects))
+	for _, object := range manifest.SaveObjects {
+		if _, duplicate := saveObjects[object.ID]; duplicate {
+			return errors.New("GameCube writable save object map is ambiguous")
+		}
+		saveObjects[object.ID] = object
+	}
+	for _, extent := range layout.SaveExtents {
+		object, ok := saveObjects[extent.SaveObjectID]
+		if extent.GenerationID != manifest.GenerationID ||
+			extent.LayoutChecksum != manifest.LayoutChecksum || !ok ||
+			extent.CardSize != object.CardSize || extent.Length != object.CardSize {
+			return errors.New("GameCube writable save extent generation mismatch")
+		}
+		delete(saveObjects, extent.SaveObjectID)
+	}
+	if manifest.Mode.IsLibraryEmulated() && len(saveObjects) != 0 {
+		return errors.New("GameCube writable save object has no trusted extent")
+	}
 	if len(layout.Files) != len(manifest.Files) {
 		return errors.New("GameCube virtual file map mismatch")
 	}
@@ -966,16 +1208,29 @@ func validateLibraryManifest(ctx context.Context, root string,
 		checksumDocument.Checksums["extent_map_sha256"] != manifest.ExtentMapHash {
 		return errors.New("GameCube generation checksum document mismatch")
 	}
-	checkBackend, err := fat32virtual.Open(layout, metadata, 1)
+	if manifest.Mode.IsLibraryEmulated() &&
+		(checksumDocument.Checksums["save_extent_map_sha256"] != manifest.SaveExtentHash ||
+			checksumDocument.Checksums["layout_checksum"] != manifest.LayoutChecksum) {
+		return errors.New("GameCube save extent checksum document mismatch")
+	}
+	var saveValidator fat32virtual.SaveStore
+	if manifest.Mode.IsLibraryEmulated() {
+		saveValidator = validationSaveStore{}
+	}
+	checkBackend, err := fat32virtual.OpenWithOptions(layout, metadata,
+		fat32virtual.OpenOptions{CacheLimit: 1, SaveStore: saveValidator})
 	if err != nil {
 		return err
 	}
 	if err = checkBackend.Close(); err != nil {
 		return err
 	}
-	rootAbsolute, err := trustedRoot(manifest.LibraryRoot)
-	if err != nil {
-		return err
+	rootAbsolute, err := filepath.Abs(manifest.LibraryRoot)
+	if checkSources {
+		rootAbsolute, err = trustedRoot(manifest.LibraryRoot)
+	}
+	if err != nil || manifest.LibraryRoot == "" {
+		return errors.New("invalid GameCube source root metadata")
 	}
 	seen := make(map[string]struct{}, len(manifest.Files))
 	checkedTrees := make(map[string]struct{})
@@ -989,6 +1244,23 @@ func validateLibraryManifest(ctx context.Context, root string,
 			return errors.New("duplicate GameCube virtual path")
 		}
 		seen[key] = struct{}{}
+		if file.Writable {
+			if !manifest.Mode.IsLibraryEmulated() || file.Format != "save" ||
+				file.SaveObjectID == "" || file.SourcePath != "" ||
+				file.LogicalSize != file.CardSize || file.CardSize <= 0 ||
+				file.GenerationID != manifest.GenerationID ||
+				file.VirtualOffset < 0 || file.AllocatedSize < file.LogicalSize ||
+				file.VirtualOffset+file.AllocatedSize > manifest.VolumeSize {
+				return errors.New("invalid GameCube writable save file metadata")
+			}
+			if progress != nil {
+				progress(ValidationProgress{
+					FilesCompleted: index + 1, TotalFiles: len(manifest.Files),
+					BytesHashed: bytesHashed,
+				})
+			}
+			continue
+		}
 		if !validID.MatchString(file.GameID) || file.DiscNumber > 1 ||
 			(file.Format != "iso" && file.Format != "gcm" &&
 				file.Format != "ciso" && file.Format != "fst") ||
@@ -1005,7 +1277,10 @@ func validateLibraryManifest(ctx context.Context, root string,
 			if file.FSTRoot == "" || file.FSTTreeSHA256 == "" {
 				return errors.New("missing extracted FST tree identity")
 			}
-			fstRoot, rootErr := trustedRoot(file.FSTRoot)
+			fstRoot, rootErr := filepath.Abs(file.FSTRoot)
+			if checkSources {
+				fstRoot, rootErr = trustedRoot(file.FSTRoot)
+			}
 			if rootErr != nil {
 				return rootErr
 			}
@@ -1015,7 +1290,7 @@ func validateLibraryManifest(ctx context.Context, root string,
 			if err = within(fstRoot, file.SourcePath); err != nil {
 				return err
 			}
-			if _, done := checkedTrees[fstRoot]; deep && !done {
+			if _, done := checkedTrees[fstRoot]; checkSources && deep && !done {
 				treeHash, _, treeErr := hashTree(fstRoot)
 				if treeErr != nil || treeHash != file.FSTTreeSHA256 {
 					return errors.New("extracted FST tree changed")
@@ -1025,16 +1300,31 @@ func validateLibraryManifest(ctx context.Context, root string,
 		} else if file.FSTRoot != "" || file.FSTTreeSHA256 != "" {
 			return errors.New("unexpected extracted FST identity")
 		}
+		if !checkSources {
+			if progress != nil {
+				progress(ValidationProgress{
+					FilesCompleted: index + 1, TotalFiles: len(manifest.Files),
+					BytesHashed: bytesHashed,
+				})
+			}
+			continue
+		}
 		identity, identityErr := sourceIdentity(file.SourcePath, file.Identity.SHA256)
-		if identityErr != nil || identity.Size != file.Identity.Size ||
+		if identityErr != nil {
+			return fmt.Errorf("%w: %v", ErrGameCubeSourceUnavailable, identityErr)
+		}
+		if identity.Size != file.Identity.Size ||
 			identity.ModTimeUnixNano != file.Identity.ModTimeUnixNano ||
 			identity.Device != file.Identity.Device || identity.Inode != file.Identity.Inode {
-			return errors.New("GameCube source identity changed")
+			return ErrGameCubeSourceChanged
 		}
 		if deep && file.Format != "fst" {
 			sum, hashErr := hashFile(file.SourcePath)
-			if hashErr != nil || sum != file.Identity.SHA256 {
-				return errors.New("GameCube source fingerprint changed")
+			if hashErr != nil {
+				return fmt.Errorf("%w: %v", ErrGameCubeSourceUnavailable, hashErr)
+			}
+			if sum != file.Identity.SHA256 {
+				return fmt.Errorf("%w: source fingerprint changed", ErrGameCubeSourceChanged)
 			}
 			bytesHashed += file.LogicalSize
 		} else if deep {
@@ -1059,6 +1349,9 @@ func sourceIdentitySetHash(manifest LibraryManifest) string {
 	})
 	hash := sha256.New()
 	for _, file := range files {
+		if file.Writable {
+			continue
+		}
 		fmt.Fprintf(hash, "%s\x00%s\x00%d\x00%d\x00%d\x00%d\x00%s\n",
 			file.VirtualPath, file.SourcePath, file.Identity.Size,
 			file.Identity.ModTimeUnixNano, file.Identity.Device,
@@ -1066,6 +1359,17 @@ func sourceIdentitySetHash(manifest LibraryManifest) string {
 	}
 	return hex.EncodeToString(hash.Sum(nil))
 }
+
+type validationSaveStore struct{}
+
+func (validationSaveStore) ReadSaveAt(string, []byte, int64) (int, error) {
+	return 0, errors.New("validation save store does not serve reads")
+}
+func (validationSaveStore) WriteSaveAt(string, []byte, int64) (int, error) {
+	return 0, errors.New("validation save store does not serve writes")
+}
+func (validationSaveStore) Sync() error  { return nil }
+func (validationSaveStore) Close() error { return nil }
 
 func validationReceiptPath(manifest LibraryManifest) string {
 	return filepath.Join(filepath.Dir(manifest.LayoutPath), "validation.json")
@@ -1137,25 +1441,84 @@ func readManagedFile(root, name string) ([]byte, error) {
 }
 
 func OpenLibraryBackend(root string, manifest LibraryManifest) (*fat32virtual.Backend, error) {
+	return OpenLibraryBackendWithMetrics(root, manifest, nil)
+}
+
+func OpenLibraryBackendWithMetrics(root string, manifest LibraryManifest,
+	metrics *perf.Registry,
+) (*fat32virtual.Backend, error) {
+	backend, _, err := OpenLibraryBackendAndSaveStore(root, manifest, metrics)
+	return backend, err
+}
+
+func OpenLibraryBackendAndSaveStore(root string, manifest LibraryManifest,
+	metrics *perf.Registry,
+) (*fat32virtual.Backend, *SaveStore, error) {
 	if err := ValidateLibraryManifestFast(root, manifest); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := validateReceipt(root, manifest); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	layoutData, err := readManagedFile(root, manifest.LayoutPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	metadata, err := readManagedFile(root, manifest.MetadataPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var layout fat32virtual.Layout
 	if err = json.Unmarshal(layoutData, &layout); err != nil {
+		return nil, nil, err
+	}
+	var saves *SaveStore
+	var saveBackend fat32virtual.SaveStore
+	if manifest.Mode.IsLibraryEmulated() {
+		saveRoot := filepath.Join(filepath.Dir(root), "saves")
+		if err = EnsureSaveObjects(saveRoot, manifest.SaveObjects, false,
+			manifest.Application, manifest.GenerationID); err != nil {
+			return nil, nil, err
+		}
+		saves, err = OpenSaveStore(SaveStoreConfig{
+			Root: saveRoot, Application: manifest.Application,
+			GenerationID: manifest.GenerationID, LayoutChecksum: manifest.LayoutChecksum,
+			MaxBackups: manifest.MaxSaveBackups, Metrics: metrics,
+		}, manifest.SaveObjects)
+		if err != nil {
+			return nil, nil, err
+		}
+		saveBackend = saves
+	}
+	backend, err := fat32virtual.OpenWithOptions(layout, metadata,
+		fat32virtual.OpenOptions{
+			CacheLimit: libraryFileCacheLimit, SaveStore: saveBackend, Metrics: metrics,
+		})
+	if err != nil && saves != nil {
+		_ = saves.Close()
+	}
+	return backend, saves, err
+}
+
+func OpenLibrarySaveStore(root string, manifest LibraryManifest,
+	metrics *perf.Registry,
+) (*SaveStore, error) {
+	if !manifest.Mode.IsLibraryEmulated() {
+		return nil, errors.New("physical memory-card mode has no managed save overlay")
+	}
+	if err := ValidateLibraryManifestManaged(root, manifest); err != nil {
 		return nil, err
 	}
-	return fat32virtual.Open(layout, metadata, libraryFileCacheLimit)
+	saveRoot := filepath.Join(filepath.Dir(root), "saves")
+	if err := EnsureSaveObjects(saveRoot, manifest.SaveObjects, false,
+		manifest.Application, manifest.GenerationID); err != nil {
+		return nil, err
+	}
+	return OpenSaveStore(SaveStoreConfig{
+		Root: saveRoot, Application: manifest.Application,
+		GenerationID: manifest.GenerationID, LayoutChecksum: manifest.LayoutChecksum,
+		MaxBackups: manifest.MaxSaveBackups, Metrics: metrics,
+	}, manifest.SaveObjects)
 }
 
 func (manager *LibraryManager) Current(games []Game) (bool, error) {
@@ -1176,7 +1539,7 @@ func (manager *LibraryManager) Current(games []Game) (bool, error) {
 		}
 		return hashed[i].ID < hashed[j].ID
 	})
-	return active.CatalogFingerprint == catalogFingerprint(hashed), nil
+	return active.CatalogFingerprint == manager.catalogFingerprint(hashed), nil
 }
 
 func (manager *LibraryManager) detectLegacy(entries []os.DirEntry) []string {
@@ -1237,9 +1600,29 @@ func (manager *LibraryManager) prune(active string) error {
 	return nil
 }
 
-func BackupLibraryMemoryCards(manifest LibraryManifest, _ string, _ int) error {
-	if manifest.Mode == MemoryCardEmulated {
-		return errors.New("emulated GameCube save overlay is unavailable with the no-copy backend")
+func BackupLibraryMemoryCards(manifest LibraryManifest, saveRoot string, retain int) error {
+	if !manifest.Mode.IsLibraryEmulated() {
+		return nil
+	}
+	if retain < 1 {
+		return errors.New("save backup retention must be positive")
+	}
+	if filepath.Base(saveRoot) == "save-backups" {
+		saveRoot = filepath.Join(filepath.Dir(saveRoot), "saves")
+	}
+	store, err := OpenSaveStore(SaveStoreConfig{
+		Root: saveRoot, Application: manifest.Application,
+		GenerationID: manifest.GenerationID, LayoutChecksum: manifest.LayoutChecksum,
+		MaxBackups: retain,
+	}, manifest.SaveObjects)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+	for _, object := range manifest.SaveObjects {
+		if _, err = store.Backup(object.ID, "detach"); err != nil {
+			return err
+		}
 	}
 	return nil
 }

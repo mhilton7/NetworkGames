@@ -78,10 +78,14 @@ validated legacy generation directory beneath
 `/data/gamecube/library/generations`. Preserve save backups and never follow
 symlinks during cleanup.
 
-Physical memory-card mode is the supported no-copy mode and rejects every block
-write. Emulated memory-card mode is explicitly rejected at startup until its
-bounded save-only copy-on-write overlay is complete; it never falls back to a
-copied image.
+Memory-card modes are `physical`, `emulated-individual`, and
+`emulated-shared`. Physical mode preserves the fully read-only export.
+Individual mode maps one managed raw card per Game ID; shared mode maps only
+the explicitly selected named card. Emulated modes authorize writes solely
+through the immutable Host-generated save-extent map. They never merge cards,
+modify a game source, or fall back to a copied image. Full storage, bounds,
+durability, backup, restore, and recovery details are in
+[gamecube-save-overlay.md](gamecube-save-overlay.md).
 
 ## USB Loader GX / Nintendont settings
 

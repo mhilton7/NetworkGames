@@ -27,6 +27,10 @@ GameCube generation, Pi controls, and password recovery.
 | Host management dashboard | Available | HTTPS on the management network |
 | Raspberry Pi Zero W bridge | Available | Direct Pi-to-Wii USB connection |
 | GameCube ISO/GCM/CISO/FST | Host-tested | Separate Nintendont-compatible FAT32 export |
+| GameCube emulated saves | Host-tested | Bounded individual/shared raw-card overlay |
+| Host/Pi compatibility contract | Available | Fresh operation-specific capability checks |
+| Offline-source reconciliation | Available | Failed scans preserve the last complete catalog |
+| Performance dashboard | Available | Bounded Host/Pi counters and session summaries |
 | GameCube physical-Wii acceptance | Pending | Follow the documented hardware validation gates |
 | ZIP, RVZ, and NKit | Unsupported | Convert and validate these outside WiiBridge |
 | USB/Ethernet HATs and hubs | Unsupported | They are not part of the design |
@@ -161,6 +165,7 @@ Authenticate with the configured administrator token. The dashboard provides:
 - validated GameCube import and selection actions.
 - per-title Nintendont compatibility settings.
 - memory-card backup health and restore actions.
+- Host/firmware compatibility, source availability, and end-to-end performance.
 
 Keep the dashboard on a trusted management network.
 
@@ -199,6 +204,11 @@ The GameCube disk is synthetic: its apparent size includes every mapped game,
 while `/data` stores only compact FAT32 metadata, manifests, extent maps, and
 save data. Payload reads are served directly from the original read-only
 `/library` files.
+
+Memory-card modes are `physical`, `emulated-individual`, and
+`emulated-shared`. Emulated modes make only the Host-generated raw-card extent
+writable; FAT metadata and game extents remain immutable. See
+[the save-overlay design](docs/gamecube-save-overlay.md).
 
 The Wii FAT is likewise synthesized on demand instead of being retained as
 millions of 512-byte heap objects. The supplied TrueNAS profile uses a 384 MiB
@@ -268,7 +278,8 @@ More recovery guidance:
 ## Security and data guarantees
 
 - The source game dataset is mandatory read-only.
-- Wii NBD exports and USB mass-storage LUNs reject writes.
+- Wii and physical-card GameCube exports reject writes. Emulated GameCube
+  accepts writes only inside checksummed Host-generated save extents.
 - NBD requires mutual TLS; HTTPS uses a separate administrator credential.
 - The container runs non-root, drops Linux capabilities, and has a read-only
   root filesystem.
@@ -290,6 +301,10 @@ Read [the security model](docs/security.md) before deployment.
 | Safe flashing | [docs/flashing.md](docs/flashing.md) |
 | USB Loader GX | [docs/usb-loader-gx.md](docs/usb-loader-gx.md) |
 | GameCube mode | [support](docs/gamecube-support.md) · [deployment](docs/gamecube-deployment.md) · [rollback](docs/gamecube-rollback.md) |
+| GameCube save overlay | [docs/gamecube-save-overlay.md](docs/gamecube-save-overlay.md) |
+| Host/Pi protocol | [docs/protocol.md](docs/protocol.md) |
+| Source reconciliation | [docs/source-reconciliation.md](docs/source-reconciliation.md) |
+| Performance dashboard | [docs/performance-dashboard.md](docs/performance-dashboard.md) |
 | Hardware validation | [docs/hardware-acceptance-plan.md](docs/hardware-acceptance-plan.md) |
 | Naming migration | [docs/wiibridge-rename.md](docs/wiibridge-rename.md) |
 

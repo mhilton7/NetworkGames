@@ -35,13 +35,115 @@
 <form class="confirmed-action" method="post" action="/api/v1/pi/shutdown"><input type="hidden" name="csrf" value="{{.CSRF}}"><label class="confirm-toggle"><input type="checkbox" name="confirm" value="shutdown" required> Confirm shutdown</label><button class="danger" {{if .DefaultPassword}}disabled{{end}}>Shut Down Raspberry Pi</button></form>
 </div></div></div>{{end}}</section>
 
+<section class="feature-grid">
+<article class="card" id="source-health" data-status-url="/api/v1/sources">
+<div class="section-title"><div><p class="eyebrow">Source reconciliation</p><h2>Library source status</h2></div><span class="tag" id="source-state">{{.Source.State}}</span></div>
+<dl class="compact">
+<div><dt>Source path</dt><dd id="source-path"><code>{{.Source.RootPath}}</code></dd></div>
+<div><dt>Source ID</dt><dd id="source-id">{{.Source.SourceID}}</dd></div>
+<div><dt>Mount / identity</dt><dd id="source-identity">{{if .Source.LastKnownMountInfo}}{{.Source.LastKnownMountInfo}}{{else}}Unavailable{{end}}</dd></div>
+<div><dt>Last successful scan</dt><dd id="source-last-success">{{if .Source.LastSuccessfulScan}}{{.Source.LastSuccessfulScan}}{{else}}Never{{end}}</dd></div>
+<div><dt>Last scan attempt</dt><dd id="source-last-attempt">{{.Source.LastAttemptedScan}}</dd></div>
+<div><dt>Last successful game count</dt><dd id="source-game-count">{{.Source.LastSuccessfulItemCount}}</dd></div>
+<div><dt>Consecutive failures</dt><dd id="source-failures">{{.Source.ConsecutiveFailures}}</dd></div>
+<div><dt>Affected games</dt><dd><span id="source-affected-wii">Loading</span> Wii · <span id="source-affected-gamecube">Loading</span> GameCube</dd></div>
+<div><dt>Current failure</dt><dd id="source-error">{{if .Source.FailureCode}}{{.Source.FailureCode}} · {{.Source.FailureMessage}}{{else}}None{{end}}</dd></div>
+</dl>
+<div class="actions"><form method="post" action="/api/v1/scan"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary" {{if .DefaultPassword}}disabled{{end}}>Retry source check and rescan</button></form><a class="button secondary" href="/api/v1/sources/diagnostic">Export diagnostic report</a></div>
+</article>
+
+<article class="card" id="compatibility-panel" data-status-url="/api/v1/compatibility">
+<div class="section-title"><div><p class="eyebrow">Compatibility contract</p><h2>Host and firmware negotiation</h2></div><span class="tag" id="compat-state">{{.Compatibility.Status}}</span></div>
+<dl class="compact">
+<div><dt>Host version / revision</dt><dd id="compat-host">{{.Version}} · {{.HostRevision}}</dd></div>
+<div><dt>Host protocol</dt><dd id="compat-host-protocol">{{.HostProtocol}}</dd></div>
+<div><dt>Firmware version / revision</dt><dd id="compat-firmware">Unknown</dd></div>
+<div><dt>Firmware board</dt><dd id="compat-board">Unknown</dd></div>
+<div><dt>Firmware protocol</dt><dd id="compat-firmware-protocol">Unknown</dd></div>
+<div><dt>Negotiated protocol</dt><dd id="compat-negotiated">Unknown</dd></div>
+<div><dt>Last check</dt><dd id="compat-checked">Not checked</dd></div>
+<div><dt>Warnings and blocking reasons</dt><dd id="compat-reasons">None recorded</dd></div>
+</dl>
+<details><summary>Host capabilities</summary><p class="code-list" id="compat-host-capabilities">Loading</p></details>
+<details><summary>Firmware capabilities</summary><p class="code-list" id="compat-firmware-capabilities">Loading</p></details>
+<form method="post" action="/api/v1/compatibility"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary" {{if .DefaultPassword}}disabled{{end}}>Retry compatibility check</button></form>
+</article>
+</section>
+
+<details class="card" data-persist-details="save-overlay">
+<summary><span><strong>GameCube Save Overlay</strong><small>Bounded, save-only copy-on-write cards</small></span></summary>
+<div class="catalog-content" id="save-overlay" data-status-url="/api/v1/gamecube/saves" data-csrf="{{.CSRF}}">
+<div class="section-title"><div><p class="eyebrow">Memory cards</p><h2>Managed save cards</h2></div><span class="tag" id="save-mode">{{.GameCubeModeRaw}}</span></div>
+{{if .SaveError}}<p class="error-text">{{.SaveError}}</p>{{end}}
+<form class="settings-grid" method="post" action="/api/v1/gamecube/saves/mode">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>Memory-card mode<select name="mode">
+<option value="physical" {{if eq .GameCubeModeRaw "physical"}}selected{{end}}>Physical</option>
+<option value="emulated-individual" {{if eq .GameCubeModeRaw "emulated-individual"}}selected{{end}}>Emulated individual</option>
+<option value="emulated-shared" {{if eq .GameCubeModeRaw "emulated-shared"}}selected{{end}}>Emulated shared</option>
+</select></label>
+<label>Selected shared card<input name="shared_card_name" value="{{.SaveSelection.SharedCardName}}" pattern="[A-Za-z0-9_-]{1,32}"></label>
+<label>Card size<select name="card_size">
+<option value="524288" {{if eq .SaveSelection.CardSize 524288}}selected{{end}}>512 KiB</option>
+<option value="1048576" {{if eq .SaveSelection.CardSize 1048576}}selected{{end}}>1 MiB</option>
+<option value="2097152" {{if eq .SaveSelection.CardSize 2097152}}selected{{end}}>2 MiB</option>
+<option value="4194304" {{if eq .SaveSelection.CardSize 4194304}}selected{{end}}>4 MiB</option>
+<option value="8388608" {{if eq .SaveSelection.CardSize 8388608}}selected{{end}}>8 MiB</option>
+<option value="16777216" {{if eq .SaveSelection.CardSize 16777216}}selected{{end}}>16 MiB</option>
+</select></label>
+<label>Maximum retained backups<input type="number" name="maximum_backups" min="1" max="100" value="{{.SaveSelection.MaximumRetainedBackups}}"></label>
+<label>Automatic backup interval<input name="automatic_backup_interval" value="{{.SaveBackupInterval}}" placeholder="0s"></label>
+<label class="confirm-toggle"><input type="checkbox" name="automatic_creation" value="1" {{if .SaveSelection.AutomaticCreation}}checked{{end}}> Automatically create missing cards</label>
+<button {{if .DefaultPassword}}disabled{{end}}>Save memory-card settings</button>
+</form>
+<div class="control-row">
+<form method="post" action="/api/v1/gamecube/saves/create"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">Create missing cards</button></form>
+<form method="post" action="/api/v1/gamecube/saves/backup"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">Backup all now</button></form>
+<form method="post" action="/api/v1/gamecube/saves/verify"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">Verify all cards</button></form>
+</div>
+<p id="save-blocked" class="error-text" hidden></p>
+<div class="table-wrap"><table><thead><tr><th>Selected card</th><th>Association</th><th>Size</th><th>Integrity</th><th>Dirty</th><th>Recovery</th><th>Last flush</th><th>Last backup</th><th>Backups</th><th>Checksum</th><th>Current error</th></tr></thead><tbody id="save-status-body"><tr><td colspan="11">Loading save status</td></tr></tbody></table></div>
+<h3>Backup history and restore</h3>
+<form class="settings-grid" method="post" action="/api/v1/gamecube/saves/restore">
+<input type="hidden" name="csrf" value="{{.CSRF}}"><label>Card<select name="object_id" data-save-object></select></label><label>Backup<select name="backup" data-save-backup></select></label>
+<label class="confirm-toggle"><input type="checkbox" name="confirm" value="restore" required> Confirm transactional restore</label><button class="danger">Restore selected backup</button>
+</form>
+<form id="save-upload-form" class="settings-grid" enctype="multipart/form-data" method="post" action="/api/v1/gamecube/saves/upload">
+<label>Card<select name="object_id" data-save-object></select></label><label>Raw card file<input type="file" name="card" accept=".raw,application/octet-stream" required></label><button>Upload and activate</button>
+</form>
+<p><a id="save-download-link" href="/api/v1/gamecube/saves/download">Download selected active card</a></p>
+</div></details>
+
+<details class="card" data-persist-details="performance">
+<summary><span><strong>Performance</strong><small>Source → Host backend → NBD/TLS → Pi NBD → USB gadget → Wii</small></span></summary>
+<div class="catalog-content" id="performance-panel" data-summary-url="/api/performance/summary" data-refresh-ms="{{.DashboardRefreshMS}}">
+<div class="status-grid">
+<div><small>Current platform</small><strong id="perf-platform">{{.Platform}}</strong></div>
+<div><small>Session duration</small><strong id="perf-duration">No active session</strong></div>
+<div><small>Current throughput</small><strong id="perf-throughput">0 B/s</strong></div>
+<div><small>P95 / P99 read latency</small><strong id="perf-latency">0 / 0 µs</strong></div>
+<div><small>Source state</small><strong id="perf-source">{{.Source.State}}</strong></div>
+<div><small>NBD state</small><strong id="perf-nbd">{{.State}}</strong></div>
+<div><small>Pi state</small><strong id="perf-pi">Unavailable</strong></div>
+<div><small>USB state</small><strong id="perf-usb">Unavailable</strong></div>
+<div><small>Host heap</small><strong id="perf-host-memory">Loading</strong></div>
+<div><small>Pi memory / temperature</small><strong id="perf-pi-memory">Unavailable</strong></div>
+</div>
+<h3>Data path</h3><div class="data-path" id="perf-data-path">Loading bounded metrics</div>
+<h3>Diagnostic warnings</h3><ul id="perf-warnings"><li>None</li></ul>
+<details><summary>Host storage, extent, cache, NBD, runtime, and save metrics</summary><pre id="perf-host-details">Loading</pre></details>
+<details><summary>Pi runtime, network, NBD, and USB metrics</summary><pre id="perf-pi-details">Loading</pre></details>
+<h3>Recent session history</h3><div class="table-wrap"><table><thead><tr><th>Session</th><th>Start</th><th>Platform</th><th>Bytes</th><th>Reads</th><th>P95</th><th>P99</th><th>Outcome</th></tr></thead><tbody id="perf-session-body"><tr><td colspan="8">No retained sessions</td></tr></tbody></table></div>
+<p><a href="/api/performance/export?format=json">Export JSON</a> · <a href="/api/performance/export?format=csv">Export CSV</a></p>
+</div></details>
+
 <details class="card catalog-viewer" data-persist-details="catalog-viewer" {{if or .Query (ne .Filter "all") .Rejected}}open{{end}}>
 <summary><span><strong>Catalog Viewer</strong><small>{{.TotalWii}} Wii · {{.TotalGameCube}} GameCube</small></span></summary>
 <div class="catalog-content">
 <div class="toolbar"><nav class="tabs" aria-label="Library filter"><a class="{{if eq .Filter "all"}}active{{end}}" href="?platform=all">All</a><a class="{{if eq .Filter "wii"}}active{{end}}" href="?platform=wii">Wii</a><a class="{{if eq .Filter "gamecube"}}active{{end}}" href="?platform=gamecube">GameCube</a></nav><form method="get" class="search"><input type="hidden" name="platform" value="{{.Filter}}"><label class="sr-only" for="library-search">Search library</label><input id="library-search" name="q" value="{{.Query}}" placeholder="Search title or game ID"><button>Search</button></form></div>
 
-{{if ne .Filter "gamecube"}}<section><div class="section-title"><div><p class="eyebrow">Wii</p><h2>Complete Wii Catalog</h2></div><span class="tag">{{len .Wii}} shown</span></div><div class="card table-wrap"><table><thead><tr><th>Title</th><th>Game ID</th><th>Virtual size</th><th>Status</th></tr></thead><tbody>{{range .Wii}}<tr><td><strong>{{.Title}}</strong></td><td><code>{{.ID}}</code></td><td>{{bytes .Size}}</td><td><span class="tag">Included</span></td></tr>{{end}}</tbody></table></div></section>{{end}}
-{{if ne .Filter "wii"}}<section><div class="section-title"><div><p class="eyebrow">GameCube</p><h2>Complete GameCube Catalog</h2></div><span class="tag">{{len .GameCube}} shown</span></div><div class="card table-wrap"><table><thead><tr><th>Title</th><th>Game ID</th><th>Revision</th><th>Region</th><th>Format</th><th>Discs</th><th>Validation</th><th>Generation</th></tr></thead><tbody>{{range .GameCube}}<tr><td><strong>{{.Title}}</strong></td><td><code>{{.ID}}</code></td><td>{{.Revision}}</td><td>{{.Region}}</td><td>{{.Format}}</td><td>{{.DiscCount}}</td><td><span class="tag">{{.Validation}}</span></td><td>{{if .Included}}Included{{else}}Not included{{end}}</td></tr>{{end}}</tbody></table></div></section>{{end}}
+{{if ne .Filter "gamecube"}}<section><div class="section-title"><div><p class="eyebrow">Wii</p><h2>Complete Wii Catalog</h2></div><span class="tag">{{len .Wii}} shown</span></div><div class="card table-wrap"><table><thead><tr><th>Title</th><th>Game ID</th><th>Virtual size</th><th>Availability</th><th>Action</th></tr></thead><tbody>{{range .Wii}}<tr><td><strong>{{.Title}}</strong></td><td><code>{{.ID}}</code></td><td>{{bytes .Size}}</td><td><span class="tag">{{if .Availability}}{{.Availability}}{{else}}playable{{end}}</span></td><td>{{if eq .Availability "missing-confirmed"}}<form class="confirmed-action" method="post" action="/api/v1/sources/acknowledge"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="platform" value="wii"><input type="hidden" name="id" value="{{.ID}}"><label><input type="checkbox" name="confirm" value="acknowledge" required> Confirm</label><button class="danger">Acknowledge removal</button></form>{{else}}—{{end}}</td></tr>{{end}}</tbody></table></div></section>{{end}}
+{{if ne .Filter "wii"}}<section><div class="section-title"><div><p class="eyebrow">GameCube</p><h2>Complete GameCube Catalog</h2></div><span class="tag">{{len .GameCube}} shown</span></div><div class="card table-wrap"><table><thead><tr><th>Title</th><th>Game ID</th><th>Revision</th><th>Region</th><th>Format</th><th>Discs</th><th>Validation</th><th>Availability</th><th>Generation</th><th>Action</th></tr></thead><tbody>{{range .GameCube}}<tr><td><strong>{{.Title}}</strong></td><td><code>{{.ID}}</code></td><td>{{.Revision}}</td><td>{{.Region}}</td><td>{{.Format}}</td><td>{{.DiscCount}}</td><td><span class="tag">{{.Validation}}</span></td><td><span class="tag">{{if .Availability}}{{.Availability}}{{else}}playable{{end}}</span></td><td>{{if .Included}}Included{{else}}Not included{{end}}</td><td>{{if eq .Availability "missing-confirmed"}}<form class="confirmed-action" method="post" action="/api/v1/sources/acknowledge"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="platform" value="gamecube"><input type="hidden" name="id" value="{{printf "%s:r%d" .ID .Revision}}"><label><input type="checkbox" name="confirm" value="acknowledge" required> Confirm</label><button class="danger">Acknowledge removal</button></form>{{else}}—{{end}}</td></tr>{{end}}</tbody></table></div></section>{{end}}
 
 <details class="card review" data-persist-details="source-review" {{if .Rejected}}open{{end}}><summary>Files Needing Attention · {{.Rejected}} items</summary><p>These files were left exactly as they are and will not be shared with your Wii.</p><form method="post" action="/api/v1/scan"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary" {{if .DefaultPassword}}disabled{{end}}>Scan again</button></form>{{if .Review}}<div class="table-wrap"><table><thead><tr><th>Library</th><th>File</th><th>What needs attention</th></tr></thead><tbody>{{range .Review}}<tr><td>{{.Platform}}</td><td><code>{{.Path}}</code></td><td class="error-text">{{.Reason}}</td></tr>{{end}}</tbody></table></div>{{end}}</details>
 </div></details>

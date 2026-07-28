@@ -14,10 +14,12 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"wiibridge/server/host-daemon/scanner"
 	"wiibridge/shared/model"
+	"wiibridge/shared/perf"
 )
 
 const (
@@ -42,13 +44,16 @@ type clusterChain struct {
 }
 
 type Disk struct {
-	size       int64
-	metadata   map[int64][]byte
-	fatStart   int64
-	fatSectors int64
-	fatChains  []clusterChain
-	extents    []extent
-	snapshot   model.Snapshot
+	size              int64
+	metadata          map[int64][]byte
+	fatStart          int64
+	fatSectors        int64
+	fatChains         []clusterChain
+	extents           []extent
+	snapshot          model.Snapshot
+	metrics           *perf.Registry
+	onSourceFailure   func(string)
+	lastSourceFailure atomic.Int64
 }
 
 func Build(catalog string, games []model.Game, appVersion string) (*Disk, error) {
@@ -225,6 +230,14 @@ func locate(sources []model.Source, logical int64) (*model.Source, int64, error)
 func (d *Disk) Size() int64              { return d.size }
 func (d *Disk) Snapshot() model.Snapshot { return d.snapshot }
 
+func (d *Disk) SetObserver(metrics *perf.Registry, sourceFailure func(string)) {
+	d.metrics, d.onSourceFailure = metrics, sourceFailure
+}
+
+func (d *Disk) metricsEnabled() bool {
+	return d.metrics != nil && d.metrics.Enabled()
+}
+
 // metadataIdentity fingerprints the compact description used to synthesize the
 // disk. Hashing every apparent FAT sector would make Host startup proportional
 // to virtual library capacity even though those sectors are generated on
@@ -371,6 +384,9 @@ func (d *Disk) ReadAt(p []byte, off int64) (int, error) {
 				n = max
 			}
 			copy(p[done:done+n], data[inSector:inSector+int64(n)])
+			if d.metricsEnabled() {
+				d.metrics.Disk.MetadataReads.Add(1)
+			}
 		} else {
 			var mapped *extent
 			for _, e := range d.extents {
@@ -386,24 +402,57 @@ func (d *Disk) ReadAt(p []byte, off int64) (int, error) {
 					n = max
 				}
 				clear(p[done : done+n])
+				if d.metricsEnabled() {
+					d.metrics.Disk.ZeroReads.Add(1)
+				}
 			} else {
 				if available := mapped.start + mapped.length - pos; int64(n) > available {
 					n = int(available)
 				}
 				if mapped.zero {
 					clear(p[done : done+n])
+					if d.metricsEnabled() {
+						d.metrics.Disk.ZeroReads.Add(1)
+					}
 				} else {
+					started := time.Time{}
+					if d.metricsEnabled() {
+						started = time.Now()
+					}
 					if err := scanner.VerifySource(*mapped.source); err != nil {
+						if d.metricsEnabled() {
+							d.metrics.Source.IdentityErrors.Add(1)
+							d.metrics.ObserveSourceRead(0, time.Since(started), err)
+						}
+						code := vdiskSourceFailureCode(err)
+						if !errors.Is(err, os.ErrNotExist) &&
+							!errors.Is(err, os.ErrPermission) {
+							code = "SOURCE-IDENTITY-CHANGED"
+						}
+						d.reportSourceFailure(code)
 						return done, err
 					}
 					f, err := os.Open(mapped.source.Path)
 					if err != nil {
+						if d.metricsEnabled() {
+							d.metrics.ObserveSourceRead(0, time.Since(started), err)
+						}
+						d.reportSourceFailure(vdiskSourceFailureCode(err))
 						return done, err
+					}
+					if d.metricsEnabled() {
+						d.metrics.Source.OpenHandles.Add(1)
 					}
 					readN, readErr := readAtFull(f, p[done:done+n],
 						mapped.sourceOffset+pos-mapped.start)
 					closeErr := f.Close()
+					if d.metricsEnabled() {
+						d.metrics.Source.OpenHandles.Add(-1)
+						d.metrics.Disk.PayloadReads.Add(1)
+						d.metrics.ObserveSourceRead(readN, time.Since(started), readErr)
+					}
 					if readErr != nil {
+						d.reportSourceFailure(vdiskSourceFailureCode(readErr))
 						return done + readN, readErr
 					}
 					if closeErr != nil {
@@ -415,6 +464,26 @@ func (d *Disk) ReadAt(p []byte, off int64) (int, error) {
 		done += n
 	}
 	return len(p), nil
+}
+
+func (d *Disk) reportSourceFailure(code string) {
+	if d.onSourceFailure == nil {
+		return
+	}
+	now := time.Now().UnixNano()
+	last := d.lastSourceFailure.Load()
+	if now-last < int64(10*time.Second) ||
+		!d.lastSourceFailure.CompareAndSwap(last, now) {
+		return
+	}
+	d.onSourceFailure(code)
+}
+
+func vdiskSourceFailureCode(err error) string {
+	if errors.Is(err, os.ErrPermission) {
+		return "SOURCE-PERMISSION-DENIED"
+	}
+	return "SOURCE-READ-FAILED"
 }
 
 func readAtFull(r io.ReaderAt, p []byte, off int64) (int, error) {

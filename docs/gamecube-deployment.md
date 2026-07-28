@@ -8,16 +8,23 @@ title/disc/file counts, then use **Activate GameCube Library**.
 
 ```text
 WIIBRIDGE_GAMECUBE_MEMORY_CARD_MODE=physical
+WIIBRIDGE_GAMECUBE_CARD_SIZE_BYTES=16777216
+WIIBRIDGE_GAMECUBE_AUTO_CREATE_CARDS=true
+WIIBRIDGE_GAMECUBE_SHARED_CARD=shared
+WIIBRIDGE_GAMECUBE_MAX_SAVE_BACKUPS=5
+WIIBRIDGE_GAMECUBE_AUTO_BACKUP_INTERVAL=0s
 WIIBRIDGE_GAMECUBE_HEADROOM_PERCENT=5
 WIIBRIDGE_GAMECUBE_SAVE_RESERVE_MIB=1024
 WIIBRIDGE_GAMECUBE_MAX_VOLUME_GIB=
 WIIBRIDGE_GAMECUBE_GENERATION_RETENTION=2
 ```
 
-`physical` exports read-only and is the currently supported no-copy mode.
-`emulated` is rejected with a clear startup error until a bounded, save-only
-copy-on-write overlay is available. It does not silently fall back to physical
-mode or to a full copied image.
+Use `physical`, `emulated-individual`, or `emulated-shared`. Physical remains
+fully read-only. Emulated modes expose only a bounded managed card extent and
+require the freshly negotiated firmware capability
+`gamecube-save-overlay-v1`. The old ambiguous value `emulated` remains
+rejected. No mode falls back to a full copied image. Back up
+`/data/gamecube/saves` before changing modes.
 
 Deployment is intentionally not performed by the build. Obtain explicit
 operator approval after reviewing the diff and host-test report.

@@ -131,8 +131,276 @@
       }
     } catch (_) {}
   }
+
+  const formatBytes = (value) => {
+    const bytes = Number(value || 0);
+    if (!Number.isFinite(bytes) || bytes < 1024) return `${Math.max(bytes, 0).toFixed(0)} B`;
+    const units = ["KiB", "MiB", "GiB"];
+    let amount = bytes;
+    let unit = -1;
+    do {
+      amount /= 1024;
+      unit += 1;
+    } while (amount >= 1024 && unit < units.length - 1);
+    return `${amount.toFixed(1)} ${units[unit]}`;
+  };
+  const formatTime = (value) => value ? new Date(value).toLocaleString() : "Never";
+
+  const sourcePanel = document.getElementById("source-health");
+  async function refreshSource() {
+    if (!sourcePanel) return;
+    try {
+      const response = await fetch(sourcePanel.dataset.statusUrl, {
+        headers: {"Accept": "application/json"}, cache: "no-store"
+      });
+      if (!response.ok) return;
+      const value = await response.json();
+      const source = value.source || {};
+      text("source-state", source.state || "unknown");
+      text("source-path", source.configured_root_path || "unknown");
+      text("source-id", source.source_id || "unknown");
+      text("source-identity", source.last_known_mount_information || "unavailable");
+      text("source-last-success", formatTime(source.last_successful_scan));
+      text("source-last-attempt", formatTime(source.last_attempted_scan));
+      text("source-game-count", String(source.last_successful_item_count || 0));
+      text("source-failures", String(source.consecutive_failure_count || 0));
+      text("source-affected-wii", String(value.affected_wii_games || 0));
+      text("source-affected-gamecube", String(value.affected_gamecube_games || 0));
+      text("source-error", source.failure_code ?
+        `${source.failure_code} · ${source.failure_message || ""}` : "None");
+    } catch (_) {}
+  }
+
+  const compatibilityPanel = document.getElementById("compatibility-panel");
+  async function refreshCompatibility() {
+    if (!compatibilityPanel) return;
+    try {
+      const response = await fetch(compatibilityPanel.dataset.statusUrl, {
+        headers: {"Accept": "application/json"}, cache: "no-store"
+      });
+      if (!response.ok) return;
+      const value = await response.json();
+      const host = value.host || {};
+      const firmware = value.firmware || {};
+      text("compat-state", value.status || "unknown");
+      text("compat-host", `${host.productVersion || "unknown"} · ${host.revision || "unknown"}`);
+      text("compat-host-protocol", `${host.protocolMin || "?"}–${host.protocolMax || "?"}`);
+      text("compat-firmware", `${firmware.productVersion || "unknown"} · ${firmware.revision || "unknown"}`);
+      text("compat-board", firmware.board || "unknown");
+      text("compat-firmware-protocol", firmware.protocolMin ?
+        `${firmware.protocolMin}–${firmware.protocolMax}` : "unknown");
+      text("compat-negotiated", value.negotiatedProtocol == null ?
+        "None" : String(value.negotiatedProtocol));
+      text("compat-checked", formatTime(value.checkedAt));
+      const reasons = [...(value.errors || []), ...(value.warnings || [])]
+        .map((item) => `${item.code}: ${item.message}`);
+      text("compat-reasons", reasons.join(" · ") || "None recorded");
+      text("compat-host-capabilities", (host.capabilities || []).join(" · ") || "None");
+      text("compat-firmware-capabilities", (firmware.capabilities || []).join(" · ") || "None");
+    } catch (_) {}
+  }
+
+  const savePanel = document.getElementById("save-overlay");
+  let saveBackups = {};
+  const updateBackupOptions = () => {
+    const object = document.querySelector("[data-save-object]")?.value || "";
+    document.querySelectorAll("[data-save-backup]").forEach((select) => {
+      select.replaceChildren();
+      (saveBackups[object] || []).forEach((backup) => {
+        const option = document.createElement("option");
+        option.value = backup.name;
+        option.textContent = `${formatTime(backup.createdAt)} · ${backup.reason} · ${backup.sha256.slice(0, 12)}`;
+        select.append(option);
+      });
+    });
+    const link = document.getElementById("save-download-link");
+    if (link) link.href = `/api/v1/gamecube/saves/download?object_id=${encodeURIComponent(object)}`;
+  };
+  async function refreshSaves() {
+    if (!savePanel) return;
+    try {
+      const response = await fetch(savePanel.dataset.statusUrl, {
+        headers: {"Accept": "application/json"}, cache: "no-store"
+      });
+      const value = await response.json();
+      text("save-mode", value.selection?.mode || "unknown");
+      const blocked = document.getElementById("save-blocked");
+      if (blocked) {
+        blocked.hidden = !value.blocked_reason;
+        blocked.textContent = value.blocked_reason || "";
+      }
+      const statuses = value.statuses || [];
+      saveBackups = value.backups || {};
+      const body = document.getElementById("save-status-body");
+      if (body) {
+        body.replaceChildren();
+        if (!statuses.length) {
+          const row = body.insertRow();
+          const cell = row.insertCell();
+          cell.colSpan = 11;
+          cell.textContent = value.selection?.mode === "physical" ?
+            "Physical mode keeps the GameCube export fully read-only." : "No managed cards are available.";
+        }
+        statuses.forEach((status) => {
+          const row = body.insertRow();
+          [
+            status.id,
+            status.game_id || status.shared_card_name || "shared",
+            formatBytes(status.card_size),
+            status.integrity_state,
+            status.dirty ? `${status.dirty_blocks} blocks` : "clean",
+            status.recovery_state,
+            formatTime(status.last_successful_flush),
+            formatTime(status.last_successful_backup),
+            String(status.backup_count || 0),
+            (status.current_checksum || "").slice(0, 16),
+            status.error_code ? `${status.error_code}: ${status.current_error || ""}` : "None"
+          ].forEach((value) => {
+            const cell = row.insertCell();
+            cell.textContent = value;
+          });
+        });
+      }
+      const previous = document.querySelector("[data-save-object]")?.value || "";
+      document.querySelectorAll("[data-save-object]").forEach((select) => {
+        select.replaceChildren();
+        statuses.forEach((status) => {
+          const option = document.createElement("option");
+          option.value = status.id;
+          option.textContent = status.id;
+          option.selected = status.id === previous;
+          select.append(option);
+        });
+      });
+      updateBackupOptions();
+    } catch (_) {}
+  }
+  document.querySelectorAll("[data-save-object]").forEach((select) => {
+    select.addEventListener("change", updateBackupOptions);
+  });
+  const uploadForm = document.getElementById("save-upload-form");
+  if (uploadForm && savePanel) {
+    uploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const object = uploadForm.querySelector("[data-save-object]")?.value || "";
+      if (!object) return;
+      const form = new FormData(uploadForm);
+      form.delete("object_id");
+      const response = await fetch(
+        `/api/v1/gamecube/saves/upload?object_id=${encodeURIComponent(object)}`, {
+          method: "POST", body: form,
+          headers: {"X-WiiBridge-CSRF": savePanel.dataset.csrf, "Accept": "application/json"}
+        });
+      if (!response.ok) {
+        window.alert(await response.text());
+        return;
+      }
+      await refreshSaves();
+    });
+  }
+
+  const performancePanel = document.getElementById("performance-panel");
+  async function refreshPerformance() {
+    if (!performancePanel) return;
+    try {
+      const response = await fetch(performancePanel.dataset.summaryUrl, {
+        headers: {"Accept": "application/json"}, cache: "no-store"
+      });
+      if (!response.ok) return;
+      const value = await response.json();
+      const host = value.host || {};
+      const nbd = host.nbd || {};
+      const runtime = host.runtime || {};
+      const pi = value.pi || null;
+      const session = value.session || {};
+      text("perf-platform", session.platform || "No active export session");
+      text("perf-duration", value.session_active && session.start_time ?
+        `${Math.max(0, Math.floor((Date.now() - new Date(session.start_time).getTime()) / 1000))} s` :
+        "No active session");
+      text("perf-throughput", `${formatBytes(nbd.rates?.bytes_per_second_1m || 0)}/s (rolling 1m)`);
+      text("perf-latency", `${(nbd.latency?.p95_us || 0).toFixed(0)} / ${(nbd.latency?.p99_us || 0).toFixed(0)} µs`);
+      text("perf-source", value.source?.state || "unknown");
+      text("perf-nbd", String(nbd.counters?.active_connections || 0) + " active");
+      text("perf-pi", value.pi_state || "unavailable");
+      text("perf-usb", pi?.usb_gadget_state || "unavailable");
+      text("perf-host-memory", `${formatBytes(runtime.go_heap_bytes)} / ${formatBytes(runtime.container_memory_limit_bytes)}`);
+      text("perf-pi-memory", pi ?
+        `${formatBytes(pi.memory_used_bytes)} / ${formatBytes(pi.memory_total_bytes)} · ${pi.temperature_celsius || 0} °C` :
+        "Unavailable");
+      const path = document.getElementById("perf-data-path");
+      if (path) {
+        path.replaceChildren();
+        (value.data_path || []).forEach((stage) => {
+          const item = document.createElement("span");
+          const throughput = stage.throughput_bytes_per_second == null ?
+            "throughput unavailable" :
+            `${formatBytes(stage.throughput_bytes_per_second)}/s`;
+          const latency = stage.latency_p99_us == null ?
+            "latency unavailable" : `P99 ${Number(stage.latency_p99_us).toFixed(0)} µs`;
+          item.textContent = `${stage.stage}: ${stage.state} · ${throughput} · ${latency}` +
+            ` · ${stage.error_count == null ? "errors unavailable" : `${stage.error_count} errors`}` +
+            ` · ${stage.measurement || "unavailable"} · ${formatTime(stage.last_update)}`;
+          path.append(item);
+        });
+      }
+      const warnings = document.getElementById("perf-warnings");
+      if (warnings) {
+        warnings.replaceChildren();
+        const items = value.warnings || [];
+        if (!items.length) items.push({code: "OK", message: "No deterministic warning threshold is active."});
+        items.forEach((warning) => {
+          const item = document.createElement("li");
+          item.textContent = `${warning.code}: ${warning.message}`;
+          warnings.append(item);
+        });
+      }
+      text("perf-host-details", JSON.stringify(host, null, 2));
+      text("perf-pi-details", pi ? JSON.stringify(pi, null, 2) :
+        "PERF-PI-METRICS-UNAVAILABLE");
+    } catch (_) {}
+    try {
+      const response = await fetch("/api/performance/sessions?limit=20", {
+        headers: {"Accept": "application/json"}, cache: "no-store"
+      });
+      if (!response.ok) return;
+      const value = await response.json();
+      const body = document.getElementById("perf-session-body");
+      if (!body) return;
+      body.replaceChildren();
+      const sessions = value.sessions || [];
+      if (!sessions.length) {
+        const row = body.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 8;
+        cell.textContent = "No retained sessions";
+      }
+      sessions.forEach((session) => {
+        const row = body.insertRow();
+        [
+          session.session_id, formatTime(session.start_time), session.platform,
+          formatBytes(session.total_bytes), String(session.read_count || 0),
+          `${(session.p95_latency_us || 0).toFixed(0)} µs`,
+          `${(session.p99_latency_us || 0).toFixed(0)} µs`,
+          session.final_outcome
+        ].forEach((value) => {
+          const cell = row.insertCell();
+          cell.textContent = value;
+        });
+      });
+    } catch (_) {}
+  }
+
   refreshPi();
   refreshBuild();
+  refreshSource();
+  refreshCompatibility();
+  refreshSaves();
+  refreshPerformance();
   window.setInterval(refreshPi, 10000);
   window.setInterval(refreshBuild, 3000);
+  window.setInterval(refreshSource, 15000);
+  window.setInterval(refreshCompatibility, 15000);
+  window.setInterval(refreshSaves, 10000);
+  window.setInterval(refreshPerformance,
+    Number(performancePanel?.dataset.refreshMs || 5000));
 })();
