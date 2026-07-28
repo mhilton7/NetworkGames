@@ -309,6 +309,43 @@ func TestDisabledPiManagerProducesNilController(t *testing.T) {
 	}
 }
 
+func TestBrowserAuthFormsExposePasswordManagerMetadata(t *testing.T) {
+	a := testApp(t)
+	login := httptest.NewRecorder()
+	a.loginForm(login, httptest.NewRequest(http.MethodGet, "/login", nil))
+	loginBody := login.Body.String()
+	for _, expected := range []string{
+		`action="/login" class="form-stack" autocomplete="on"`,
+		`id="login-username" type="text" name="username" autocomplete="username"`,
+		`id="login-password" type="password" name="password" autocomplete="current-password"`,
+	} {
+		if !strings.Contains(loginBody, expected) {
+			t.Errorf("login form missing password-manager field %q", expected)
+		}
+	}
+
+	var password strings.Builder
+	if err := a.web.Execute(&password, "change-password.html",
+		map[string]any{"CSRF": "test-csrf"}); err != nil {
+		t.Fatal(err)
+	}
+	passwordBody := password.String()
+	for _, expected := range []string{
+		`action="/account/password" class="form-stack" autocomplete="on"`,
+		`id="current-password" type="password" name="current" autocomplete="current-password"`,
+		`id="new-password" type="password" name="password" autocomplete="new-password"`,
+		`id="confirm-password" type="password" name="confirm" autocomplete="new-password"`,
+	} {
+		if !strings.Contains(passwordBody, expected) {
+			t.Errorf("password-change form missing password-manager field %q", expected)
+		}
+	}
+	if strings.Contains(loginBody, `autocomplete="off"`) ||
+		strings.Contains(passwordBody, `autocomplete="off"`) {
+		t.Fatal("browser credential forms must not disable password managers")
+	}
+}
+
 func TestDashboardKeepsPiIndicatorsVisibleWhenUnconfigured(t *testing.T) {
 	a := testApp(t)
 	request := httptest.NewRequest("GET", "/", nil)
@@ -316,8 +353,8 @@ func TestDashboardKeepsPiIndicatorsVisibleWhenUnconfigured(t *testing.T) {
 	a.dashboard(response, request)
 	body := response.Body.String()
 	for _, expected := range []string{
-		"Raspberry Pi bridge", "Configured Pi IP",
-		"Controller", "NBD / USB", "/assets/app.js",
+		"Raspberry Pi Bridge", "Raspberry Pi address",
+		"Pi status", "Wii connection", "/assets/app.js",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("unconfigured dashboard missing %q", expected)
@@ -355,8 +392,8 @@ func TestDashboardProvidesPlatformFiltersWithoutHidingWii(t *testing.T) {
 	for _, expected := range []string{
 		"All", "Wii", "GameCube", "Synthetic Wii", "Synthetic GameCube",
 		"Complete Wii Catalog", "Complete GameCube Catalog", "Catalog Viewer",
-		"Source review", "broken.wbfs", "invalid WBFS magic",
-		"unsupported.nkit.iso", "NKit images are unsupported", "Rescan library",
+		"Files Needing Attention", "broken.wbfs", "invalid WBFS magic",
+		"unsupported.nkit.iso", "NKit images are unsupported", "Scan again",
 		"Activate Wii Library", "Activate GameCube Library",
 	} {
 		if !strings.Contains(body, expected) {
@@ -365,28 +402,37 @@ func TestDashboardProvidesPlatformFiltersWithoutHidingWii(t *testing.T) {
 	}
 }
 
-func TestDashboardPrioritizesPiPowerAndCollapsesCatalogViewer(t *testing.T) {
+func TestDashboardGroupsPiPowerWithBridgeAndCollapsesCatalogViewer(t *testing.T) {
 	a := testApp(t)
 	a.pi = readyPiController()
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	response := httptest.NewRecorder()
 	a.dashboard(response, request)
 	body := response.Body.String()
-	power := strings.Index(body, "Raspberry Pi Power")
 	profiles := strings.Index(body, `aria-label="Complete library profiles"`)
+	piPanel := strings.Index(body, `id="pi-live"`)
+	power := strings.Index(body, "Power options")
 	viewer := strings.Index(body, `<details class="card catalog-viewer"`)
-	if power < 0 || profiles < 0 || viewer < 0 ||
-		!(power < profiles && profiles < viewer) {
-		t.Fatalf("dashboard order power=%d profiles=%d viewer=%d", power, profiles, viewer)
+	if profiles < 0 || piPanel < 0 || power < 0 || viewer < 0 ||
+		!(profiles < piPanel && piPanel < power && power < viewer) {
+		t.Fatalf("dashboard order profiles=%d pi=%d power=%d viewer=%d",
+			profiles, piPanel, power, viewer)
 	}
 	for _, expected := range []string{
 		"<summary><span><strong>Catalog Viewer</strong>",
+		`data-persist-details="catalog-viewer"`,
+		`data-persist-details="source-review"`,
+		`class="confirmed-action"`,
+		"Connection controls", "Reboot Raspberry Pi", "Shut Down Raspberry Pi",
 		"Complete Wii Catalog", "Complete GameCube Catalog",
 		"Activate Wii Library", "Activate GameCube Library",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("dashboard missing %q", expected)
 		}
+	}
+	if strings.Contains(body, `class="card power`) {
+		t.Error("power controls must not be rendered outside the Pi bridge panel")
 	}
 }
 
@@ -397,7 +443,7 @@ func TestLibraryReviewSeparatesScannerCounts(t *testing.T) {
 	a.dashboard(response, request)
 	body := response.Body.String()
 	for _, expected := range []string{
-		"Source review", "2 items", "broken.wbfs", "unsupported.nkit.iso",
+		"Files Needing Attention", "2 items", "broken.wbfs", "unsupported.nkit.iso",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("review panel missing %q", expected)
@@ -608,7 +654,7 @@ func TestDashboardShowsLivePiStatusPanel(t *testing.T) {
 	a.dashboard(response, request)
 	body := response.Body.String()
 	for _, expected := range []string{
-		"Raspberry Pi bridge", `value="192.0.2.10"`,
+		"Raspberry Pi Bridge", `value="192.0.2.10"`,
 		"/assets/app.js", "Reconcile Connection",
 	} {
 		if !strings.Contains(body, expected) {
@@ -708,7 +754,7 @@ func TestDashboardDisablesAutomaticSwitchingWhilePiIsUnavailable(t *testing.T) {
 	a.dashboard(response, request)
 	body := response.Body.String()
 	if response.Code != http.StatusOK ||
-		!strings.Contains(body, "Automatic library switching is disabled") ||
+		!strings.Contains(body, "Connect it before switching libraries") ||
 		strings.Count(body, `data-pi-guard="blocked"`) != 2 {
 		t.Fatalf("unavailable Pi did not disable profile switches: status=%d body=%s",
 			response.Code, body)
