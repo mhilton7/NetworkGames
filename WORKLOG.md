@@ -855,14 +855,16 @@
 - `make compose`: PASS (`static compose policy: PASS`; Docker Compose parser
   PASS).
 - `make oci`: PASS;
-  `wiibridge-host:0.1.0-rc.1@sha256:5615d069317bef23d8e0703fd461488a3e0832ccd0694b3c439452385db54a4f`.
+  the final clean implementation commit `7097d8a` produced
+  `wiibridge-host:0.1.0-rc.1@sha256:f34bd8d2036d918dd2ab841e53cbf6b924369c8dfbaa4b375bc1f142fe2b0d4e`.
 - `go test -race ./server/host-daemon/... ./server/nbd-plugin ./shared/... ./pi/controller/...`:
   PASS.
 - `go vet ./server/host-daemon/...` and `git diff --check`: PASS.
 - The current controller cross-builds with `CGO_ENABLED=0 GOOS=linux
   GOARCH=arm GOARM=6` as a stripped, statically linked 32-bit ARM EABI5
   executable; SHA-256
-  `a540e6542a721df54e3a4ac8f696677176c94d313f99d5210ebc5712cc46b650`.
+  `5418fd2008debd021c8c55d853eedc6ce80b01c41a01795d7f97618841c74857`
+  from clean implementation commit `7097d8a`.
 - `go mod tidy` could not traverse pre-existing root-owned Pi build-root files
   below `build/pi-gen-zero-w-armhf`; it stopped with permission denied and did
   not change `go.sum`. Targeted module builds, all tests, `go vet`, and static
@@ -886,7 +888,7 @@
   Pi Zero W measurements.
 - Physical GameCube/Nintendont save creation, flush, reconnect, restore, and
   sustained I/O remain `DEFERRED_HARDWARE_UNAVAILABLE`. Pi Zero W telemetry
-  cost, current firmware-image boot, and deployment of the current dirty
+  cost, current firmware-image boot, and deployment of the clean `7097d8a`
   Host OCI image to TrueNAS also remain unverified. Prior physical Wii launch,
   read-only NBD, and Pi recovery evidence is retained but was not repeated for
-  this uncommitted worktree.
+  this implementation.
