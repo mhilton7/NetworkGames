@@ -1,0 +1,66 @@
+title: "[General] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to the WiiBridge community discussion area.
+
+        Use this category for open conversation about WiiBridge, including deployments, Raspberry Pi hardware, TrueNAS hosting, Wii and GameCube testing, documentation, ideas, and project feedback.
+
+        For a confirmed software defect or a specific tracked task, open an issue instead. Do not upload copyrighted game files, encryption keys, certificates, credentials, or Nintendo system software.
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Discussion topic
+      description: Select the area that best matches your discussion.
+      options:
+        - General WiiBridge discussion
+        - Installation or deployment
+        - Raspberry Pi bridge hardware
+        - Wii or GameCube compatibility testing
+        - Documentation or usability
+        - Feature idea or project feedback
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: discussion
+    attributes:
+      label: What would you like to discuss?
+      description: Describe your question, idea, experience, or feedback with enough detail for others to respond.
+      placeholder: Tell the community what you are working on, what you observed, and what kind of input would be useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Relevant setup details
+      description: Optional. Include only details that help explain the discussion.
+      placeholder: |
+        Host platform and version:
+        WiiBridge version or commit:
+        Raspberry Pi model:
+        Wii loader and version:
+        Network or storage details:
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Optional. Add logs, screenshots, links, test results, or other useful context. Remove credentials and private information first.
+
+  - type: checkboxes
+    id: legal-and-security
+    attributes:
+      label: Legal and security check
+      options:
+        - label: I have removed credentials, private keys, tokens, copyrighted game files, and Nintendo system software from this discussion.
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve WiiBridge. Keep the discussion respectful, specific, and focused on legal backups and supported project use.
