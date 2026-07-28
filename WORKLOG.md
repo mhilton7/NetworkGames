@@ -710,3 +710,8 @@
   A minimal auto-refreshing page and `/healthz` startup response now expose the
   current scan phase immediately. NBD, Pi coordination, and Wii/GameCube
   exports are not started until the validated Wii backend is complete.
+- Added 30-second startup heartbeats, phase durations, scan candidate/game/
+  rejection counts, listener-ready logging, and total startup duration.
+- Health-check failures now log their CA, TLS, connection, or HTTP error.
+  Loopback checks still verify the complete trusted server-auth chain but no
+  longer require legacy certificates to contain a `127.0.0.1` SAN.

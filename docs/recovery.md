@@ -7,6 +7,13 @@ instead of leaving the port closed. Do not repeatedly restart the container:
 NBD remains unavailable until the startup page is replaced by the authenticated
 dashboard.
 
+If TrueNAS still reports the running container as unhealthy, inspect
+`docker logs`. The in-container health command now reports missing CA files,
+certificate-chain failures, connection errors, and non-200 HTTP responses
+instead of exiting silently. Loopback health checks validate the full trusted
+server-auth certificate chain without requiring an older certificate to
+contain a `127.0.0.1` subjectAltName.
+
 On backend loss the bridge must remain detached until the configured export,
 snapshot identity, and virtual size validate again. A changed identity is never
 accepted as a reconnect. The local recovery service exposes diagnostics and

@@ -11,6 +11,11 @@ The active read path uses binary-search extent resolution and a bounded
 32-handle read-only LRU. Complete hashing, directory walks, manifest parsing,
 and catalog validation occur before activation rather than during block reads.
 
+The local HTTPS health check verifies the server certificate's complete
+server-auth chain against `/certs/ca.crt`. Because it connects only over
+container loopback, it does not require hostname verification; browser and NBD
+connections retain their normal identity verification.
+
 The container is non-root with a read-only root, all capabilities dropped,
 no-new-privileges, bounded PIDs/logs/tmpfs, no devices, and no Docker
 socket. `/library` and `/certs` are read-only binds.
