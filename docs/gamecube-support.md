@@ -41,12 +41,22 @@ generations/<generation-id>/manifest.json
 generations/<generation-id>/layout.bin
 generations/<generation-id>/metadata.bin
 generations/<generation-id>/checksums.json
+generations/<generation-id>/validation.json
 ```
 
 Builds use `.building-*` staging directories, validate the closed metadata and
 source map, rename the generation atomically, and then atomically update
 `active.json`. A failed or canceled build cannot replace the prior generation.
 Source changes show **Update available** and invalidate activation.
+
+`validation.json` is a compact receipt for a completed deep source validation.
+Startup first checks only the schema, layout and metadata hashes, extent
+geometry, managed paths, regular-file type, and stored size/device/inode/mtime
+identities. It never hashes every ISO before opening HTTPS or before making the
+Wii export ready. If the receipt is absent or stale, full SHA-256 validation
+runs as a cancellable background operation; GameCube remains unavailable until
+it succeeds. The receipt is not trusted after any recorded source identity or
+generation checksum changes.
 
 The apparent virtual FAT32 disk includes the mapped size of every payload,
 headroom, and save reserve. Physical `/data` usage contains only FAT32 metadata,

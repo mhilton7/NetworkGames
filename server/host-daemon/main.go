@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,6 +41,18 @@ import (
 
 const version = "0.1.0-rc.1"
 
+var (
+	gitCommit  = "unknown"
+	buildTime  = "unknown"
+	buildDirty = "unknown"
+)
+
+func buildVersion() string {
+	return fmt.Sprintf("WiiBridge %s\ncommit %s\nbuilt %s\ndirty %s\ngo %s\ntarget %s/%s",
+		version, gitCommit, buildTime, buildDirty, runtime.Version(),
+		runtime.GOOS, runtime.GOARCH)
+}
+
 type app struct {
 	mu              sync.RWMutex
 	switchMu        sync.Mutex
@@ -60,6 +73,9 @@ type app struct {
 	gcLibrary       *gamecube.LibraryManager
 	gcMode          gamecube.MemoryCardMode
 	gcUpdate        bool
+	ready           bool
+	gcStartupPhase  string
+	gcStartupError  string
 	browser         *webauth.Manager
 	web             *webui.Renderer
 	authMu          sync.Mutex
@@ -88,6 +104,8 @@ type importJob struct {
 type startupHandler struct {
 	mu           sync.RWMutex
 	phase        string
+	lastComplete string
+	failure      string
 	started      time.Time
 	phaseStarted time.Time
 }
@@ -100,7 +118,11 @@ func (h *startupHandler) SetPhase(phase string) {
 	if h.started.IsZero() {
 		h.started = now
 	}
+	if previous != "" {
+		h.lastComplete = previous
+	}
 	h.phase = phase
+	h.failure = ""
 	h.phaseStarted = now
 	started := h.started
 	h.mu.Unlock()
@@ -111,6 +133,24 @@ func (h *startupHandler) SetPhase(phase string) {
 	slog.Info("Host startup phase completed",
 		"phase", previous, "duration", now.Sub(previousStarted),
 		"next_phase", phase, "total_elapsed", now.Sub(started))
+}
+
+func (h *startupHandler) Fail(summary string) {
+	now := time.Now()
+	h.mu.Lock()
+	if h.started.IsZero() {
+		h.started = now
+	}
+	phase := h.phase
+	phaseStarted := h.phaseStarted
+	h.phase = "Startup failed"
+	h.failure = summary
+	h.phaseStarted = now
+	started := h.started
+	h.mu.Unlock()
+	slog.Error("Host startup failed", "phase", phase,
+		"phase_duration", now.Sub(phaseStarted), "total_elapsed", now.Sub(started),
+		"summary", summary)
 }
 
 func (h *startupHandler) LogHeartbeat(ctx context.Context, done <-chan struct{},
@@ -140,20 +180,52 @@ func (h *startupHandler) LogHeartbeat(ctx context.Context, done <-chan struct{},
 func (h *startupHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.mu.RLock()
 	phase := h.phase
+	lastComplete := h.lastComplete
+	failure := h.failure
+	phaseStarted := h.phaseStarted
 	h.mu.RUnlock()
+	status := "starting"
+	if failure != "" {
+		status = "failed"
+	}
 	if r.URL.Path == "/healthz" {
-		writeJSON(w, map[string]string{"status": "starting", "phase": phase})
+		writeJSON(w, map[string]any{
+			"status": status, "phase": phase,
+			"phase_started":   phaseStarted.UTC().Format(time.RFC3339),
+			"elapsed_seconds": int(time.Since(phaseStarted).Seconds()),
+		})
+		return
+	}
+	if r.URL.Path == "/readyz" {
+		writeJSONStatus(w, http.StatusServiceUnavailable,
+			map[string]any{
+				"status": "not-ready", "phase": phase,
+				"phase_started":   phaseStarted.UTC().Format(time.RFC3339),
+				"elapsed_seconds": int(time.Since(phaseStarted).Seconds()),
+			})
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	heading := "WiiBridge is starting"
+	if failure != "" {
+		heading = "WiiBridge startup failed"
+	}
 	_, _ = fmt.Fprintf(w, `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="5">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WiiBridge starting</title></head>
-<body><main><h1>WiiBridge is starting</h1><p>%s</p>
+<body><main><h1>%s</h1><p>Current phase: %s</p>
+<p>Phase started: %s (%d seconds ago)</p>
+<p>Last completed phase: %s</p><p>%s</p>
 <p>This page refreshes automatically. Wii and GameCube exports remain unavailable until scanning finishes.</p>
-</main></body></html>`, html.EscapeString(phase))
+</main></body></html>`,
+		html.EscapeString(heading),
+		html.EscapeString(phase),
+		html.EscapeString(phaseStarted.UTC().Format(time.RFC3339)),
+		int(time.Since(phaseStarted).Seconds()),
+		html.EscapeString(lastComplete),
+		html.EscapeString(failure))
 }
 
 type switchingHandler struct {
@@ -201,7 +273,7 @@ func main() {
 			healthCLI(os.Args[2:])
 			return
 		case "version":
-			fmt.Println(version)
+			fmt.Println(buildVersion())
 			return
 		}
 	}
@@ -280,66 +352,35 @@ func runHealthCheck(args []string) error {
 
 func serve() error {
 	hostStarted := time.Now()
+	slog.Info("Host process entered main",
+		"event", "startup", "phase", "process entered main", "elapsed_ms", 0,
+		"version", version, "revision", gitCommit, "built", buildTime,
+		"dirty", buildDirty, "go_version", runtime.Version(),
+		"target", runtime.GOOS+"/"+runtime.GOARCH)
 	root := env("WIIBRIDGE_LIBRARY", "/library")
 	dataDir := env("WIIBRIDGE_DATA", "/data")
 	token := os.Getenv("WIIBRIDGE_ADMIN_TOKEN")
 	if len(token) < 20 {
 		return errors.New("WIIBRIDGE_ADMIN_TOKEN must contain at least 20 characters")
 	}
+	slog.Info("Host configuration validated",
+		"event", "startup", "phase", "configuration validation",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	if err := assertReadOnly(root); err != nil {
 		return fmt.Errorf("library safety check: %w", err)
 	}
+	slog.Info("Read-only library proof complete",
+		"event", "startup", "phase", "read-only library proof",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
+	dataStarted := time.Now()
 	if err := os.MkdirAll(filepath.Join(dataDir, "snapshots"), 0o700); err != nil {
 		return err
 	}
-	var err error
-	gcConfig := gamecube.DefaultLibraryConfig()
-	gcConfig.SourceRoot = root
-	gcConfig.HeadroomPercent, err = intEnv("WIIBRIDGE_GAMECUBE_HEADROOM_PERCENT", 5)
-	if err != nil {
-		return err
-	}
-	gcConfig.SaveReserveMiB, err = int64Env("WIIBRIDGE_GAMECUBE_SAVE_RESERVE_MIB", 1024)
-	if err != nil {
-		return err
-	}
-	gcConfig.MaxVolumeGiB, err = int64Env("WIIBRIDGE_GAMECUBE_MAX_VOLUME_GIB", 0)
-	if err != nil {
-		return err
-	}
-	gcConfig.Retention, err = intEnv("WIIBRIDGE_GAMECUBE_GENERATION_RETENTION", 2)
-	if err != nil {
-		return err
-	}
-	gcConfig.Mode = gamecube.MemoryCardMode(
-		env("WIIBRIDGE_GAMECUBE_MEMORY_CARD_MODE", string(gamecube.MemoryCardPhysical)))
-	gcLibrary, err := gamecube.NewLibraryManager(
-		filepath.Join(dataDir, "gamecube", "library"), gcConfig)
-	if err != nil {
-		return fmt.Errorf("GameCube library configuration: %w", err)
-	}
-	sessionTTL, err := time.ParseDuration(env("WIIBRIDGE_SESSION_TTL", "12h"))
-	if err != nil {
-		return fmt.Errorf("WIIBRIDGE_SESSION_TTL: %w", err)
-	}
-	browserAuth, err := webauth.New(
-		filepath.Join(dataDir, "auth"),
-		env("WIIBRIDGE_UI_USERNAME", "admin"),
-		env("WIIBRIDGE_UI_BOOTSTRAP_PASSWORD", "wiibridge"),
-		sessionTTL,
-	)
-	if err != nil {
-		return fmt.Errorf("browser authentication: %w", err)
-	}
-	renderer, err := webui.New(webui.Functions(humanBytes))
-	if err != nil {
-		return fmt.Errorf("web templates: %w", err)
-	}
-	database, err := store.Open(filepath.Join(dataDir, "wiibridge.sqlite3"))
-	if err != nil {
-		return err
-	}
-	defer database.Close()
+	slog.Info("Data directory initialization complete",
+		"event", "startup", "phase", "data-directory initialization",
+		"phase_elapsed_ms", time.Since(dataStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
+	tlsStarted := time.Now()
 	tlsConfig, err := mutualTLSConfig(
 		env("WIIBRIDGE_TLS_CERT", "/certs/server.crt"),
 		env("WIIBRIDGE_TLS_KEY", "/certs/server.key"),
@@ -348,10 +389,14 @@ func serve() error {
 	if err != nil {
 		return err
 	}
+	slog.Info("TLS certificates loaded",
+		"event", "startup", "phase", "TLS certificate loading",
+		"phase_elapsed_ms", time.Since(tlsStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 	startup := &startupHandler{}
-	startup.SetPhase("Scanning Wii library")
+	startup.SetPhase("Initializing configuration")
 	startupDone := make(chan struct{})
 	go startup.LogHeartbeat(ctx, startupDone, 30*time.Second)
 	handler := &switchingHandler{handler: startup}
@@ -370,38 +415,139 @@ func serve() error {
 	if err != nil {
 		return err
 	}
-	slog.Info("Host HTTPS startup listener ready", "address", web.Addr)
+	slog.Info("Host HTTPS startup listener ready", "address", web.Addr,
+		"event", "startup", "phase", "HTTPS listener opened",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	go func() {
 		errs <- web.ServeTLS(webListener,
 			env("WIIBRIDGE_TLS_CERT", "/certs/server.crt"),
 			env("WIIBRIDGE_TLS_KEY", "/certs/server.key"))
 	}()
+	failStartup := func(summary string, cause error) error {
+		startup.Fail(summary)
+		select {
+		case <-ctx.Done():
+		case listenerErr := <-errs:
+			if listenerErr != nil && !errors.Is(listenerErr, http.ErrServerClosed) {
+				cause = fmt.Errorf("%w (startup HTTPS listener: %v)", cause, listenerErr)
+			}
+		}
+		shutdown, stop := context.WithTimeout(context.Background(), 10*time.Second)
+		defer stop()
+		_ = web.Shutdown(shutdown)
+		return cause
+	}
 
+	startup.SetPhase("Opening persistent state")
+	gcConfig := gamecube.DefaultLibraryConfig()
+	gcConfig.SourceRoot = root
+	gcConfig.HeadroomPercent, err = intEnv("WIIBRIDGE_GAMECUBE_HEADROOM_PERCENT", 5)
+	if err != nil {
+		return failStartup("GameCube headroom configuration is invalid", err)
+	}
+	gcConfig.SaveReserveMiB, err = int64Env("WIIBRIDGE_GAMECUBE_SAVE_RESERVE_MIB", 1024)
+	if err != nil {
+		return failStartup("GameCube save-reserve configuration is invalid", err)
+	}
+	gcConfig.MaxVolumeGiB, err = int64Env("WIIBRIDGE_GAMECUBE_MAX_VOLUME_GIB", 0)
+	if err != nil {
+		return failStartup("GameCube volume configuration is invalid", err)
+	}
+	gcConfig.Retention, err = intEnv("WIIBRIDGE_GAMECUBE_GENERATION_RETENTION", 2)
+	if err != nil {
+		return failStartup("GameCube retention configuration is invalid", err)
+	}
+	gcConfig.Mode = gamecube.MemoryCardMode(
+		env("WIIBRIDGE_GAMECUBE_MEMORY_CARD_MODE", string(gamecube.MemoryCardPhysical)))
+	startup.SetPhase("Checking existing GameCube generation")
+	gcManagerStarted := time.Now()
+	gcLibrary, err := gamecube.NewLibraryManager(
+		filepath.Join(dataDir, "gamecube", "library"), gcConfig)
+	if err != nil {
+		return failStartup("GameCube generation metadata could not be opened",
+			fmt.Errorf("GameCube library configuration: %w", err))
+	}
+	gcProgress := gcLibrary.Progress()
+	slog.Info("GameCube LibraryManager construction complete",
+		"event", "startup", "phase", "GameCube LibraryManager construction",
+		"phase_elapsed_ms", time.Since(gcManagerStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds(),
+		"generation", gcProgress.GenerationID,
+		"validation_state", gcProgress.Validation,
+		"mapped_files", gcProgress.FilesMapped,
+		"mapped_extents", gcProgress.ExtentCount)
+	sessionTTL, err := time.ParseDuration(env("WIIBRIDGE_SESSION_TTL", "12h"))
+	if err != nil {
+		return failStartup("Session configuration is invalid",
+			fmt.Errorf("WIIBRIDGE_SESSION_TTL: %w", err))
+	}
+	authStarted := time.Now()
+	browserAuth, err := webauth.New(
+		filepath.Join(dataDir, "auth"),
+		env("WIIBRIDGE_UI_USERNAME", "admin"),
+		env("WIIBRIDGE_UI_BOOTSTRAP_PASSWORD", "wiibridge"),
+		sessionTTL,
+	)
+	if err != nil {
+		return failStartup("Browser authentication could not be initialized",
+			fmt.Errorf("browser authentication: %w", err))
+	}
+	slog.Info("Browser authentication initialized",
+		"event", "startup", "phase", "browser-authentication initialization",
+		"phase_elapsed_ms", time.Since(authStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
+	renderer, err := webui.New(webui.Functions(humanBytes))
+	if err != nil {
+		return failStartup("Web templates could not be initialized",
+			fmt.Errorf("web templates: %w", err))
+	}
+	sqliteStarted := time.Now()
+	database, err := store.Open(filepath.Join(dataDir, "wiibridge.sqlite3"))
+	if err != nil {
+		return failStartup("Persistent state could not be opened", err)
+	}
+	defer database.Close()
+	slog.Info("SQLite open complete",
+		"event", "startup", "phase", "SQLite open",
+		"phase_elapsed_ms", time.Since(sqliteStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
+	startup.SetPhase("Scanning Wii library")
+
+	wiiScanStarted := time.Now()
+	slog.Info("Wii library scan started",
+		"event", "startup", "phase", "Wii scan started",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	result, err := scanner.Scan(root)
 	if err != nil {
-		return err
+		return failStartup("Wii library scan failed", err)
 	}
 	slog.Info("Wii library scan result", "games", len(result.Games),
-		"rejected", len(result.Rejected), "candidate_files", result.FileCount)
+		"rejected", len(result.Rejected), "candidate_files", result.FileCount,
+		"event", "startup", "phase", "Wii scan completed",
+		"phase_elapsed_ms", time.Since(wiiScanStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	startup.SetPhase("Building Wii virtual disk")
+	wiiBuildStarted := time.Now()
+	slog.Info("Wii virtual disk build started",
+		"event", "startup", "phase", "Wii virtual disk build started",
+		"wii_games", len(result.Games),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	disk, err := vdisk.Build("all", result.Games, version)
 	if err != nil {
-		return err
+		return failStartup("Wii virtual disk build failed", err)
 	}
-	startup.SetPhase("Scanning GameCube library")
-	gcResult, err := gamecube.Scan(root)
-	if err != nil {
-		return err
-	}
-	slog.Info("GameCube library scan result", "games", len(gcResult.Games),
-		"rejected", len(gcResult.Rejected), "candidate_files", gcResult.FileCount)
+	slog.Info("Wii virtual disk build completed",
+		"event", "startup", "phase", "Wii virtual disk build completed",
+		"wii_games", len(result.Games),
+		"phase_elapsed_ms", time.Since(wiiBuildStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	startup.SetPhase("Finalizing validated exports")
 	csrfSum := sha256.Sum256([]byte("wiibridge-host-csrf\x00" + token))
-	a := &app{root: root, dataDir: dataDir, disk: disk, scan: result, gcScan: gcResult,
+	a := &app{root: root, dataDir: dataDir, disk: disk, scan: result,
 		tokenSum: sha256.Sum256([]byte(token)), started: hostStarted, store: database,
 		failures: make(map[string]authFailure), csrf: hex.EncodeToString(csrfSum[:]),
 		imports: make(map[string]importJob), gcLibrary: gcLibrary, gcMode: gcConfig.Mode,
-		browser: browserAuth, web: renderer}
+		browser: browserAuth, web: renderer, gcStartupPhase: "Scanning GameCube library"}
 	piManager, err := bridgecontrol.NewManager(
 		os.Getenv("WIIBRIDGE_PI_URL"),
 		os.Getenv("WIIBRIDGE_PI_ADMIN_TOKEN"),
@@ -409,23 +555,36 @@ func serve() error {
 		filepath.Join(dataDir, "pi-address"),
 	)
 	if err != nil {
-		return fmt.Errorf("automatic Pi switching configuration: %w", err)
+		return failStartup("Pi manager configuration is invalid",
+			fmt.Errorf("automatic Pi switching configuration: %w", err))
 	}
 	a.pi = configuredPiController(piManager)
+	slog.Info("Pi manager initialized",
+		"event", "startup", "phase", "Pi manager initialized",
+		"configured", a.pi != nil,
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	a.wii = &wiiExportProfile{app: a}
 	a.exports, err = exportprofile.New(a.wii)
 	if err != nil {
-		return err
+		return failStartup("Wii export manager could not be initialized", err)
 	}
+	snapshotStarted := time.Now()
+	slog.Info("Snapshot persistence started",
+		"event", "startup", "phase", "snapshot persistence started",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	if err := a.persistSnapshot(); err != nil {
-		return err
+		return failStartup("Wii snapshot could not be persisted", err)
 	}
+	slog.Info("Snapshot persistence completed",
+		"event", "startup", "phase", "snapshot persistence completed",
+		"phase_elapsed_ms", time.Since(snapshotStarted).Milliseconds(),
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	if piManager != nil {
 		go piManager.Run(ctx)
 	}
 	nbdListener, err := net.Listen("tcp", env("WIIBRIDGE_NBD_LISTEN", ":10809"))
 	if err != nil {
-		return err
+		return failStartup("NBD listener could not be opened", err)
 	}
 	nbdServer := &nbd.Server{
 		BackendAcquirer: a.exports.BeginSession,
@@ -433,8 +592,13 @@ func serve() error {
 		Deadline: 30 * time.Second, MaxRequest: 1 << 20,
 	}
 	go func() { errs <- nbdServer.Serve(ctx, nbdListener) }()
+	slog.Info("NBD listener opened",
+		"event", "startup", "phase", "NBD listener opened",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds(),
+		"wii_backend_ready", true)
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", a.health)
+	mux.HandleFunc("GET /readyz", a.readyHealth)
 	mux.Handle("GET /assets/", webui.Static())
 	mux.HandleFunc("GET /login", a.loginForm)
 	mux.HandleFunc("POST /login", a.login)
@@ -459,11 +623,18 @@ func serve() error {
 	mux.HandleFunc("POST /api/v1/pi/storage/{action}", a.auth(a.piStorageAction))
 	mux.HandleFunc("GET /metrics", a.auth(a.metrics))
 	mux.HandleFunc("GET /", a.auth(a.dashboard))
+	a.mu.Lock()
+	a.ready = true
+	a.mu.Unlock()
 	handler.Set(mux)
 	close(startupDone)
-	slog.Info("Host startup complete", "wii_games", len(result.Games),
-		"gamecube_games", len(gcResult.Games),
-		"total_duration", time.Since(hostStarted))
+	slog.Info("Dashboard published",
+		"event", "startup", "phase", "dashboard published",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
+	slog.Info("Wii Host readiness complete", "wii_games", len(result.Games),
+		"event", "startup", "phase", "Host startup complete",
+		"elapsed_ms", time.Since(hostStarted).Milliseconds())
+	go a.initializeGameCube(ctx)
 	select {
 	case <-ctx.Done():
 	case err = <-errs:
@@ -749,13 +920,148 @@ func (a *app) authLimited(host string, failed bool) bool {
 }
 
 func (a *app) health(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, map[string]any{
+		"status": "healthy", "phase": "Ready", "version": version,
+		"revision": gitCommit, "built": buildTime,
+	})
+}
+
+func (a *app) readyHealth(w http.ResponseWriter, _ *http.Request) {
 	a.mu.RLock()
-	defer a.mu.RUnlock()
-	if a.disk == nil {
-		http.Error(w, "unhealthy", http.StatusServiceUnavailable)
+	ready := a.ready && a.disk != nil && a.exports != nil
+	a.mu.RUnlock()
+	if !ready {
+		writeJSONStatus(w, http.StatusServiceUnavailable,
+			map[string]string{"status": "not-ready", "phase": "Finalizing validated exports"})
 		return
 	}
-	writeJSON(w, map[string]any{"status": "healthy", "version": version})
+	if err := a.wii.Validate(); err != nil {
+		writeJSONStatus(w, http.StatusServiceUnavailable,
+			map[string]string{"status": "not-ready", "phase": "Wii export validation failed"})
+		return
+	}
+	writeJSON(w, map[string]string{"status": "ready", "phase": "Ready"})
+}
+
+func (a *app) initializeGameCube(ctx context.Context) {
+	started := time.Now()
+	slog.Info("GameCube background initialization started",
+		"event", "startup", "phase", "GameCube scan started",
+		"elapsed_ms", 0)
+	result, err := gamecube.Scan(a.root)
+	if err != nil {
+		a.mu.Lock()
+		a.gcStartupPhase = "Startup failed"
+		a.gcStartupError = "GameCube source scan failed"
+		a.mu.Unlock()
+		slog.Error("GameCube background initialization failed",
+			"event", "startup", "phase", "GameCube scan failed",
+			"elapsed_ms", time.Since(started).Milliseconds(),
+			"error", boundedLogError(err))
+		return
+	}
+	a.mu.Lock()
+	a.gcScan = result
+	a.gcStartupPhase = "Checking existing GameCube generation"
+	a.mu.Unlock()
+	slog.Info("GameCube library scan result", "games", len(result.Games),
+		"rejected", len(result.Rejected), "candidate_files", result.FileCount,
+		"event", "startup", "phase", "GameCube scan completed",
+		"elapsed_ms", time.Since(started).Milliseconds())
+
+	progress := a.gcLibrary.Progress()
+	if progress.State == "Failed" {
+		a.mu.Lock()
+		a.gcStartupPhase = "Startup failed"
+		a.gcStartupError = progress.Error
+		a.mu.Unlock()
+		slog.Error("GameCube fast generation validation failed",
+			"event", "startup", "phase", "GameCube fast validation failed",
+			"elapsed_ms", time.Since(started).Milliseconds(),
+			"error", progress.Error)
+		return
+	}
+	if progress.Validation == "pending" || progress.Validation == "validating" {
+		a.mu.Lock()
+		a.gcStartupPhase = "Validating GameCube library"
+		a.mu.Unlock()
+		if err = a.gcLibrary.StartActiveValidation(ctx); err != nil {
+			a.mu.Lock()
+			a.gcStartupPhase = "Startup failed"
+			a.gcStartupError = "GameCube deep validation could not start"
+			a.mu.Unlock()
+			slog.Error("GameCube deep validation could not start",
+				"event", "startup", "phase", "GameCube validation failed",
+				"elapsed_ms", time.Since(started).Milliseconds(),
+				"error", boundedLogError(err))
+			return
+		}
+		slog.Info("GameCube deep validation started",
+			"event", "startup", "phase", "GameCube deep validation started",
+			"generation", a.gcLibrary.Progress().GenerationID,
+			"files_total", a.gcLibrary.Progress().ValidationTotal,
+			"elapsed_ms", time.Since(started).Milliseconds())
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		lastLog := time.Now()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				progress = a.gcLibrary.Progress()
+				if time.Since(lastLog) >= 30*time.Second {
+					slog.Info("GameCube deep validation still running",
+						"files_completed", progress.ValidationFiles,
+						"total_files", progress.ValidationTotal,
+						"bytes_hashed", progress.ValidationBytes,
+						"elapsed_ms", time.Since(started).Milliseconds())
+					lastLog = time.Now()
+				}
+				switch progress.State {
+				case "Ready":
+					a.mu.Lock()
+					a.gcStartupPhase = "Ready"
+					a.gcStartupError = ""
+					a.mu.Unlock()
+					slog.Info("GameCube background initialization complete",
+						"event", "startup", "phase", "GameCube validation completed",
+						"elapsed_ms", time.Since(started).Milliseconds(),
+						"bytes_hashed", progress.ValidationBytes)
+					return
+				case "Failed", "Canceled":
+					a.mu.Lock()
+					a.gcStartupPhase = "Startup failed"
+					a.gcStartupError = progress.Error
+					a.mu.Unlock()
+					slog.Error("GameCube deep validation failed",
+						"event", "startup", "phase", "GameCube validation failed",
+						"elapsed_ms", time.Since(started).Milliseconds(),
+						"error", progress.Error)
+					return
+				}
+			}
+		}
+	}
+	a.mu.Lock()
+	a.gcStartupPhase = "Ready"
+	a.gcStartupError = ""
+	a.mu.Unlock()
+	slog.Info("GameCube background initialization complete",
+		"event", "startup", "phase", "GameCube validation receipt current",
+		"elapsed_ms", time.Since(started).Milliseconds(),
+		"deep_validation", "receipt-current")
+}
+
+func boundedLogError(err error) string {
+	if err == nil {
+		return ""
+	}
+	value := err.Error()
+	if len(value) > 240 {
+		value = value[:240]
+	}
+	return value
 }
 
 func (a *app) status(w http.ResponseWriter, _ *http.Request) {
@@ -765,22 +1071,27 @@ func (a *app) status(w http.ResponseWriter, _ *http.Request) {
 	wiiRejected := len(a.scan.Rejected)
 	gameCubeGames := len(a.gcScan.Games)
 	gameCubeRejected := len(a.gcScan.Rejected)
+	gameCubeStartupPhase := a.gcStartupPhase
+	gameCubeStartupError := a.gcStartupError
 	started := a.started
 	a.mu.RUnlock()
-	activeLibrary, libraryErr := a.gcLibrary.Active()
+	activeLibrary, libraryReady := a.gcLibrary.ValidatedSummary()
 	writeJSON(w, map[string]any{
-		"version": version, "snapshot": snapshot, "games": wiiGames,
+		"version": version, "revision": gitCommit, "built": buildTime,
+		"snapshot": snapshot, "games": wiiGames,
 		"rejected": wiiRejected, "gamecube_games": gameCubeGames,
 		"gamecube_rejected": gameCubeRejected, "platform": a.exports.Platform(),
 		"export_state": a.exports.State(), "automatic_switching": a.pi != nil,
-		"gamecube_library_ready": libraryErr == nil,
+		"gamecube_library_ready": libraryReady,
 		"gamecube_library_generation": func() string {
-			if libraryErr == nil {
+			if libraryReady {
 				return activeLibrary.GenerationID
 			}
 			return ""
 		}(),
 		"gamecube_library_build": a.gcLibrary.Progress(),
+		"gamecube_startup_phase": gameCubeStartupPhase,
+		"gamecube_startup_error": gameCubeStartupError,
 		"uptime_seconds":         int(time.Since(started).Seconds()),
 	})
 }
@@ -842,8 +1153,7 @@ func (a *app) gamecubeImports(w http.ResponseWriter, _ *http.Request) {
 
 func (a *app) gamecubeLibraryStatus(w http.ResponseWriter, _ *http.Request) {
 	progress := a.gcLibrary.Progress()
-	active, err := a.gcLibrary.Active()
-	ready := err == nil
+	active, ready := a.gcLibrary.ValidatedSummary()
 	a.mu.Lock()
 	if ready && progress.State == "Ready" {
 		a.gcUpdate = false
@@ -1053,15 +1363,18 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "GameCube backend open failed", http.StatusInternalServerError)
 			return
 		}
-		manifestPath := filepath.Join(
-			a.gcLibrary.Root(), "generations", manifest.GenerationID, "manifest.json")
 		next = &exportprofile.BasicProfile{
 			Name: "gamecube", BlockBackend: backend,
 			Immutable: a.gcMode == gamecube.MemoryCardPhysical,
 			ValidateProfile: func() error {
-				_, validateErr := gamecube.LoadAndValidateLibrary(
-					a.gcLibrary.Root(), manifestPath)
-				return validateErr
+				validated, validateErr := a.gcLibrary.Active()
+				if validateErr != nil {
+					return validateErr
+				}
+				if validated.GenerationID != manifest.GenerationID {
+					return errors.New("GameCube active generation changed during activation")
+				}
+				return nil
 			},
 			CloseProfile: backend.Close,
 		}
@@ -1380,9 +1693,9 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		gamecube.Game
 		Included bool
 	}
-	active, activeErr := a.gcLibrary.Active()
+	active, activeReady := a.gcLibrary.ValidatedSummary()
 	included := make(map[string]bool)
-	if activeErr == nil {
+	if activeReady {
 		for _, title := range active.Titles {
 			included[fmt.Sprintf("%s:%d", title.ID, title.Revision)] = true
 		}
@@ -1439,7 +1752,7 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		{"Action": "reconcile", "Label": "Reconcile Connection"},
 	}
 	generation := ""
-	if activeErr == nil {
+	if activeReady {
 		generation = active.GenerationID
 	}
 	data := map[string]any{
@@ -1449,7 +1762,7 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"Notice":   strings.TrimSpace(r.URL.Query().Get("notice")),
 		"TotalWii": len(wiiGames), "TotalGameCube": len(gameCubeGames),
 		"GameCubeDiscs": totalDiscs, "GameCubeMode": strings.Title(string(a.gcMode)),
-		"GCBuild": a.gcLibrary.Progress(), "GCReady": activeErr == nil,
+		"GCBuild": a.gcLibrary.Progress(), "GCReady": activeReady,
 		"GCGeneration": generation, "GCUpdate": gcUpdate,
 		"GCLegacy": len(a.gcLibrary.LegacyGenerations()) > 0,
 		"Rejected": len(review), "Review": review,

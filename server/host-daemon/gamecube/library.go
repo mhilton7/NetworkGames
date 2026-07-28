@@ -22,12 +22,13 @@ import (
 )
 
 const (
-	LibrarySchema          = 2
-	libraryFileCacheLimit  = 32
-	libraryMinimumSize     = int64(8 << 30)
-	libraryAlignment       = int64(1 << 30)
-	libraryMetadataReserve = int64(256 << 20)
-	fat32MaximumFileSize   = int64(1<<32 - 1)
+	LibrarySchema           = 2
+	validationReceiptSchema = 1
+	libraryFileCacheLimit   = 32
+	libraryMinimumSize      = int64(8 << 30)
+	libraryAlignment        = int64(1 << 30)
+	libraryMetadataReserve  = int64(256 << 20)
+	fat32MaximumFileSize    = int64(1<<32 - 1)
 )
 
 type LibraryConfig struct {
@@ -107,6 +108,7 @@ type LibraryManifest struct {
 
 type LibraryBuildProgress struct {
 	State              string    `json:"state"`
+	GenerationID       string    `json:"generation_id,omitempty"`
 	GamesCompleted     int       `json:"titles_processed"`
 	TotalGames         int       `json:"total_titles"`
 	DiscsCompleted     int       `json:"discs_processed"`
@@ -118,18 +120,39 @@ type LibraryBuildProgress struct {
 	MetadataBytes      int64     `json:"metadata_bytes_generated"`
 	ExtentCount        int       `json:"extent_count"`
 	Validation         string    `json:"validation_state"`
+	ValidationFiles    int       `json:"validation_files_processed"`
+	ValidationTotal    int       `json:"validation_total_files"`
+	ValidationBytes    int64     `json:"validation_bytes_hashed"`
 	Started            time.Time `json:"started,omitempty"`
 	Completed          time.Time `json:"completed,omitempty"`
 	Error              string    `json:"error,omitempty"`
 }
 
+type ValidationReceipt struct {
+	Schema                int       `json:"schema"`
+	ValidatorSchema       int       `json:"validator_schema"`
+	GenerationID          string    `json:"generation_id"`
+	CatalogFingerprint    string    `json:"catalog_fingerprint"`
+	SourceIdentitySetHash string    `json:"source_identity_set_hash"`
+	Completed             time.Time `json:"completed_utc"`
+	Result                string    `json:"result"`
+}
+
+type ValidationProgress struct {
+	FilesCompleted int
+	TotalFiles     int
+	BytesHashed    int64
+}
+
 type LibraryManager struct {
-	mu       sync.RWMutex
-	root     string
-	config   LibraryConfig
-	progress LibraryBuildProgress
-	cancel   context.CancelFunc
-	legacy   []string
+	mu        sync.RWMutex
+	root      string
+	config    LibraryConfig
+	progress  LibraryBuildProgress
+	active    *LibraryManifest
+	validated bool
+	cancel    context.CancelFunc
+	legacy    []string
 }
 
 func NewLibraryManager(root string, config LibraryConfig) (*LibraryManager, error) {
@@ -156,24 +179,33 @@ func NewLibraryManager(root string, config LibraryConfig) (*LibraryManager, erro
 	if err != nil {
 		return nil, err
 	}
-	for _, entry := range entries {
-		if entry.IsDir() && strings.HasPrefix(entry.Name(), ".building-") {
-			_ = os.RemoveAll(filepath.Join(clean, "generations", entry.Name()))
-		}
-	}
 	manager.legacy = manager.detectLegacy(entries)
-	if active, activeErr := manager.Active(); activeErr == nil {
+	if active, activeErr := manager.activeFast(); activeErr == nil {
+		validation := "pending"
+		state := "Validating"
+		phase := "Deep validation pending"
+		if receiptErr := validateReceipt(manager.root, active); receiptErr == nil {
+			validation, state, phase = "validated", "Ready", "Ready"
+			manager.validated = true
+		}
 		manager.progress = LibraryBuildProgress{
-			State: "Ready", GamesCompleted: active.TitleCount, TotalGames: active.TitleCount,
+			State: state, GenerationID: active.GenerationID,
+			GamesCompleted: active.TitleCount, TotalGames: active.TitleCount,
 			DiscsCompleted: active.DiscCount, TotalDiscs: active.DiscCount,
-			FilesMapped: active.MappedFileCount, Phase: "Ready",
-			MetadataGeneration: "Ready", ExtentCount: active.MappedExtentCount,
-			Validation: "validated", Completed: active.Created,
+			FilesMapped: active.MappedFileCount, Phase: phase,
+			MetadataGeneration: phase, ExtentCount: active.MappedExtentCount,
+			Validation: validation, Completed: active.Created,
 		}
 		if info, statErr := os.Stat(active.MetadataPath); statErr == nil {
 			manager.progress.MetadataBytes = info.Size()
 		}
-		_ = manager.prune(active.GenerationID)
+		manager.active = &active
+	} else if !errors.Is(activeErr, os.ErrNotExist) {
+		manager.progress = LibraryBuildProgress{
+			State: "Failed", Phase: "Fast generation validation failed",
+			MetadataGeneration: "Fast generation validation failed",
+			Validation:         "failed", Error: boundedError(activeErr),
+		}
 	}
 	return manager, nil
 }
@@ -200,6 +232,15 @@ func (manager *LibraryManager) Progress() LibraryBuildProgress {
 	return manager.progress
 }
 
+func (manager *LibraryManager) ValidatedSummary() (LibraryManifest, bool) {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	if manager.active == nil || !manager.validated {
+		return LibraryManifest{}, false
+	}
+	return *manager.active, true
+}
+
 func (manager *LibraryManager) Cancel() bool {
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
@@ -208,6 +249,72 @@ func (manager *LibraryManager) Cancel() bool {
 	}
 	manager.cancel()
 	return true
+}
+
+func (manager *LibraryManager) StartActiveValidation(ctx context.Context) error {
+	manager.mu.Lock()
+	if manager.cancel != nil {
+		manager.mu.Unlock()
+		return errors.New("GameCube library operation is already running")
+	}
+	manifest, err := manager.activeFast()
+	if err != nil {
+		manager.mu.Unlock()
+		return err
+	}
+	validationContext, cancel := context.WithCancel(ctx)
+	manager.cancel = cancel
+	manager.progress.State = "Validating"
+	manager.progress.Phase = "Deep source validation"
+	manager.progress.MetadataGeneration = "Deep source validation"
+	manager.progress.Validation = "validating"
+	manager.progress.ValidationFiles = 0
+	manager.progress.ValidationTotal = len(manifest.Files)
+	manager.progress.ValidationBytes = 0
+	manager.progress.Started = time.Now().UTC()
+	manager.progress.Completed = time.Time{}
+	manager.progress.Error = ""
+	manager.mu.Unlock()
+
+	go func() {
+		validateErr := ValidateLibraryManifestDeep(validationContext,
+			manager.root, manifest, func(update ValidationProgress) {
+				manager.mu.Lock()
+				manager.progress.ValidationFiles = update.FilesCompleted
+				manager.progress.ValidationTotal = update.TotalFiles
+				manager.progress.ValidationBytes = update.BytesHashed
+				manager.mu.Unlock()
+			})
+		if validateErr == nil {
+			validateErr = writeValidationReceipt(manager.root, manifest)
+		}
+		manager.mu.Lock()
+		defer manager.mu.Unlock()
+		manager.cancel = nil
+		manager.progress.Completed = time.Now().UTC()
+		if validateErr != nil {
+			manager.validated = false
+			if errors.Is(validateErr, context.Canceled) {
+				manager.progress.State = "Canceled"
+				manager.progress.Error = "validation canceled"
+			} else {
+				manager.progress.State = "Failed"
+				manager.progress.Error = boundedError(validateErr)
+			}
+			manager.progress.Validation = "failed"
+			manager.progress.Phase = "Deep validation failed"
+			manager.progress.MetadataGeneration = "Deep validation failed"
+			return
+		}
+		manager.progress.State = "Ready"
+		manager.progress.GenerationID = manifest.GenerationID
+		manager.progress.Validation = "validated"
+		manager.progress.Phase = "Ready"
+		manager.progress.MetadataGeneration = "Ready"
+		manager.active = &manifest
+		manager.validated = true
+	}()
+	return nil
 }
 
 func (manager *LibraryManager) StartBuild(ctx context.Context, games []Game) error {
@@ -245,6 +352,7 @@ func (manager *LibraryManager) StartBuild(ctx context.Context, games []Game) err
 			return
 		}
 		manager.progress.State = "Ready"
+		manager.progress.GenerationID = manifest.GenerationID
 		manager.progress.GamesCompleted = manifest.TitleCount
 		manager.progress.DiscsCompleted = manifest.DiscCount
 		manager.progress.FilesMapped = manifest.MappedFileCount
@@ -252,6 +360,8 @@ func (manager *LibraryManager) StartBuild(ctx context.Context, games []Game) err
 		manager.progress.Phase = "Ready"
 		manager.progress.MetadataGeneration = "Ready"
 		manager.progress.Validation = "validated"
+		manager.active = &manifest
+		manager.validated = true
 	}()
 	return nil
 }
@@ -415,6 +525,9 @@ func (manager *LibraryManager) build(ctx context.Context, games []Game) (Library
 	staged.LayoutPath, staged.MetadataPath = layoutPath, metadataPath
 	manager.setProgress("", "Validating generation", len(hashed), totalDiscs, len(files))
 	if err = ValidateLibraryManifest(manager.root, staged); err != nil {
+		return LibraryManifest{}, err
+	}
+	if err = writeValidationReceipt(manager.root, staged); err != nil {
 		return LibraryManifest{}, err
 	}
 	data, err := json.MarshalIndent(manifest, "", "  ")
@@ -705,6 +818,17 @@ func (manager *LibraryManager) promote(manifest LibraryManifest) error {
 }
 
 func (manager *LibraryManager) Active() (LibraryManifest, error) {
+	manifest, err := manager.activeFast()
+	if err != nil {
+		return LibraryManifest{}, err
+	}
+	if err = validateReceipt(manager.root, manifest); err != nil {
+		return LibraryManifest{}, err
+	}
+	return manifest, nil
+}
+
+func (manager *LibraryManager) activeFast() (LibraryManifest, error) {
 	data, err := os.ReadFile(filepath.Join(manager.root, "active.json"))
 	if err != nil {
 		return LibraryManifest{}, err
@@ -719,7 +843,7 @@ func (manager *LibraryManager) Active() (LibraryManifest, error) {
 	if pointer.Schema != LibrarySchema || !safeGenerationID(pointer.GenerationID) {
 		return LibraryManifest{}, errors.New("invalid GameCube active-generation pointer")
 	}
-	return LoadAndValidateLibrary(manager.root,
+	return LoadLibraryFast(manager.root,
 		filepath.Join(manager.root, "generations", pointer.GenerationID, "manifest.json"))
 }
 
@@ -729,6 +853,28 @@ func safeGenerationID(value string) bool {
 }
 
 func LoadAndValidateLibrary(root, manifestPath string) (LibraryManifest, error) {
+	manifest, err := loadLibraryManifest(root, manifestPath)
+	if err != nil {
+		return LibraryManifest{}, err
+	}
+	if err = ValidateLibraryManifest(root, manifest); err != nil {
+		return LibraryManifest{}, err
+	}
+	return manifest, nil
+}
+
+func LoadLibraryFast(root, manifestPath string) (LibraryManifest, error) {
+	manifest, err := loadLibraryManifest(root, manifestPath)
+	if err != nil {
+		return LibraryManifest{}, err
+	}
+	if err = ValidateLibraryManifestFast(root, manifest); err != nil {
+		return LibraryManifest{}, err
+	}
+	return manifest, nil
+}
+
+func loadLibraryManifest(root, manifestPath string) (LibraryManifest, error) {
 	rootAbsolute, err := filepath.Abs(root)
 	if err != nil {
 		return LibraryManifest{}, err
@@ -749,13 +895,26 @@ func LoadAndValidateLibrary(root, manifestPath string) (LibraryManifest, error) 
 	if err = json.Unmarshal(data, &manifest); err != nil {
 		return LibraryManifest{}, err
 	}
-	if err = ValidateLibraryManifest(root, manifest); err != nil {
-		return LibraryManifest{}, err
-	}
 	return manifest, nil
 }
 
 func ValidateLibraryManifest(root string, manifest LibraryManifest) error {
+	return validateLibraryManifest(context.Background(), root, manifest, true, nil)
+}
+
+func ValidateLibraryManifestFast(root string, manifest LibraryManifest) error {
+	return validateLibraryManifest(context.Background(), root, manifest, false, nil)
+}
+
+func ValidateLibraryManifestDeep(ctx context.Context, root string,
+	manifest LibraryManifest, progress func(ValidationProgress),
+) error {
+	return validateLibraryManifest(ctx, root, manifest, true, progress)
+}
+
+func validateLibraryManifest(ctx context.Context, root string,
+	manifest LibraryManifest, deep bool, progress func(ValidationProgress),
+) error {
 	if manifest.Schema != LibrarySchema || !manifest.Complete ||
 		!safeGenerationID(manifest.GenerationID) || manifest.Filesystem != "fat32" ||
 		!manifest.ReadOnly || manifest.Mode != MemoryCardPhysical {
@@ -820,7 +979,11 @@ func ValidateLibraryManifest(root string, manifest LibraryManifest) error {
 	}
 	seen := make(map[string]struct{}, len(manifest.Files))
 	checkedTrees := make(map[string]struct{})
-	for _, file := range manifest.Files {
+	var bytesHashed int64
+	for index, file := range manifest.Files {
+		if err = ctx.Err(); err != nil {
+			return err
+		}
 		key := strings.ToLower(filepath.ToSlash(file.VirtualPath))
 		if _, exists := seen[key]; exists {
 			return errors.New("duplicate GameCube virtual path")
@@ -852,7 +1015,7 @@ func ValidateLibraryManifest(root string, manifest LibraryManifest) error {
 			if err = within(fstRoot, file.SourcePath); err != nil {
 				return err
 			}
-			if _, done := checkedTrees[fstRoot]; !done {
+			if _, done := checkedTrees[fstRoot]; deep && !done {
 				treeHash, _, treeErr := hashTree(fstRoot)
 				if treeErr != nil || treeHash != file.FSTTreeSHA256 {
 					return errors.New("extracted FST tree changed")
@@ -868,10 +1031,91 @@ func ValidateLibraryManifest(root string, manifest LibraryManifest) error {
 			identity.Device != file.Identity.Device || identity.Inode != file.Identity.Inode {
 			return errors.New("GameCube source identity changed")
 		}
-		sum, hashErr := hashFile(file.SourcePath)
-		if hashErr != nil || sum != file.Identity.SHA256 {
-			return errors.New("GameCube source fingerprint changed")
+		if deep && file.Format != "fst" {
+			sum, hashErr := hashFile(file.SourcePath)
+			if hashErr != nil || sum != file.Identity.SHA256 {
+				return errors.New("GameCube source fingerprint changed")
+			}
+			bytesHashed += file.LogicalSize
+		} else if deep {
+			// hashTree reads every FST payload once. Account for each mapped
+			// file as progress advances without hashing the tree repeatedly.
+			bytesHashed += file.LogicalSize
 		}
+		if progress != nil {
+			progress(ValidationProgress{
+				FilesCompleted: index + 1, TotalFiles: len(manifest.Files),
+				BytesHashed: bytesHashed,
+			})
+		}
+	}
+	return nil
+}
+
+func sourceIdentitySetHash(manifest LibraryManifest) string {
+	files := append([]fat32virtual.File(nil), manifest.Files...)
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].VirtualPath < files[j].VirtualPath
+	})
+	hash := sha256.New()
+	for _, file := range files {
+		fmt.Fprintf(hash, "%s\x00%s\x00%d\x00%d\x00%d\x00%d\x00%s\n",
+			file.VirtualPath, file.SourcePath, file.Identity.Size,
+			file.Identity.ModTimeUnixNano, file.Identity.Device,
+			file.Identity.Inode, file.Identity.SHA256)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func validationReceiptPath(manifest LibraryManifest) string {
+	return filepath.Join(filepath.Dir(manifest.LayoutPath), "validation.json")
+}
+
+func writeValidationReceipt(root string, manifest LibraryManifest) error {
+	receipt := ValidationReceipt{
+		Schema: validationReceiptSchema, ValidatorSchema: LibrarySchema,
+		GenerationID:          manifest.GenerationID,
+		CatalogFingerprint:    manifest.CatalogFingerprint,
+		SourceIdentitySetHash: sourceIdentitySetHash(manifest),
+		Completed:             time.Now().UTC(), Result: "validated",
+	}
+	data, err := json.MarshalIndent(receipt, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := validationReceiptPath(manifest)
+	rootAbsolute, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	absolute, err := filepath.Abs(path)
+	if err != nil || !strings.HasPrefix(absolute, rootAbsolute+string(os.PathSeparator)) {
+		return errors.New("GameCube validation receipt escapes managed storage")
+	}
+	temp := absolute + ".tmp"
+	if err = os.WriteFile(temp, append(data, '\n'), 0o600); err != nil {
+		return err
+	}
+	if err = os.Rename(temp, absolute); err != nil {
+		return err
+	}
+	return syncDirectory(filepath.Dir(absolute))
+}
+
+func validateReceipt(root string, manifest LibraryManifest) error {
+	data, err := readManagedFile(root, validationReceiptPath(manifest))
+	if err != nil {
+		return errors.New("GameCube deep validation receipt is unavailable")
+	}
+	var receipt ValidationReceipt
+	if err = json.Unmarshal(data, &receipt); err != nil ||
+		receipt.Schema != validationReceiptSchema ||
+		receipt.ValidatorSchema != LibrarySchema ||
+		receipt.GenerationID != manifest.GenerationID ||
+		receipt.CatalogFingerprint != manifest.CatalogFingerprint ||
+		receipt.SourceIdentitySetHash != sourceIdentitySetHash(manifest) ||
+		receipt.Result != "validated" || receipt.Completed.IsZero() {
+		return errors.New("GameCube deep validation receipt is stale")
 	}
 	return nil
 }
@@ -893,7 +1137,10 @@ func readManagedFile(root, name string) ([]byte, error) {
 }
 
 func OpenLibraryBackend(root string, manifest LibraryManifest) (*fat32virtual.Backend, error) {
-	if err := ValidateLibraryManifest(root, manifest); err != nil {
+	if err := ValidateLibraryManifestFast(root, manifest); err != nil {
+		return nil, err
+	}
+	if err := validateReceipt(root, manifest); err != nil {
 		return nil, err
 	}
 	layoutData, err := readManagedFile(root, manifest.LayoutPath)
@@ -1005,7 +1252,8 @@ func StorageReport(manifest LibraryManifest) (map[string]int64, error) {
 	var metadataApparent, metadataAllocated int64
 	generationFiles := []string{manifest.LayoutPath, manifest.MetadataPath,
 		filepath.Join(filepath.Dir(manifest.LayoutPath), "manifest.json"),
-		filepath.Join(filepath.Dir(manifest.LayoutPath), "checksums.json")}
+		filepath.Join(filepath.Dir(manifest.LayoutPath), "checksums.json"),
+		validationReceiptPath(manifest)}
 	for _, name := range generationFiles {
 		info, err := os.Stat(name)
 		if err != nil {

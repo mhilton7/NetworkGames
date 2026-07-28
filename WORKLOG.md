@@ -715,3 +715,44 @@
 - Health-check failures now log their CA, TLS, connection, or HTTP error.
   Loopback checks still verify the complete trusted server-auth chain but no
   longer require legacy certificates to contain a `127.0.0.1` SAN.
+
+## 2026-07-28 — Prompt Host liveness and deferred GameCube validation
+
+- Confirmed the remaining 30-minute startup path in source commit `43ccb38`:
+  `serve` constructed `NewLibraryManager` before opening HTTPS, and the
+  constructor called the deep active-generation validator. That validator
+  recalculated every ISO/GCM/CISO hash and every extracted-FST tree hash.
+- Confirmed the last operator-provided container identity was commit `4a5ba33`,
+  image ID `sha256:1ebeaa...`, registry digest `sha256:1eb7ec...`, with zero
+  restarts and no OOM. That image contains neither the bounded-Wii fix nor the
+  early-startup-page fix. Registry image `43ccb38` contains both but still has
+  the pre-listener manager defect and exposes no binary/OCI revision metadata.
+- HTTPS and `/healthz` now open before LibraryManager, authentication, SQLite,
+  Wii scanning, or GameCube work. `/readyz` remains 503 until the safe Wii
+  backend and export manager are complete. Post-listener startup failures keep
+  a bounded diagnostic page available and do not open NBD.
+- Split GameCube validation into compact startup checks and cancellable deep
+  hashing. A persisted `validation.json` receipt is accepted only while the
+  generation checksums and stored source identity set remain current.
+  GameCube stays disabled while a missing/stale receipt is regenerated in the
+  background; Wii and its NBD export become ready independently.
+- Removed synchronous `.building-*` deletion and generation pruning from
+  LibraryManager construction. Routine ISO/GCM/CISO and FST catalog scans no
+  longer hash full payloads; generation builds and deliberate deep validation
+  still do.
+- Added structured phase timing, validation file/byte progress, `/readyz`,
+  startup failure tests, fast-validation regressions, a startup validation
+  benchmark, detailed binary version output, and OCI source identity labels.
+- Local fast validation of a three-file, 6,291,456-byte fixture took a median
+  7.82 ms and hashed zero payload bytes. The 512 GiB Wii regression with
+  1,048,577 FAT sectors per copy built in 672.788 microseconds.
+- `make test`, `make static`, `make compose`, `make oci`,
+  `go test -race ./server/host-daemon/...`,
+  `go vet ./server/host-daemon/...`, focused benchmarks, and
+  `git diff --check` pass. Repository-root `gofmt -w .` and `go mod tidy`
+  remain blocked by pre-existing unreadable root-owned Pi build artifacts;
+  all changed Go files were formatted directly and module files are unchanged.
+- TrueNAS redeployment, two-restart timing, and live image/digest/binary
+  comparison remain pending because this workspace has no TrueNAS runtime
+  access. Evidence and exact acceptance checks are in
+  `reports/truenas-startup-investigation.json`.

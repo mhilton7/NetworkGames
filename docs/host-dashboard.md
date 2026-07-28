@@ -17,10 +17,20 @@ Existing Bearer and Basic API authentication continues to use
 
 During Host startup, HTTPS opens before the potentially long Wii and GameCube
 library scans. The browser displays a small auto-refreshing startup page with
-the current phase. The health endpoint reports `starting`, while NBD and USB
-exports remain unavailable until the validated Wii virtual disk is ready.
-Docker logs emit each phase transition, scan counts, total duration, and a
+the current phase, phase start time, elapsed time, last completed phase, and a
+bounded failure summary. `GET /healthz` reports `starting` as soon as HTTPS is
+live. `GET /readyz` remains HTTP 503 and NBD remains unavailable until the
+validated Wii virtual disk and export manager are ready. Docker logs emit each
+phase transition, scan counts, mapped-file counts, elapsed milliseconds, and a
 30-second heartbeat while a phase is still running.
+
+Wii readiness does not wait for a full GameCube source hash. On an upgrade from
+a generation without a current validation receipt, the authenticated dashboard
+becomes available with **GameCube library: Validating** while a cancellable
+background validator reads the GameCube sources. GameCube activation remains
+disabled until that validation succeeds and its compact receipt is committed.
+Routine restarts reuse the receipt only while all stored source identities and
+generation checksums still match.
 
 The two primary controls are:
 

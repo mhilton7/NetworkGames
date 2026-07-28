@@ -2,10 +2,11 @@
 
 If a large library takes time to scan after a Host restart, open the normal
 Host HTTPS address. WiiBridge displays `Scanning Wii library`, `Building Wii
-virtual disk`, `Scanning GameCube library`, or `Finalizing validated exports`
-instead of leaving the port closed. Do not repeatedly restart the container:
-NBD remains unavailable until the startup page is replaced by the authenticated
-dashboard.
+virtual disk`, or `Finalizing validated exports` instead of leaving the port
+closed. Do not repeatedly restart the container. `/healthz` indicates process
+liveness; `/readyz` remains HTTP 503 until the safe Wii export is ready.
+GameCube scan and deep validation continue in the background after Wii
+readiness, and do not prevent the authenticated dashboard or Wii NBD export.
 
 If TrueNAS still reports the running container as unhealthy, inspect
 `docker logs`. The in-container health command now reports missing CA files,
@@ -13,6 +14,19 @@ certificate-chain failures, connection errors, and non-200 HTTP responses
 instead of exiting silently. Loopback health checks validate the full trusted
 server-auth certificate chain without requiring an older certificate to
 contain a `127.0.0.1` subjectAltName.
+
+Verify the exact running artifact rather than trusting a mutable release tag:
+
+```sh
+sudo docker exec ix-wiibridge-wiibridge-host-1 /wiibridge-host version
+sudo docker inspect --format '{{.Config.Image}} image_id={{.Image}} started={{.State.StartedAt}} restarts={{.RestartCount}} oom={{.State.OOMKilled}} health={{.State.Health.Status}}' ix-wiibridge-wiibridge-host-1
+sudo docker image inspect --format 'id={{.Id}} revision={{index .Config.Labels "org.opencontainers.image.revision"}} created={{index .Config.Labels "org.opencontainers.image.created"}}' "$(sudo docker inspect --format '{{.Image}}' ix-wiibridge-wiibridge-host-1)"
+```
+
+The binary commit and OCI revision label must match the intended immutable
+image. These commands do not print environment variables or credentials.
+During a delayed phase, use timestamped container logs and the JSON health
+endpoints to identify the exact phase before changing limits or timeouts.
 
 On backend loss the bridge must remain detached until the configured export,
 snapshot identity, and virtual size validate again. A changed identity is never

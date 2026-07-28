@@ -13,11 +13,12 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"wiibridge/tests/testutil"
 )
 
-func libraryGames(t *testing.T, root string) []Game {
+func libraryGames(t testing.TB, root string) []Game {
 	t.Helper()
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		t.Fatal(err)
@@ -46,7 +47,7 @@ func libraryGames(t *testing.T, root string) []Game {
 	return result.Games
 }
 
-func libraryManager(t *testing.T, managed, sources string) *LibraryManager {
+func libraryManager(t testing.TB, managed, sources string) *LibraryManager {
 	t.Helper()
 	config := DefaultLibraryConfig()
 	config.SourceRoot = sources
@@ -186,6 +187,138 @@ func TestRetainedGenerationsDoNotMultiplyPayloadStorage(t *testing.T) {
 	if allocated >= sourceBytes {
 		t.Fatalf("retained metadata allocated=%d source payload=%d", allocated, sourceBytes)
 	}
+}
+
+func TestFastStartupValidationDoesNotHashPayload(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	manager := libraryManager(t, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), games[:1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := manifest.Files[0].SourcePath
+	before, err := os.Stat(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := make([]byte, 1)
+	readSource, err := os.Open(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = readSource.ReadAt(original, 0x1000); err != nil {
+		readSource.Close()
+		t.Fatal(err)
+	}
+	readSource.Close()
+	file, err := os.OpenFile(source, os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = file.WriteAt([]byte{original[0] ^ 0xff}, 0x1000); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	if err = file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Chtimes(source, before.ModTime(), before.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	if err = ValidateLibraryManifestFast(manager.Root(), manifest); err != nil {
+		t.Fatalf("fast validation read payload content: %v", err)
+	}
+	if err = ValidateLibraryManifest(manager.Root(), manifest); err == nil ||
+		!strings.Contains(err.Error(), "fingerprint changed") {
+		t.Fatalf("deep validation did not detect content change: %v", err)
+	}
+}
+
+func TestManagerDefersDeepValidationAndStartupCleanup(t *testing.T) {
+	root := t.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(t, sourceRoot)
+	managed := filepath.Join(root, "managed")
+	manager := libraryManager(t, managed, sourceRoot)
+	manifest, err := manager.Build(context.Background(), games[:1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Remove(validationReceiptPath(manifest)); err != nil {
+		t.Fatal(err)
+	}
+	stale := filepath.Join(managed, "generations", ".building-preserved", "marker")
+	if err = os.MkdirAll(filepath.Dir(stale), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(stale, []byte("preserve"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now()
+	restarted := libraryManager(t, managed, sourceRoot)
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("manager construction performed deep startup work: %s", elapsed)
+	}
+	if restarted.Progress().Validation != "pending" ||
+		restarted.Progress().State != "Validating" {
+		t.Fatalf("unexpected deferred state: %#v", restarted.Progress())
+	}
+	if _, ready := restarted.ValidatedSummary(); ready {
+		t.Fatal("generation without deep-validation receipt was reported ready")
+	}
+	if _, err = os.Stat(stale); err != nil {
+		t.Fatalf("constructor deleted stale generation data: %v", err)
+	}
+	if _, err = restarted.Active(); err == nil {
+		t.Fatal("generation without deep-validation receipt became active")
+	}
+	if err = restarted.StartActiveValidation(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if restarted.Progress().State == "Ready" {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if restarted.Progress().State != "Ready" {
+		t.Fatalf("background validation did not finish: %#v", restarted.Progress())
+	}
+	if active, activeErr := restarted.Active(); activeErr != nil ||
+		active.GenerationID != manifest.GenerationID {
+		t.Fatalf("validated generation not restored: %#v err=%v", active, activeErr)
+	}
+	if summary, ready := restarted.ValidatedSummary(); !ready ||
+		summary.GenerationID != manifest.GenerationID {
+		t.Fatalf("validated summary not restored: %#v ready=%v", summary, ready)
+	}
+}
+
+func BenchmarkFastStartupValidation(b *testing.B) {
+	root := b.TempDir()
+	sourceRoot := filepath.Join(root, "sources")
+	games := libraryGames(b, sourceRoot)
+	manager := libraryManager(b, filepath.Join(root, "managed"), sourceRoot)
+	manifest, err := manager.Build(context.Background(), games)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var payloadBytes int64
+	for _, file := range manifest.Files {
+		payloadBytes += file.LogicalSize
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		if err = ValidateLibraryManifestFast(manager.Root(), manifest); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.ReportMetric(float64(payloadBytes), "payload_bytes")
+	b.ReportMetric(float64(len(manifest.Files)), "source_files")
 }
 
 func TestCompleteLibraryMapsCISOWithoutConversion(t *testing.T) {

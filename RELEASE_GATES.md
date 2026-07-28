@@ -103,3 +103,8 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | Responsive UI during source scan | PASS | HTTPS and a phase-specific startup page are available before library walking; NBD remains unavailable until the validated Wii export is complete |
 | Diagnostic startup and health logging | PASS | Phase transitions, 30-second heartbeats, scan counts, elapsed time, and exact CA/TLS/HTTP health errors are logged |
 | Legacy loopback health certificate | PASS | Local check validates the trusted server-auth chain without requiring a 127.0.0.1 SAN; external identity verification is unchanged |
+| HTTPS liveness before persistent/library work | PASS | Startup handler and listener are installed before LibraryManager, browser auth, SQLite, Wii scan, or GameCube scan; delayed-phase and failure regressions pass |
+| Separate Host readiness | PASS | `/healthz` remains live during startup while `/readyz` stays 503 until the Wii backend/export manager is safe |
+| GameCube startup validation bound | PASS | Fast validation checks compact generation data and source identities without payload hashing; deep hashing is background, cancellable, receipt-backed, and does not block Wii |
+| Immutable binary and OCI source identity | PASS | Host `version` reports commit/build/dirty/Go/target and OCI builders emit revision/version/created/source labels with CI equality checks |
+| Corrected TrueNAS startup deployment | PENDING | Exact digest, binary revision, OCI label, prompt 8445 liveness, and two consecutive restart timings require the operator's TrueNAS runtime |

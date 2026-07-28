@@ -4,7 +4,7 @@
   "prompt_version": 3,
   "status": "software-complete-gamecube-no-copy-hardware-unverified",
   "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
-  "application_commit": "74dfb5bb2d66c2a558c9de7690ee89c0c31daa70",
+  "application_commit": "43ccb384961097b1f82ed1735d0c711f72d77740",
   "build_host": {
     "os": "Debian GNU/Linux 13 (trixie)",
     "kernel": "6.12.96+deb13-amd64",
@@ -33,8 +33,9 @@
     "firmware_zero_w": "server-wait-cleanup-vidpid-export-installed-offline-verified",
     "firmware_pi4": "firmware-offline-verified",
     "firmware_pi5": "firmware-offline-verified",
-    "release": "software-complete-gamecube-hardware-validation-deferred"
+    "release": "software-complete-gamecube-hardware-validation-deferred",
+    "truenas_startup": "host-validated-live-digest-verification-pending"
   },
   "physical_tests": "gamecube-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
-  "updated_utc": "2026-07-28T02:35:00Z"
+  "updated_utc": "2026-07-28T03:02:00Z"
 }

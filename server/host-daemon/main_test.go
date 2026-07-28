@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -44,6 +45,12 @@ func TestStartupHandlerExposesProgressBeforeLibraryIsReady(t *testing.T) {
 		!strings.Contains(health.Body.String(), "Scanning GameCube library") {
 		t.Fatalf("startup health status=%d body=%s", health.Code, health.Body.String())
 	}
+	ready := httptest.NewRecorder()
+	startup.ServeHTTP(ready, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if ready.Code != http.StatusServiceUnavailable ||
+		!strings.Contains(ready.Body.String(), `"status":"not-ready"`) {
+		t.Fatalf("startup readiness status=%d body=%s", ready.Code, ready.Body.String())
+	}
 
 	page := httptest.NewRecorder()
 	startup.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/login", nil))
@@ -51,6 +58,108 @@ func TestStartupHandlerExposesProgressBeforeLibraryIsReady(t *testing.T) {
 		!strings.Contains(page.Body.String(), "WiiBridge is starting") ||
 		!strings.Contains(page.Body.String(), "refreshes automatically") {
 		t.Fatalf("startup page status=%d body=%s", page.Code, page.Body.String())
+	}
+}
+
+func TestStartupLivenessDoesNotWaitForLongLibraryPhase(t *testing.T) {
+	startup := &startupHandler{}
+	startup.SetPhase("Checking existing GameCube generation")
+	release := make(chan struct{})
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		<-release // Simulates a slow scanner or validator after HTTPS is live.
+	}()
+	t.Cleanup(func() {
+		close(release)
+		<-finished
+	})
+	server := httptest.NewServer(startup)
+	defer server.Close()
+
+	client := &http.Client{Timeout: time.Second}
+	started := time.Now()
+	response, err := client.Get(server.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK || time.Since(started) >= time.Second {
+		t.Fatalf("liveness waited for long phase: status=%d elapsed=%s",
+			response.StatusCode, time.Since(started))
+	}
+}
+
+func TestStartupHandlerKeepsLivenessAvailableAfterFailure(t *testing.T) {
+	startup := &startupHandler{}
+	startup.SetPhase("Scanning Wii library")
+	startup.Fail("Wii library scan failed")
+
+	health := httptest.NewRecorder()
+	startup.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if health.Code != http.StatusOK ||
+		!strings.Contains(health.Body.String(), `"status":"failed"`) ||
+		!strings.Contains(health.Body.String(), `"phase":"Startup failed"`) {
+		t.Fatalf("failure health status=%d body=%s", health.Code, health.Body.String())
+	}
+	page := httptest.NewRecorder()
+	startup.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/", nil))
+	if page.Code != http.StatusOK ||
+		!strings.Contains(page.Body.String(), "WiiBridge startup failed") ||
+		!strings.Contains(page.Body.String(), "Wii library scan failed") {
+		t.Fatalf("failure page status=%d body=%s", page.Code, page.Body.String())
+	}
+}
+
+func TestWiiReadinessDoesNotWaitForGameCubeValidation(t *testing.T) {
+	a := testApp(t)
+	a.mu.Lock()
+	a.ready = true
+	a.gcStartupPhase = "Validating GameCube library"
+	a.mu.Unlock()
+	response := httptest.NewRecorder()
+	a.readyHealth(response, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if response.Code != http.StatusOK ||
+		!strings.Contains(response.Body.String(), `"status":"ready"`) {
+		t.Fatalf("Wii readiness blocked by GameCube: status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+}
+
+func TestReadinessRejectsIncompleteWiiExport(t *testing.T) {
+	a := testApp(t)
+	a.mu.Lock()
+	a.ready = false
+	a.exports = nil
+	a.mu.Unlock()
+	response := httptest.NewRecorder()
+	a.readyHealth(response, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if response.Code != http.StatusServiceUnavailable ||
+		!strings.Contains(response.Body.String(), `"status":"not-ready"`) {
+		t.Fatalf("incomplete Wii export was ready: status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+}
+
+func TestVersionReportsBuildIdentity(t *testing.T) {
+	oldCommit, oldTime, oldDirty := gitCommit, buildTime, buildDirty
+	t.Cleanup(func() {
+		gitCommit, buildTime, buildDirty = oldCommit, oldTime, oldDirty
+	})
+	gitCommit = "0123456789abcdef"
+	buildTime = "2026-07-28T00:00:00Z"
+	buildDirty = "false"
+	got := buildVersion()
+	for _, expected := range []string{
+		"WiiBridge " + version,
+		"commit 0123456789abcdef",
+		"built 2026-07-28T00:00:00Z",
+		"dirty false",
+		"target " + runtime.GOOS + "/" + runtime.GOARCH,
+	} {
+		if !strings.Contains(got, expected) {
+			t.Fatalf("version output %q lacks %q", got, expected)
+		}
 	}
 }
 
