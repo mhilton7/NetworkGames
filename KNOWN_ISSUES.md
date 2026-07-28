@@ -294,6 +294,8 @@
   on the operator's TrueNAS system. The last container inspect supplied by the
   operator identified the older `4a5ba33` image; a later statement that the new
   image was selected did not include a second sanitized runtime inspect.
-  Therefore the final live digest, binary revision, OCI revision label,
-  production GameCube bytes hashed, and before/after restart timing remain
-  pending rather than inferred.
+  A later read-only endpoint probe confirmed the fixed image is not yet
+  running: `/healthz` has no phase/revision/build fields and `/readyz` redirects
+  to login. Therefore the final live digest, binary revision, OCI revision
+  label, production GameCube bytes hashed, and before/after restart timing
+  remain pending rather than inferred.

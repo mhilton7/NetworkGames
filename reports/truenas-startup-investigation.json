@@ -85,7 +85,22 @@
     "full_payload_bytes_hashed_per_operation": 0
   },
   "live_acceptance": {
-    "status": "PENDING_TRUENAS_ACCESS",
+    "status": "DEPLOYMENT_REQUIRED",
+    "read_only_probe_utc": "2026-07-28T03:10:20Z",
+    "management_endpoint_reachable": true,
+    "healthz_http_status": 200,
+    "healthz_response": {
+      "status": "healthy",
+      "version": "0.1.0-rc.1",
+      "phase": null,
+      "revision": null,
+      "built": null
+    },
+    "readyz_http_status": 303,
+    "readyz_behavior": "redirected to login instead of returning readiness JSON",
+    "nbd_tcp_reachable": true,
+    "fixed_image_currently_running": false,
+    "runtime_digest_unavailable_without_truenas_runtime_access": true,
     "required": [
       "running binary version matches expected commit",
       "container image ID and registry digest match the pinned image",

@@ -762,3 +762,8 @@
   build time `2026-07-28T03:06:50Z`, `dirty=false`, and equal binary and OCI
   revisions. The TrueNAS paste YAML now pins this digest; live deployment
   remains pending.
+- A read-only probe at `2026-07-28T03:10:20Z` reached the live TrueNAS Host.
+  `/healthz` returned the old schema with only `status` and `version`;
+  `/readyz` redirected to login, while TCP 10809 was reachable. The fixed image
+  is therefore not yet running. Runtime-level digest verification still needs
+  the TrueNAS shell after the pinned YAML is installed.
