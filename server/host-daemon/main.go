@@ -86,15 +86,55 @@ type importJob struct {
 }
 
 type startupHandler struct {
-	mu    sync.RWMutex
-	phase string
+	mu           sync.RWMutex
+	phase        string
+	started      time.Time
+	phaseStarted time.Time
 }
 
 func (h *startupHandler) SetPhase(phase string) {
+	now := time.Now()
 	h.mu.Lock()
+	previous := h.phase
+	previousStarted := h.phaseStarted
+	if h.started.IsZero() {
+		h.started = now
+	}
 	h.phase = phase
+	h.phaseStarted = now
+	started := h.started
 	h.mu.Unlock()
-	slog.Info("Host startup", "phase", phase)
+	if previous == "" {
+		slog.Info("Host startup phase started", "phase", phase)
+		return
+	}
+	slog.Info("Host startup phase completed",
+		"phase", previous, "duration", now.Sub(previousStarted),
+		"next_phase", phase, "total_elapsed", now.Sub(started))
+}
+
+func (h *startupHandler) LogHeartbeat(ctx context.Context, done <-chan struct{},
+	interval time.Duration,
+) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-done:
+			return
+		case now := <-ticker.C:
+			h.mu.RLock()
+			phase := h.phase
+			started := h.started
+			phaseStarted := h.phaseStarted
+			h.mu.RUnlock()
+			slog.Info("Host startup still running", "phase", phase,
+				"phase_elapsed", now.Sub(phaseStarted),
+				"total_elapsed", now.Sub(started))
+		}
+	}
 }
 
 func (h *startupHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -184,26 +224,58 @@ func scanCLI(args []string) {
 }
 
 func healthCLI(args []string) {
+	if err := runHealthCheck(args); err != nil {
+		slog.Error("health check failed", "error", err)
+		os.Exit(1)
+	}
+}
+
+func runHealthCheck(args []string) error {
 	fs := flag.NewFlagSet("healthcheck", flag.ExitOnError)
 	url := fs.String("url", "https://127.0.0.1:8445/healthz", "health URL")
 	caPath := fs.String("ca", "/certs/ca.crt", "CA certificate")
 	_ = fs.Parse(args)
 	pem, err := os.ReadFile(*caPath)
 	if err != nil {
-		os.Exit(1)
+		return fmt.Errorf("read CA %s: %w", *caPath, err)
 	}
 	pool := x509.NewCertPool()
 	if !pool.AppendCertsFromPEM(pem) {
-		os.Exit(1)
+		return fmt.Errorf("parse CA %s", *caPath)
+	}
+	// The check runs inside the same container over loopback. Verify the
+	// complete server-auth chain, but do not require legacy deployments to
+	// reissue an otherwise valid certificate solely to add a 127.0.0.1 SAN.
+	tlsConfig := &tls.Config{
+		RootCAs: pool, MinVersion: tls.VersionTLS13,
+		InsecureSkipVerify: true, // Verification is performed below without DNSName.
+		VerifyConnection: func(state tls.ConnectionState) error {
+			if len(state.PeerCertificates) == 0 {
+				return errors.New("health endpoint presented no certificate")
+			}
+			intermediates := x509.NewCertPool()
+			for _, certificate := range state.PeerCertificates[1:] {
+				intermediates.AddCert(certificate)
+			}
+			_, verifyErr := state.PeerCertificates[0].Verify(x509.VerifyOptions{
+				Roots: pool, Intermediates: intermediates,
+				KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			})
+			return verifyErr
+		},
 	}
 	client := &http.Client{Timeout: 3 * time.Second, Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS13},
+		TLSClientConfig: tlsConfig,
 	}}
 	resp, err := client.Get(*url)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		os.Exit(1)
+	if err != nil {
+		return fmt.Errorf("GET %s: %w", *url, err)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("GET %s: HTTP %s", *url, resp.Status)
+	}
+	return nil
 }
 
 func serve() error {
@@ -280,6 +352,8 @@ func serve() error {
 	defer cancel()
 	startup := &startupHandler{}
 	startup.SetPhase("Scanning Wii library")
+	startupDone := make(chan struct{})
+	go startup.LogHeartbeat(ctx, startupDone, 30*time.Second)
 	handler := &switchingHandler{handler: startup}
 	errs := make(chan error, 2)
 	web := &http.Server{
@@ -296,6 +370,7 @@ func serve() error {
 	if err != nil {
 		return err
 	}
+	slog.Info("Host HTTPS startup listener ready", "address", web.Addr)
 	go func() {
 		errs <- web.ServeTLS(webListener,
 			env("WIIBRIDGE_TLS_CERT", "/certs/server.crt"),
@@ -306,6 +381,8 @@ func serve() error {
 	if err != nil {
 		return err
 	}
+	slog.Info("Wii library scan result", "games", len(result.Games),
+		"rejected", len(result.Rejected), "candidate_files", result.FileCount)
 	startup.SetPhase("Building Wii virtual disk")
 	disk, err := vdisk.Build("all", result.Games, version)
 	if err != nil {
@@ -316,6 +393,8 @@ func serve() error {
 	if err != nil {
 		return err
 	}
+	slog.Info("GameCube library scan result", "games", len(gcResult.Games),
+		"rejected", len(gcResult.Rejected), "candidate_files", gcResult.FileCount)
 	startup.SetPhase("Finalizing validated exports")
 	csrfSum := sha256.Sum256([]byte("wiibridge-host-csrf\x00" + token))
 	a := &app{root: root, dataDir: dataDir, disk: disk, scan: result, gcScan: gcResult,
@@ -381,8 +460,10 @@ func serve() error {
 	mux.HandleFunc("GET /metrics", a.auth(a.metrics))
 	mux.HandleFunc("GET /", a.auth(a.dashboard))
 	handler.Set(mux)
+	close(startupDone)
 	slog.Info("Host startup complete", "wii_games", len(result.Games),
-		"gamecube_games", len(gcResult.Games))
+		"gamecube_games", len(gcResult.Games),
+		"total_duration", time.Since(hostStarted))
 	select {
 	case <-ctx.Done():
 	case err = <-errs:

@@ -101,3 +101,5 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | End-to-end physical GameCube performance | DEFERRED_HARDWARE_UNAVAILABLE | Host benchmarks and mutual-TLS protocol tests do not prove Pi Zero W/Wii/Nintendont gameplay throughput |
 | Bounded Wii Host startup | PASS | 512 GiB fixture with 1,048,577 FAT sectors per copy builds from 131 compact chains in under one millisecond without walking the apparent FAT |
 | Responsive UI during source scan | PASS | HTTPS and a phase-specific startup page are available before library walking; NBD remains unavailable until the validated Wii export is complete |
+| Diagnostic startup and health logging | PASS | Phase transitions, 30-second heartbeats, scan counts, elapsed time, and exact CA/TLS/HTTP health errors are logged |
+| Legacy loopback health certificate | PASS | Local check validates the trusted server-auth chain without requiring a 127.0.0.1 SAN; external identity verification is unchanged |

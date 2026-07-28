@@ -19,6 +19,8 @@ During Host startup, HTTPS opens before the potentially long Wii and GameCube
 library scans. The browser displays a small auto-refreshing startup page with
 the current phase. The health endpoint reports `starting`, while NBD and USB
 exports remain unavailable until the validated Wii virtual disk is ready.
+Docker logs emit each phase transition, scan counts, total duration, and a
+30-second heartbeat while a phase is still running.
 
 The two primary controls are:
 

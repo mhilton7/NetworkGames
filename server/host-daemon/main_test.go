@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/pem"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -50,6 +51,39 @@ func TestStartupHandlerExposesProgressBeforeLibraryIsReady(t *testing.T) {
 		!strings.Contains(page.Body.String(), "WiiBridge is starting") ||
 		!strings.Contains(page.Body.String(), "refreshes automatically") {
 		t.Fatalf("startup page status=%d body=%s", page.Code, page.Body.String())
+	}
+}
+
+func TestHealthCheckAcceptsTrustedLoopbackCertificateWithoutIPSAN(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/healthz" {
+			http.NotFound(w, r)
+			return
+		}
+		writeJSON(w, map[string]string{"status": "starting"})
+	}))
+	defer server.Close()
+
+	caPath := filepath.Join(t.TempDir(), "ca.crt")
+	certificate := server.Certificate()
+	if err := os.WriteFile(caPath, pem.EncodeToMemory(&pem.Block{
+		Type: "CERTIFICATE", Bytes: certificate.Raw,
+	}), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := runHealthCheck([]string{
+		"--url", server.URL + "/healthz", "--ca", caPath,
+	}); err != nil {
+		t.Fatalf("trusted loopback health check failed: %v", err)
+	}
+}
+
+func TestHealthCheckReportsCAAndHTTPFailures(t *testing.T) {
+	if err := runHealthCheck([]string{
+		"--url", "https://127.0.0.1:1/healthz",
+		"--ca", filepath.Join(t.TempDir(), "missing.crt"),
+	}); err == nil || !strings.Contains(err.Error(), "read CA") {
+		t.Fatalf("missing CA error=%v", err)
 	}
 }
 
