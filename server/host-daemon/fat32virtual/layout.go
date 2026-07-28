@@ -49,6 +49,11 @@ type File struct {
 	Format        string   `json:"source_format"`
 	FSTRoot       string   `json:"fst_root,omitempty"`
 	FSTTreeSHA256 string   `json:"fst_tree_sha256,omitempty"`
+	Writable      bool     `json:"writable,omitempty"`
+	SaveObjectID  string   `json:"save_object_id,omitempty"`
+	CardOffset    int64    `json:"card_offset,omitempty"`
+	CardSize      int64    `json:"card_size,omitempty"`
+	GenerationID  string   `json:"generation_id,omitempty"`
 }
 
 type Extent struct {
@@ -65,6 +70,16 @@ type MetadataExtent struct {
 	VirtualOffset int64 `json:"virtual_offset"`
 	Length        int64 `json:"length"`
 	StorageOffset int64 `json:"storage_offset"`
+}
+
+type SaveExtent struct {
+	VirtualOffset  int64  `json:"virtual_offset"`
+	Length         int64  `json:"length"`
+	SaveObjectID   string `json:"save_object_id"`
+	CardOffset     int64  `json:"card_offset"`
+	CardSize       int64  `json:"card_size"`
+	GenerationID   string `json:"generation_id"`
+	LayoutChecksum string `json:"layout_checksum"`
 }
 
 type Geometry struct {
@@ -86,9 +101,12 @@ type Layout struct {
 	Geometry        Geometry         `json:"geometry"`
 	MetadataExtents []MetadataExtent `json:"metadata_extents"`
 	SourceExtents   []Extent         `json:"source_extents"`
+	SaveExtents     []SaveExtent     `json:"save_extents,omitempty"`
 	Files           []File           `json:"files"`
 	MetadataHash    string           `json:"metadata_hash"`
 	ExtentMapHash   string           `json:"extent_map_hash"`
+	SaveExtentHash  string           `json:"save_extent_map_hash,omitempty"`
+	LayoutChecksum  string           `json:"layout_checksum"`
 }
 
 type node struct {
@@ -224,10 +242,29 @@ func Build(virtualSize int64, label, identity string, files []File) (Layout, []b
 		addMetadata(virtualOffset, data)
 	}
 	var sourceExtents []Extent
+	var saveExtents []SaveExtent
 	for _, file := range fileNodes {
 		virtualOffset := dataStart + int64(file.first-2)*ClusterSize
 		file.file.VirtualOffset = virtualOffset
 		file.file.AllocatedSize = file.clusters * ClusterSize
+		if file.file.Writable {
+			if file.file.SaveObjectID == "" || file.file.CardSize <= 0 ||
+				file.file.LogicalSize != file.file.CardSize ||
+				file.file.CardOffset < 0 ||
+				file.file.CardOffset > file.file.CardSize-file.file.LogicalSize ||
+				file.file.SourcePath != "" {
+				return Layout{}, nil, errors.New("invalid writable save file")
+			}
+			saveExtents = append(saveExtents, SaveExtent{
+				VirtualOffset: virtualOffset, Length: file.file.LogicalSize,
+				SaveObjectID: file.file.SaveObjectID, CardOffset: file.file.CardOffset,
+				CardSize: file.file.CardSize, GenerationID: file.file.GenerationID,
+			})
+			continue
+		}
+		if file.file.SourcePath == "" {
+			return Layout{}, nil, errors.New("immutable virtual file has no source")
+		}
 		sourceExtents = append(sourceExtents, Extent{
 			VirtualOffset: virtualOffset, Length: file.file.LogicalSize,
 			SourcePath: file.file.SourcePath, SourceOffset: file.file.SourceOffset,
@@ -240,10 +277,21 @@ func Build(virtualSize int64, label, identity string, files []File) (Layout, []b
 	sort.Slice(sourceExtents, func(i, j int) bool {
 		return sourceExtents[i].VirtualOffset < sourceExtents[j].VirtualOffset
 	})
-	if err = validateRanges(virtualSize, metadataExtents, sourceExtents); err != nil {
+	sort.Slice(saveExtents, func(i, j int) bool {
+		return saveExtents[i].VirtualOffset < saveExtents[j].VirtualOffset
+	})
+	if err = validateRanges(virtualSize, metadataExtents, sourceExtents, saveExtents); err != nil {
 		return Layout{}, nil, err
 	}
 	metadataSum := sha256.Sum256(metadata)
+	metadataHash := hex.EncodeToString(metadataSum[:])
+	extentHash := hashExtents(sourceExtents)
+	saveBaseHash := hashSaveExtents(saveExtents, false)
+	layoutSum := sha256.Sum256([]byte(metadataHash + "\x00" + extentHash + "\x00" + saveBaseHash))
+	layoutChecksum := hex.EncodeToString(layoutSum[:])
+	for index := range saveExtents {
+		saveExtents[index].LayoutChecksum = layoutChecksum
+	}
 	return Layout{
 		Schema: 2, VirtualSize: virtualSize,
 		Geometry: Geometry{
@@ -253,9 +301,10 @@ func Build(virtualSize int64, label, identity string, files []File) (Layout, []b
 			SectorsPerCluster: sectorsPerCluster, ClusterSize: ClusterSize,
 			FirstDataSector: firstData, VolumeID: volumeID,
 		},
-		MetadataExtents: metadataExtents, SourceExtents: sourceExtents, Files: files,
-		MetadataHash:  hex.EncodeToString(metadataSum[:]),
-		ExtentMapHash: hashExtents(sourceExtents),
+		MetadataExtents: metadataExtents, SourceExtents: sourceExtents,
+		SaveExtents: saveExtents, Files: files,
+		MetadataHash: metadataHash, ExtentMapHash: extentHash,
+		SaveExtentHash: hashSaveExtents(saveExtents, true), LayoutChecksum: layoutChecksum,
 	}, metadata, nil
 }
 
@@ -265,6 +314,20 @@ func hashExtents(extents []Extent) string {
 		fmt.Fprintf(hash, "%d\x00%d\x00%s\x00%d\x00%d\x00%s\n",
 			extent.VirtualOffset, extent.Length, extent.SourcePath, extent.SourceOffset,
 			extent.SourceSize, extent.Identity.SHA256)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func hashSaveExtents(extents []SaveExtent, includeLayout bool) string {
+	hash := sha256.New()
+	for _, extent := range extents {
+		layout := ""
+		if includeLayout {
+			layout = extent.LayoutChecksum
+		}
+		fmt.Fprintf(hash, "%d\x00%d\x00%s\x00%d\x00%d\x00%s\x00%s\n",
+			extent.VirtualOffset, extent.Length, extent.SaveObjectID, extent.CardOffset,
+			extent.CardSize, extent.GenerationID, layout)
 	}
 	return hex.EncodeToString(hash.Sum(nil))
 }
@@ -553,7 +616,9 @@ func makeFSInfo() []byte {
 	return data
 }
 
-func validateRanges(size int64, metadata []MetadataExtent, sources []Extent) error {
+func validateRanges(size int64, metadata []MetadataExtent, sources []Extent,
+	saves []SaveExtent,
+) error {
 	type span struct{ start, end int64 }
 	var spans []span
 	for _, item := range metadata {
@@ -568,6 +633,20 @@ func validateRanges(size int64, metadata []MetadataExtent, sources []Extent) err
 			item.VirtualOffset > size-item.Length {
 			return errors.New("source extent exceeds source or virtual disk")
 		}
+		spans = append(spans, span{item.VirtualOffset, item.VirtualOffset + item.Length})
+	}
+	saveObjects := make(map[string]struct{}, len(saves))
+	for _, item := range saves {
+		if item.VirtualOffset < 0 || item.Length <= 0 || item.SaveObjectID == "" ||
+			item.CardOffset < 0 || item.CardSize <= 0 ||
+			item.CardOffset > item.CardSize-item.Length ||
+			item.VirtualOffset > size-item.Length {
+			return errors.New("save extent exceeds card or virtual disk")
+		}
+		if _, duplicate := saveObjects[item.SaveObjectID]; duplicate {
+			return errors.New("duplicate writable save object extent")
+		}
+		saveObjects[item.SaveObjectID] = struct{}{}
 		spans = append(spans, span{item.VirtualOffset, item.VirtualOffset + item.Length})
 	}
 	sort.Slice(spans, func(i, j int) bool { return spans[i].start < spans[j].start })

@@ -17,10 +17,11 @@ type Source struct {
 }
 
 type Game struct {
-	ID      string   `json:"id"`
-	Title   string   `json:"title"`
-	Sources []Source `json:"sources"`
-	Size    int64    `json:"size"`
+	ID           string   `json:"id"`
+	Title        string   `json:"title"`
+	Sources      []Source `json:"sources"`
+	Size         int64    `json:"size"`
+	Availability string   `json:"availability,omitempty"`
 }
 
 type VirtualFile struct {

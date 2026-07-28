@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/pem"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -22,7 +24,10 @@ import (
 	"wiibridge/server/host-daemon/scanner"
 	"wiibridge/server/host-daemon/vdisk"
 	webui "wiibridge/server/host-daemon/web"
+	"wiibridge/shared/compat"
 	"wiibridge/shared/model"
+	"wiibridge/shared/perf"
+	"wiibridge/shared/sourcehealth"
 	"wiibridge/tests/testutil"
 )
 
@@ -250,10 +255,13 @@ func readyPiController() *fakePiController {
 		Target: "zero-w-armhf", Board: "Raspberry Pi Zero W Rev 1.1",
 		BoardOK: true, Provisioned: true, WiFiReady: true,
 		USBController: "20980000.usb", USBState: "not attached", State: "ready",
+		Compatibility: compat.NewDescriptor(
+			"firmware", "Raspberry Pi Zero W Rev 1.1", "synthetic-test-device",
+			version, gitCommit, buildTime, compat.FirmwareCapabilities()),
 	}}
 }
 
-func testApp(t *testing.T) *app {
+func testApp(t testing.TB) *app {
 	t.Helper()
 	disk, err := vdisk.Build("all", nil, version)
 	if err != nil {
@@ -262,6 +270,8 @@ func testApp(t *testing.T) *app {
 	dataDir := t.TempDir()
 	gcConfig := gamecube.DefaultLibraryConfig()
 	gcConfig.SourceRoot = dataDir
+	gcConfig.SavesRoot = filepath.Join(dataDir, "gamecube", "saves")
+	gcConfig.Application = version
 	gcLibrary, err := gamecube.NewLibraryManager(
 		dataDir+"/gamecube/library", gcConfig)
 	if err != nil {
@@ -293,6 +303,13 @@ func testApp(t *testing.T) *app {
 		csrf:    "test-csrf",
 		dataDir: dataDir, gcLibrary: gcLibrary, gcMode: gamecube.MemoryCardPhysical,
 		browser: browser, web: renderer, failures: make(map[string]authFailure),
+		source: sourcehealth.Record{State: sourcehealth.StateAvailable},
+		gcSaveSelection: gamecube.SaveSelection{
+			FormatVersion: gamecube.SaveOverlayFormatVersion,
+			Mode:          gamecube.MemoryCardPhysical, CardSize: gamecube.DefaultLibraryCardSize,
+			AutomaticCreation:      true,
+			MaximumRetainedBackups: gamecube.DefaultSaveBackupRetention,
+		},
 	}
 	a.wii = &wiiExportProfile{app: a}
 	a.exports, err = exportprofile.New(a.wii)
@@ -581,7 +598,7 @@ func TestPiPowerControlsRequireConfirmation(t *testing.T) {
 
 func TestConfirmedShutdownUsesFixedPoweroffAction(t *testing.T) {
 	a := testApp(t)
-	pi := &fakePiController{}
+	pi := readyPiController()
 	a.pi = pi
 	request := httptest.NewRequest("POST", "/api/v1/pi/shutdown?confirm=shutdown", nil)
 	request.SetPathValue("action", "shutdown")
@@ -833,7 +850,7 @@ func TestCompleteGameCubeActivationNeedsNoGameIDAndUsesSafeSequence(t *testing.T
 
 func TestPiStorageControlsDeriveActionsAndRejectRawNames(t *testing.T) {
 	a := testApp(t)
-	pi := &fakePiController{}
+	pi := readyPiController()
 	a.pi = pi
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/pi/storage/disconnect", nil)
 	request.SetPathValue("action", "disconnect")
@@ -862,5 +879,263 @@ func TestPiAddressControlRejectsURLs(t *testing.T) {
 	a.setPiAddress(response, request)
 	if response.Code != 400 || pi.address != "192.0.2.10" {
 		t.Fatalf("unsafe address status=%d address=%q", response.Code, pi.address)
+	}
+}
+
+func buildEmulatedTestLibrary(t *testing.T, a *app) gamecube.LibraryManifest {
+	t.Helper()
+	a.pi = readyPiController()
+	form := url.Values{
+		"mode": {"emulated-individual"}, "card_size": {"524288"},
+		"maximum_backups": {"3"}, "automatic_backup_interval": {"0s"},
+		"automatic_creation": {"1"},
+	}
+	request := httptest.NewRequest(http.MethodPost,
+		"/api/v1/gamecube/saves/mode", strings.NewReader(form.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	response := httptest.NewRecorder()
+	a.configureGameCubeSaves(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("configure save mode status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+	sourceRoot := filepath.Join(a.dataDir, "games")
+	if err := os.MkdirAll(sourceRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := testutil.SyntheticGameCubeISO(
+		filepath.Join(sourceRoot, "save-test.iso"),
+		"GSAV01", "Save Test", 0, 0, 2<<20); err != nil {
+		t.Fatal(err)
+	}
+	scan, err := gamecube.Scan(sourceRoot)
+	if err != nil || len(scan.Games) != 1 {
+		t.Fatalf("scan=%#v err=%v", scan, err)
+	}
+	a.mu.Lock()
+	a.gcScan = scan
+	a.mu.Unlock()
+	manifest, err := a.gcLibrary.Build(context.Background(), scan.Games)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return manifest
+}
+
+func TestManagedSaveStatusBackupDownloadAndAuthentication(t *testing.T) {
+	a := testApp(t)
+	manifest := buildEmulatedTestLibrary(t, a)
+	if len(manifest.SaveObjects) != 1 {
+		t.Fatalf("save objects=%#v", manifest.SaveObjects)
+	}
+	statusResponse := httptest.NewRecorder()
+	a.gameCubeSaveStatus(statusResponse,
+		httptest.NewRequest(http.MethodGet, "/api/v1/gamecube/saves", nil))
+	if statusResponse.Code != http.StatusOK ||
+		!strings.Contains(statusResponse.Body.String(), manifest.SaveObjects[0].ID) {
+		t.Fatalf("save status=%d body=%s",
+			statusResponse.Code, statusResponse.Body.String())
+	}
+
+	form := url.Values{"object_id": {manifest.SaveObjects[0].ID}}
+	backupRequest := httptest.NewRequest(http.MethodPost,
+		"/api/v1/gamecube/saves/backup", strings.NewReader(form.Encode()))
+	backupRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	backupRequest.SetPathValue("action", "backup")
+	backupResponse := httptest.NewRecorder()
+	a.gameCubeSaveAction(backupResponse, backupRequest)
+	if backupResponse.Code != http.StatusOK {
+		t.Fatalf("backup=%d body=%s", backupResponse.Code, backupResponse.Body.String())
+	}
+
+	unauthorized := httptest.NewRecorder()
+	a.auth(a.downloadGameCubeSave)(unauthorized, httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/gamecube/saves/download?object_id="+
+			url.QueryEscape(manifest.SaveObjects[0].ID), nil))
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated download status=%d", unauthorized.Code)
+	}
+	download := httptest.NewRecorder()
+	a.downloadGameCubeSave(download, httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/gamecube/saves/download?object_id="+
+			url.QueryEscape(manifest.SaveObjects[0].ID), nil))
+	if download.Code != http.StatusOK ||
+		int64(download.Body.Len()) != manifest.SaveObjects[0].CardSize ||
+		download.Header().Get("Content-Disposition") == "" {
+		t.Fatalf("download status=%d bytes=%d headers=%v",
+			download.Code, download.Body.Len(), download.Header())
+	}
+}
+
+func TestSwitchFromEmulatedGameCubeFlushesAndBacksUpManagedCard(t *testing.T) {
+	a := testApp(t)
+	manifest := buildEmulatedTestLibrary(t, a)
+	gameCubeRequest := httptest.NewRequest(
+		http.MethodPost, "/api/v1/export/gamecube", nil)
+	gameCubeRequest.SetPathValue("platform", "gamecube")
+	gameCubeResponse := httptest.NewRecorder()
+	a.selectExport(gameCubeResponse, gameCubeRequest)
+	if gameCubeResponse.Code != http.StatusOK || a.gcSaves == nil {
+		t.Fatalf("gamecube activation=%d body=%s",
+			gameCubeResponse.Code, gameCubeResponse.Body.String())
+	}
+	expected := []byte("durable-detach-save")
+	if _, err := a.gcSaves.WriteSaveAt(
+		manifest.SaveObjects[0].ID, expected, 1024); err != nil {
+		t.Fatal(err)
+	}
+
+	wiiRequest := httptest.NewRequest(http.MethodPost, "/api/v1/export/wii", nil)
+	wiiRequest.SetPathValue("platform", "wii")
+	wiiResponse := httptest.NewRecorder()
+	a.selectExport(wiiResponse, wiiRequest)
+	if wiiResponse.Code != http.StatusOK || a.exports.Platform() != "wii" {
+		t.Fatalf("wii activation=%d body=%s",
+			wiiResponse.Code, wiiResponse.Body.String())
+	}
+	saveStore, closeStore, _, err := a.saveStoreForAdministration()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeStore {
+		defer saveStore.Close()
+	}
+	statuses := saveStore.Statuses()
+	if len(statuses) != 1 || statuses[0].Dirty || statuses[0].BackupCount < 1 {
+		t.Fatalf("detach status=%#v", statuses)
+	}
+	actual := make([]byte, len(expected))
+	if _, err = saveStore.ReadSaveAt(
+		manifest.SaveObjects[0].ID, actual, 1024); err != nil ||
+		!bytes.Equal(actual, expected) {
+		t.Fatalf("flushed data=%q err=%v", actual, err)
+	}
+}
+
+func TestEmulatedGameCubeRequiresFreshSaveOverlayCapability(t *testing.T) {
+	a := testApp(t)
+	_ = buildEmulatedTestLibrary(t, a)
+	pi := readyPiController()
+	pi.status.Compatibility.Capabilities = removeCapability(
+		pi.status.Compatibility.Capabilities, compat.CapGameCubeSaveOverlay)
+	a.pi = pi
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/export/gamecube", nil)
+	request.SetPathValue("platform", "gamecube")
+	response := httptest.NewRecorder()
+	a.selectExport(response, request)
+	if response.Code != http.StatusServiceUnavailable ||
+		len(pi.actions) != 0 || a.exports.Platform() != "wii" {
+		t.Fatalf("missing capability status=%d actions=%v platform=%s body=%s",
+			response.Code, pi.actions, a.exports.Platform(), response.Body.String())
+	}
+}
+
+func removeCapability(values []string, target string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value != target {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func TestPerformanceAPIsRemainBoundedAndExportJSONAndCSV(t *testing.T) {
+	a := testApp(t)
+	a.metricsRegistry = perf.New(perf.Config{
+		Enabled: true, SessionHistory: true, MaxSessions: 4,
+	})
+	a.metricsRegistry.StartSession("wii", "", version, "firmware", 1)
+	a.metricsRegistry.ObserveSourceRead(4096, time.Millisecond, nil)
+	a.metricsRegistry.ObserveNBDRead(4096, 2*time.Millisecond, nil)
+	a.metricsRegistry.EndSession("detached")
+
+	summary := httptest.NewRecorder()
+	a.performanceSummary(summary,
+		httptest.NewRequest(http.MethodGet, "/api/performance/summary", nil))
+	if summary.Code != http.StatusOK || summary.Body.Len() > 1<<20 ||
+		!strings.Contains(summary.Body.String(), `"compatibility"`) ||
+		!strings.Contains(summary.Body.String(), `"data_path"`) {
+		t.Fatalf("summary status=%d bytes=%d body=%s",
+			summary.Code, summary.Body.Len(), summary.Body.String())
+	}
+	for _, format := range []string{"json", "csv"} {
+		response := httptest.NewRecorder()
+		a.performanceExport(response, httptest.NewRequest(
+			http.MethodGet, "/api/performance/export?format="+format, nil))
+		if response.Code != http.StatusOK || response.Body.Len() == 0 ||
+			response.Body.Len() > 2<<20 {
+			t.Fatalf("%s export status=%d bytes=%d",
+				format, response.Code, response.Body.Len())
+		}
+	}
+}
+
+func TestPerformanceCheckpointAndPersistenceFailureDegradeGracefully(t *testing.T) {
+	a := testApp(t)
+	a.metricsRegistry = perf.New(perf.Config{Enabled: true})
+	a.metricsRegistry.ObserveNBDRead(4096, time.Millisecond, nil)
+	if err := a.persistMetricsSnapshot(); err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := filepath.Join(a.dataDir, "performance", "current.json")
+	data, err := os.ReadFile(checkpoint)
+	if err != nil || !strings.Contains(string(data), `"read_requests": 1`) {
+		t.Fatalf("checkpoint=%s err=%v", data, err)
+	}
+
+	blockedRoot := filepath.Join(t.TempDir(), "not-a-directory")
+	if err = os.WriteFile(blockedRoot, []byte("blocked"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a.dataDir = blockedRoot
+	if err = a.persistMetricsSnapshot(); err == nil {
+		t.Fatal("unavailable metrics storage was accepted")
+	} else {
+		a.metricsRegistry.SavePersistenceFailure()
+	}
+	warnings := a.metricsRegistry.Warnings(a.performanceSnapshot())
+	found := false
+	for _, warning := range warnings {
+		if warning.Code == "PERF-PERSISTENCE-FAILED" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("persistence warning missing: %#v", warnings)
+	}
+	if got := a.metricsRegistry.Snapshot("", "ready", 0, 0).
+		NBD.Counters["read_requests"]; got != 1 {
+		t.Fatalf("metrics stopped after persistence failure: %d", got)
+	}
+}
+
+func BenchmarkPerformanceSummarySerialization(b *testing.B) {
+	a := testApp(b)
+	a.metricsRegistry = perf.New(perf.Config{Enabled: true, MaxSessions: 10})
+	a.metricsRegistry.ObserveNBDRead(64<<10, time.Millisecond, nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/performance/summary", nil)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for index := 0; index < b.N; index++ {
+		response := httptest.NewRecorder()
+		a.performanceSummary(response, request)
+		if response.Code != http.StatusOK {
+			b.Fatal(response.Code)
+		}
+	}
+}
+
+func TestDownloadStreamsExactManagedCard(t *testing.T) {
+	a := testApp(t)
+	manifest := buildEmulatedTestLibrary(t, a)
+	response := httptest.NewRecorder()
+	a.downloadGameCubeSave(response, httptest.NewRequest(
+		http.MethodGet, "/api/v1/gamecube/saves/download?object_id="+
+			url.QueryEscape(manifest.SaveObjects[0].ID), nil))
+	if _, err := io.Copy(io.Discard, response.Result().Body); err != nil {
+		t.Fatal(err)
 	}
 }

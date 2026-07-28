@@ -37,9 +37,15 @@ var unsafeFATName = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1f]`)
 type MemoryCardMode string
 
 const (
-	MemoryCardPhysical MemoryCardMode = "physical"
-	MemoryCardEmulated MemoryCardMode = "emulated"
+	MemoryCardPhysical           MemoryCardMode = "physical"
+	MemoryCardEmulated           MemoryCardMode = "emulated" // Legacy copied per-title volume only.
+	MemoryCardEmulatedIndividual MemoryCardMode = "emulated-individual"
+	MemoryCardEmulatedShared     MemoryCardMode = "emulated-shared"
 )
+
+func (mode MemoryCardMode) IsLibraryEmulated() bool {
+	return mode == MemoryCardEmulatedIndividual || mode == MemoryCardEmulatedShared
+}
 
 type VolumeManifest struct {
 	Schema       int            `json:"schema"`

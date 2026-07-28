@@ -27,6 +27,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	webauth "wiibridge/server/host-daemon/auth"
 	"wiibridge/server/host-daemon/bridgecontrol"
 	"wiibridge/server/host-daemon/exportprofile"
@@ -36,7 +38,10 @@ import (
 	"wiibridge/server/host-daemon/vdisk"
 	webui "wiibridge/server/host-daemon/web"
 	"wiibridge/server/nbd-plugin"
+	"wiibridge/shared/compat"
 	"wiibridge/shared/model"
+	"wiibridge/shared/perf"
+	"wiibridge/shared/sourcehealth"
 )
 
 const version = "0.1.0-rc.1"
@@ -54,33 +59,47 @@ func buildVersion() string {
 }
 
 type app struct {
-	mu              sync.RWMutex
-	switchMu        sync.Mutex
-	root            string
-	dataDir         string
-	disk            *vdisk.Disk
-	scan            scanner.Result
-	tokenSum        [32]byte
-	started         time.Time
-	store           *store.Store
-	gcScan          gamecube.Result
-	exports         *exportprofile.Manager
-	wii             *wiiExportProfile
-	csrf            string
-	imports         map[string]importJob
-	activeGC        *gamecube.VolumeManifest
-	activeGCLibrary *gamecube.LibraryManifest
-	gcLibrary       *gamecube.LibraryManager
-	gcMode          gamecube.MemoryCardMode
-	gcUpdate        bool
-	ready           bool
-	gcStartupPhase  string
-	gcStartupError  string
-	browser         *webauth.Manager
-	web             *webui.Renderer
-	authMu          sync.Mutex
-	failures        map[string]authFailure
-	pi              piController
+	mu                   sync.RWMutex
+	switchMu             sync.Mutex
+	root                 string
+	dataDir              string
+	disk                 *vdisk.Disk
+	scan                 scanner.Result
+	tokenSum             [32]byte
+	started              time.Time
+	store                *store.Store
+	gcScan               gamecube.Result
+	exports              *exportprofile.Manager
+	wii                  *wiiExportProfile
+	csrf                 string
+	imports              map[string]importJob
+	activeGC             *gamecube.VolumeManifest
+	activeGCLibrary      *gamecube.LibraryManifest
+	gcLibrary            *gamecube.LibraryManager
+	gcMode               gamecube.MemoryCardMode
+	gcUpdate             bool
+	ready                bool
+	gcStartupPhase       string
+	gcStartupError       string
+	browser              *webauth.Manager
+	web                  *webui.Renderer
+	authMu               sync.Mutex
+	failures             map[string]authFailure
+	pi                   piController
+	gcSaves              *gamecube.SaveStore
+	gcSaveSelection      gamecube.SaveSelection
+	gcSaveError          string
+	metricsRegistry      *perf.Registry
+	source               sourcehealth.Record
+	hostDescriptor       compat.Descriptor
+	compatibility        compat.Result
+	maxSessions          int
+	sessionRetentionDays int
+	memoryLimit          int64
+	dashboardRefresh     time.Duration
+	metricsPersistence   time.Duration
+	sourceFailures       chan string
+	lastPiUSBResets      uint64
 }
 
 type piController interface {
@@ -368,11 +387,17 @@ func serve() error {
 		"event", "startup", "phase", "configuration validation",
 		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	if err := assertReadOnly(root); err != nil {
-		return fmt.Errorf("library safety check: %w", err)
+		if !isUnavailableLibraryError(err) {
+			return fmt.Errorf("library safety check: %w", err)
+		}
+		slog.Warn("Library source is unavailable during the read-only proof; "+
+			"startup will continue in offline-source mode",
+			"code", "SOURCE-OFFLINE")
+	} else {
+		slog.Info("Read-only library proof complete",
+			"event", "startup", "phase", "read-only library proof",
+			"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	}
-	slog.Info("Read-only library proof complete",
-		"event", "startup", "phase", "read-only library proof",
-		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	dataStarted := time.Now()
 	if err := os.MkdirAll(filepath.Join(dataDir, "snapshots"), 0o700); err != nil {
 		return err
@@ -460,6 +485,49 @@ func serve() error {
 	}
 	gcConfig.Mode = gamecube.MemoryCardMode(
 		env("WIIBRIDGE_GAMECUBE_MEMORY_CARD_MODE", string(gamecube.MemoryCardPhysical)))
+	gcConfig.SavesRoot = filepath.Join(dataDir, "gamecube", "saves")
+	gcConfig.CardSize, err = int64Env(
+		"WIIBRIDGE_GAMECUBE_CARD_SIZE_BYTES", gamecube.DefaultLibraryCardSize)
+	if err != nil {
+		return failStartup("GameCube card-size configuration is invalid", err)
+	}
+	gcConfig.AutoCreateCards, err = boolEnv("WIIBRIDGE_GAMECUBE_AUTO_CREATE_CARDS", true)
+	if err != nil {
+		return failStartup("GameCube card-creation configuration is invalid", err)
+	}
+	gcConfig.SharedCardName = env("WIIBRIDGE_GAMECUBE_SHARED_CARD", "shared")
+	gcConfig.MaxSaveBackups, err = intEnv(
+		"WIIBRIDGE_GAMECUBE_MAX_SAVE_BACKUPS", gamecube.DefaultSaveBackupRetention)
+	if err != nil {
+		return failStartup("GameCube save-retention configuration is invalid", err)
+	}
+	gcConfig.Application = version
+	autoBackupInterval, err := time.ParseDuration(
+		env("WIIBRIDGE_GAMECUBE_AUTO_BACKUP_INTERVAL", "0s"))
+	if err != nil || autoBackupInterval < 0 {
+		return failStartup("GameCube automatic backup configuration is invalid",
+			errors.New("WIIBRIDGE_GAMECUBE_AUTO_BACKUP_INTERVAL must be a non-negative duration"))
+	}
+	saveSelection := gamecube.SaveSelection{
+		FormatVersion: gamecube.SaveOverlayFormatVersion, Mode: gcConfig.Mode,
+		CardSize: gcConfig.CardSize, SharedCardName: gcConfig.SharedCardName,
+		AutomaticCreation:       gcConfig.AutoCreateCards,
+		MaximumRetainedBackups:  gcConfig.MaxSaveBackups,
+		AutomaticBackupInterval: int64(autoBackupInterval / time.Second),
+	}
+	saveSelectionPath := filepath.Join(dataDir, "gamecube", "save-settings.json")
+	loadedSelection, saveSelectionErr := gamecube.LoadSaveSelection(
+		saveSelectionPath, saveSelection)
+	if saveSelectionErr == nil {
+		saveSelection = loadedSelection
+		gcConfig.Mode, gcConfig.CardSize = saveSelection.Mode, saveSelection.CardSize
+		gcConfig.SharedCardName = saveSelection.SharedCardName
+		gcConfig.AutoCreateCards = saveSelection.AutomaticCreation
+		gcConfig.MaxSaveBackups = saveSelection.MaximumRetainedBackups
+	} else {
+		slog.Error("Managed GameCube save settings are invalid; emulated mode will be blocked",
+			"code", "SAVE-CARD-INVALID")
+	}
 	startup.SetPhase("Checking existing GameCube generation")
 	gcManagerStarted := time.Now()
 	gcLibrary, err := gamecube.NewLibraryManager(
@@ -513,14 +581,77 @@ func serve() error {
 		"phase_elapsed_ms", time.Since(sqliteStarted).Milliseconds(),
 		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	startup.SetPhase("Scanning Wii library")
+	metricsEnabled, err := boolEnv("WIIBRIDGE_PERFORMANCE_METRICS_ENABLED", true)
+	if err != nil {
+		return failStartup("Performance metrics configuration is invalid", err)
+	}
+	sessionHistory, err := boolEnv("WIIBRIDGE_SESSION_HISTORY_ENABLED", true)
+	if err != nil {
+		return failStartup("Performance session configuration is invalid", err)
+	}
+	maxSessions, err := intEnv("WIIBRIDGE_MAX_RETAINED_SESSIONS", 100)
+	if err != nil || maxSessions < 1 || maxSessions > 1000 {
+		return failStartup("Performance session retention is invalid",
+			errors.New("WIIBRIDGE_MAX_RETAINED_SESSIONS must be between 1 and 1000"))
+	}
+	sessionRetentionDays, err := intEnv("WIIBRIDGE_SESSION_RETENTION_DAYS", 30)
+	if err != nil || sessionRetentionDays < 1 || sessionRetentionDays > 3650 {
+		return failStartup("Performance session age retention is invalid",
+			errors.New("WIIBRIDGE_SESSION_RETENTION_DAYS must be between 1 and 3650"))
+	}
+	p99Warning, err := time.ParseDuration(env("WIIBRIDGE_PERF_P99_WARNING", "100ms"))
+	if err != nil {
+		return failStartup("Performance warning configuration is invalid", err)
+	}
+	memoryWarningPercent, err := intEnv("WIIBRIDGE_PERF_MEMORY_WARNING_PERCENT", 85)
+	if err != nil || memoryWarningPercent < 1 || memoryWarningPercent > 100 {
+		return failStartup("Performance memory warning configuration is invalid",
+			errors.New("WIIBRIDGE_PERF_MEMORY_WARNING_PERCENT must be between 1 and 100"))
+	}
+	piMetricsInterval, err := time.ParseDuration(
+		env("WIIBRIDGE_PI_METRICS_POLL_INTERVAL", "10s"))
+	if err != nil || piMetricsInterval < 5*time.Second || piMetricsInterval > 5*time.Minute {
+		return failStartup("Pi metrics interval is invalid",
+			errors.New("WIIBRIDGE_PI_METRICS_POLL_INTERVAL must be between 5s and 5m"))
+	}
+	dashboardRefresh, err := time.ParseDuration(
+		env("WIIBRIDGE_DASHBOARD_REFRESH_INTERVAL", "5s"))
+	if err != nil || dashboardRefresh < 2*time.Second || dashboardRefresh > 30*time.Second {
+		return failStartup("Dashboard refresh interval is invalid",
+			errors.New("WIIBRIDGE_DASHBOARD_REFRESH_INTERVAL must be between 2s and 30s"))
+	}
+	metricsPersistence, err := time.ParseDuration(
+		env("WIIBRIDGE_METRICS_PERSISTENCE_INTERVAL", "1m"))
+	if err != nil || (metricsPersistence != 0 &&
+		(metricsPersistence < 30*time.Second || metricsPersistence > time.Hour)) {
+		return failStartup("Metrics persistence interval is invalid",
+			errors.New("WIIBRIDGE_METRICS_PERSISTENCE_INTERVAL must be 0s or between 30s and 1h"))
+	}
+	metricsRegistry := perf.New(perf.Config{
+		Enabled: metricsEnabled, SessionHistory: sessionHistory,
+		MaxSessions: maxSessions, P99Warning: p99Warning,
+		MemoryWarningPct: memoryWarningPercent,
+	})
+	if retained, loadErr := database.PerformanceSessions(maxSessions); loadErr == nil {
+		metricsRegistry.ImportSessions(retained)
+	}
+	hostDescriptor := compat.NewDescriptor(
+		"host", "", "", version, gitCommit, buildTime, compat.HostCapabilities())
+	hostDescriptor.BuildDirty = buildDirty == "true"
 
 	wiiScanStarted := time.Now()
 	slog.Info("Wii library scan started",
 		"event", "startup", "phase", "Wii scan started",
 		"elapsed_ms", time.Since(hostStarted).Milliseconds())
-	result, err := scanner.Scan(root)
-	if err != nil {
-		return failStartup("Wii library scan failed", err)
+	result, sourceRecord, scanErr := scanWiiCatalog(database, root)
+	if scanErr != nil && len(result.Games) == 0 {
+		return failStartup("Wii library scan failed and no prior complete catalog is available",
+			scanErr)
+	}
+	if scanErr != nil {
+		slog.Warn("Wii source unavailable; preserving prior complete catalog",
+			"code", sourceRecord.FailureCode, "state", sourceRecord.State,
+			"games", len(result.Games))
 	}
 	slog.Info("Wii library scan result", "games", len(result.Games),
 		"rejected", len(result.Rejected), "candidate_files", result.FileCount,
@@ -549,6 +680,21 @@ func serve() error {
 		failures: make(map[string]authFailure), csrf: hex.EncodeToString(csrfSum[:]),
 		imports: make(map[string]importJob), gcLibrary: gcLibrary, gcMode: gcConfig.Mode,
 		browser: browserAuth, web: renderer, gcStartupPhase: "Scanning GameCube library"}
+	a.metricsRegistry = metricsRegistry
+	a.sourceFailures = make(chan string, 8)
+	a.gcSaveSelection = saveSelection
+	if saveSelectionErr != nil {
+		a.gcSaveError = "SAVE-CARD-INVALID: managed save settings require administrator repair"
+	}
+	a.source = sourceRecord
+	a.hostDescriptor = hostDescriptor
+	a.maxSessions = maxSessions
+	a.sessionRetentionDays = sessionRetentionDays
+	a.dashboardRefresh = dashboardRefresh
+	a.metricsPersistence = metricsPersistence
+	a.memoryLimit = detectContainerMemoryLimit(
+		parseByteSize(env("WIIBRIDGE_MEMORY_LIMIT", "512m")))
+	_ = database.LoadCompatibility(&a.compatibility)
 	piManager, err := bridgecontrol.NewManager(
 		os.Getenv("WIIBRIDGE_PI_URL"),
 		os.Getenv("WIIBRIDGE_PI_ADMIN_TOKEN"),
@@ -559,12 +705,18 @@ func serve() error {
 		return failStartup("Pi manager configuration is invalid",
 			fmt.Errorf("automatic Pi switching configuration: %w", err))
 	}
+	if piManager != nil {
+		if err = piManager.SetPollInterval(piMetricsInterval); err != nil {
+			return failStartup("Pi metrics interval is invalid", err)
+		}
+	}
 	a.pi = configuredPiController(piManager)
 	slog.Info("Pi manager initialized",
 		"event", "startup", "phase", "Pi manager initialized",
 		"configured", a.pi != nil,
 		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	a.wii = &wiiExportProfile{app: a}
+	disk.SetObserver(metricsRegistry, a.queueSourceFailure)
 	a.exports, err = exportprofile.New(a.wii)
 	if err != nil {
 		return failStartup("Wii export manager could not be initialized", err)
@@ -590,7 +742,7 @@ func serve() error {
 	nbdServer := &nbd.Server{
 		BackendAcquirer: a.exports.BeginSession,
 		TLS:             tlsConfig, ExportName: env("WIIBRIDGE_EXPORT", "all"),
-		Deadline: 30 * time.Second, MaxRequest: 1 << 20,
+		Deadline: 30 * time.Second, MaxRequest: 1 << 20, Metrics: metricsRegistry,
 	}
 	go func() { errs <- nbdServer.Serve(ctx, nbdListener) }()
 	slog.Info("NBD listener opened",
@@ -608,6 +760,11 @@ func serve() error {
 	mux.HandleFunc("POST /account/password", a.auth(a.changePassword))
 	mux.HandleFunc("GET /api/v1/status", a.auth(a.status))
 	mux.HandleFunc("GET /api/v1/pi/status", a.auth(a.piStatus))
+	mux.HandleFunc("GET /api/v1/compatibility", a.auth(a.compatibilityAPI))
+	mux.HandleFunc("POST /api/v1/compatibility", a.auth(a.compatibilityAPI))
+	mux.HandleFunc("GET /api/v1/sources", a.auth(a.sourceStatusAPI))
+	mux.HandleFunc("GET /api/v1/sources/diagnostic", a.auth(a.sourceDiagnosticAPI))
+	mux.HandleFunc("POST /api/v1/sources/acknowledge", a.auth(a.acknowledgeSourceRemoval))
 	mux.HandleFunc("POST /api/v1/pi/address", a.auth(a.setPiAddress))
 	mux.HandleFunc("GET /api/v1/scan", a.auth(a.scanResult))
 	mux.HandleFunc("POST /api/v1/scan", a.auth(a.rescan))
@@ -618,14 +775,24 @@ func serve() error {
 	mux.HandleFunc("POST /api/v1/gamecube/library/cancel", a.auth(a.cancelGameCubeLibrary))
 	mux.HandleFunc("POST /api/v1/gamecube/import", a.auth(a.importGameCube))
 	mux.HandleFunc("POST /api/v1/gamecube/settings", a.auth(a.saveGameCubeSettings))
-	mux.HandleFunc("POST /api/v1/gamecube/saves/restore", a.auth(a.restoreGameCubeSave))
+	mux.HandleFunc("GET /api/v1/gamecube/saves", a.auth(a.gameCubeSaveStatus))
+	mux.HandleFunc("POST /api/v1/gamecube/saves/{action}", a.auth(a.gameCubeSaveAction))
+	mux.HandleFunc("POST /api/v1/gamecube/saves/upload", a.auth(a.uploadGameCubeSave))
+	mux.HandleFunc("GET /api/v1/gamecube/saves/download", a.auth(a.downloadGameCubeSave))
 	mux.HandleFunc("POST /api/v1/export/{platform}", a.auth(a.selectExport))
 	mux.HandleFunc("POST /api/v1/pi/{action}", a.auth(a.piPowerAction))
 	mux.HandleFunc("POST /api/v1/pi/storage/{action}", a.auth(a.piStorageAction))
 	mux.HandleFunc("GET /metrics", a.auth(a.metrics))
+	mux.HandleFunc("GET /api/performance/summary", a.auth(a.performanceSummary))
+	mux.HandleFunc("GET /api/performance/host", a.auth(a.performanceHost))
+	mux.HandleFunc("GET /api/performance/pi", a.auth(a.performancePi))
+	mux.HandleFunc("GET /api/performance/session/current", a.auth(a.performanceCurrentSession))
+	mux.HandleFunc("GET /api/performance/sessions", a.auth(a.performanceSessions))
+	mux.HandleFunc("GET /api/performance/sessions/{id}", a.auth(a.performanceSession))
+	mux.HandleFunc("GET /api/performance/export", a.auth(a.performanceExport))
 	mux.HandleFunc("GET /", a.auth(a.dashboard))
 	a.mu.Lock()
-	a.ready = true
+	a.ready = sourceRecord.State == sourcehealth.StateAvailable
 	a.mu.Unlock()
 	handler.Set(mux)
 	close(startupDone)
@@ -636,6 +803,9 @@ func serve() error {
 		"event", "startup", "phase", "Host startup complete",
 		"elapsed_ms", time.Since(hostStarted).Milliseconds())
 	go a.initializeGameCube(ctx)
+	go a.runAutomaticSaveBackups(ctx)
+	go a.runSourceFailureReconciler(ctx)
+	go a.runMetricsPersistence(ctx)
 	select {
 	case <-ctx.Done():
 	case err = <-errs:
@@ -647,6 +817,20 @@ func serve() error {
 	defer stop()
 	_ = web.Shutdown(shutdown)
 	_ = nbdListener.Close()
+	a.switchMu.Lock()
+	a.endPerformanceSession("host-shutdown")
+	disconnectContext, disconnectCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_ = a.waitForExportDisconnect(disconnectContext)
+	disconnectCancel()
+	if syncErr := a.syncGameCubeSaves(); err == nil {
+		err = syncErr
+	}
+	if a.exports != nil {
+		if disconnectErr := a.exports.Disconnect(); err == nil {
+			err = disconnectErr
+		}
+	}
+	a.switchMu.Unlock()
 	return err
 }
 
@@ -679,6 +863,18 @@ func intEnv(key string, fallback int) (int, error) {
 	return parsed, nil
 }
 
+func boolEnv(key string, fallback bool) (bool, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%s must be true or false", key)
+	}
+	return parsed, nil
+}
+
 func int64Env(key string, fallback int64) (int64, error) {
 	value := os.Getenv(key)
 	if value == "" {
@@ -692,17 +888,31 @@ func int64Env(key string, fallback int64) (int64, error) {
 }
 
 func assertReadOnly(path string) error {
-	probe := filepath.Join(path, ".wiibridge-write-probe-"+strconv.Itoa(os.Getpid()))
-	f, err := os.OpenFile(probe, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err == nil {
-		f.Close()
-		_ = os.Remove(probe)
+	info, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("cannot inspect read-only mount: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return errors.New("library source must be a non-symlink directory")
+	}
+	var filesystem unix.Statfs_t
+	if err = unix.Statfs(path, &filesystem); err != nil {
+		return fmt.Errorf("cannot inspect read-only mount: %w", err)
+	}
+	if filesystem.Flags&unix.ST_RDONLY == 0 {
 		return errors.New("library mount is writable; refusing startup")
 	}
-	if errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EROFS) {
-		return nil
-	}
-	return fmt.Errorf("cannot prove read-only mount: %w", err)
+	return nil
+}
+
+func isUnavailableLibraryError(err error) bool {
+	return errors.Is(err, os.ErrNotExist) ||
+		errors.Is(err, syscall.ENOTCONN) ||
+		errors.Is(err, syscall.ESTALE) ||
+		errors.Is(err, syscall.EIO) ||
+		errors.Is(err, syscall.ETIMEDOUT) ||
+		errors.Is(err, syscall.ENETUNREACH) ||
+		errors.Is(err, syscall.EHOSTUNREACH)
 }
 
 func mutualTLSConfig(certPath, keyPath, caPath string) (*tls.Config, error) {
@@ -753,9 +963,13 @@ func (a *app) auth(next http.HandlerFunc) http.HandlerFunc {
 					return
 				}
 				if r.Method != http.MethodGet && r.Method != http.MethodHead {
-					_ = r.ParseForm()
+					csrfValue := r.Header.Get("X-WiiBridge-CSRF")
+					if csrfValue == "" {
+						_ = r.ParseForm()
+						csrfValue = r.Form.Get("csrf")
+					}
 					if subtle.ConstantTimeCompare(
-						[]byte(r.Form.Get("csrf")), []byte(session.CSRF)) != 1 {
+						[]byte(csrfValue), []byte(session.CSRF)) != 1 {
 						http.Error(w, "invalid CSRF token", http.StatusForbidden)
 						return
 					}
@@ -949,20 +1163,26 @@ func (a *app) initializeGameCube(ctx context.Context) {
 	slog.Info("GameCube background initialization started",
 		"event", "startup", "phase", "GameCube scan started",
 		"elapsed_ms", 0)
-	result, err := gamecube.Scan(a.root)
+	a.mu.RLock()
+	sourceRecord := a.source
+	a.mu.RUnlock()
+	result, sourceRecord, err := scanGameCubeCatalog(a.store, a.root, sourceRecord)
 	if err != nil {
 		a.mu.Lock()
-		a.gcStartupPhase = "Startup failed"
-		a.gcStartupError = "GameCube source scan failed"
+		a.gcScan = result
+		a.source = sourceRecord
+		a.gcStartupPhase = "Source offline"
+		a.gcStartupError = sourceRecord.FailureMessage
 		a.mu.Unlock()
-		slog.Error("GameCube background initialization failed",
-			"event", "startup", "phase", "GameCube scan failed",
+		slog.Warn("GameCube source unavailable; prior catalog and generation retained",
+			"event", "startup", "phase", "GameCube source offline",
 			"elapsed_ms", time.Since(started).Milliseconds(),
-			"error", boundedLogError(err))
+			"code", sourceRecord.FailureCode, "games_preserved", len(result.Games))
 		return
 	}
 	a.mu.Lock()
 	a.gcScan = result
+	a.source = sourceRecord
 	a.gcStartupPhase = "Checking existing GameCube generation"
 	a.mu.Unlock()
 	slog.Info("GameCube library scan result", "games", len(result.Games),
@@ -970,6 +1190,46 @@ func (a *app) initializeGameCube(ctx context.Context) {
 		"event", "startup", "phase", "GameCube scan completed",
 		"elapsed_ms", time.Since(started).Milliseconds())
 
+	if _, managedErr := a.gcLibrary.ManagedActive(); managedErr == nil {
+		if recheckErr := a.gcLibrary.RecheckActive(); recheckErr != nil {
+			if errors.Is(recheckErr, gamecube.ErrGameCubeSourceUnavailable) {
+				offline := sourcehealth.RuntimeFailure(sourceRecord, "SOURCE-READ-FAILED")
+				_ = a.store.UpsertSource(offline)
+				a.mu.Lock()
+				a.source = offline
+				for index := range a.gcScan.Games {
+					a.gcScan.Games[index].Availability =
+						string(sourcehealth.AvailabilitySourceOffline)
+				}
+				a.gcStartupPhase = "Source offline"
+				a.gcStartupError = "SOURCE-READ-FAILED: source became unavailable"
+				a.mu.Unlock()
+				return
+			}
+			if errors.Is(recheckErr, gamecube.ErrGameCubeSourceChanged) {
+				changed := sourcehealth.RuntimeFailure(
+					sourceRecord, "SOURCE-IDENTITY-CHANGED")
+				_ = a.store.UpsertSource(changed)
+				a.mu.Lock()
+				a.source = changed
+				for index := range a.gcScan.Games {
+					a.gcScan.Games[index].Availability =
+						string(sourcehealth.AvailabilitySourceChanged)
+				}
+				a.gcStartupPhase = "Source changed"
+				a.gcStartupError = "SOURCE-IDENTITY-CHANGED: rebuild validation is required"
+				a.mu.Unlock()
+				slog.Warn("GameCube active source identity changed; generation retained but blocked",
+					"code", "SOURCE-IDENTITY-CHANGED")
+				return
+			}
+			a.mu.Lock()
+			a.gcStartupPhase = "Startup failed"
+			a.gcStartupError = boundedLogError(recheckErr)
+			a.mu.Unlock()
+			return
+		}
+	}
 	progress := a.gcLibrary.Progress()
 	if progress.State == "Failed" {
 		a.mu.Lock()
@@ -1176,7 +1436,23 @@ func (a *app) gamecubeLibraryStatus(w http.ResponseWriter, _ *http.Request) {
 func (a *app) buildGameCubeLibrary(w http.ResponseWriter, r *http.Request) {
 	a.mu.RLock()
 	games := append([]gamecube.Game(nil), a.gcScan.Games...)
+	sourceState := a.source.State
+	saveError := a.gcSaveError
 	a.mu.RUnlock()
+	if sourceState != sourcehealth.StateAvailable {
+		http.Error(w, "GameCube source is unavailable; the prior generation is retained",
+			http.StatusServiceUnavailable)
+		return
+	}
+	if saveError != "" && a.gcMode.IsLibraryEmulated() {
+		http.Error(w, saveError, http.StatusConflict)
+		return
+	}
+	games = playableGameCubeGames(games)
+	if len(games) == 0 {
+		http.Error(w, "no playable GameCube sources are available", http.StatusConflict)
+		return
+	}
 	if err := a.gcLibrary.StartBuild(context.Background(), games); err != nil {
 		http.Error(w, "GameCube library build is already active", http.StatusConflict)
 		return
@@ -1197,9 +1473,87 @@ func (a *app) cancelGameCubeLibrary(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) rescan(w http.ResponseWriter, r *http.Request) {
+	a.mu.RLock()
+	previous := a.source
+	a.mu.RUnlock()
+	if safetyErr := assertReadOnly(a.root); safetyErr != nil &&
+		!isUnavailableLibraryError(safetyErr) {
+		record := sourcehealth.RuntimeFailure(
+			previous, "SOURCE-READONLY-GUARANTEE-FAILED")
+		_ = a.store.UpsertSource(record)
+		a.mu.Lock()
+		a.source, a.ready = record, false
+		a.mu.Unlock()
+		writeJSONStatus(w, http.StatusConflict, map[string]any{
+			"status": "preserved", "source": record,
+			"message": "Source is not provably read-only; prior catalogs were preserved.",
+		})
+		return
+	}
+	preflight, err := sourcehealth.Preflight(a.root, &previous)
+	if err != nil {
+		_ = a.store.UpsertSource(preflight.Record)
+		a.mu.Lock()
+		a.source = preflight.Record
+		a.ready = false
+		for index := range a.scan.Games {
+			a.scan.Games[index].Availability = string(sourcehealth.AvailabilitySourceOffline)
+		}
+		for index := range a.gcScan.Games {
+			a.gcScan.Games[index].Availability = string(sourcehealth.AvailabilitySourceOffline)
+		}
+		a.mu.Unlock()
+		writeJSONStatus(w, http.StatusServiceUnavailable, map[string]any{
+			"status": "preserved", "source": preflight.Record,
+			"message": "Source unavailable; the prior complete catalog was preserved.",
+		})
+		return
+	}
 	result, err := scanner.Scan(a.root)
 	if err != nil {
-		http.Error(w, "scan failed", http.StatusInternalServerError)
+		record := sourcehealth.Partial(preflight.Record, err)
+		_ = a.store.UpsertSource(record)
+		a.mu.Lock()
+		a.source, a.ready = record, false
+		a.mu.Unlock()
+		http.Error(w, "source scan was partial; prior catalog preserved",
+			http.StatusServiceUnavailable)
+		return
+	}
+	gcResult, err := gamecube.Scan(a.root)
+	if err != nil {
+		record := sourcehealth.Partial(preflight.Record, err)
+		_ = a.store.UpsertSource(record)
+		a.mu.Lock()
+		a.source, a.ready = record, false
+		a.mu.Unlock()
+		http.Error(w, "source scan was partial; prior catalogs preserved",
+			http.StatusServiceUnavailable)
+		return
+	}
+	wiiCount, gameCubeCount := len(result.Games), len(gcResult.Games)
+	wiiItems, err := wiiCatalogItems(result.Games)
+	if err == nil {
+		var gameCubeItems []store.CatalogItem
+		gameCubeItems, err = gameCubeCatalogItems(gcResult.Games)
+		if err == nil {
+			var catalogs map[string][]store.CatalogItem
+			catalogs, err = a.store.ReconcileCatalogs(map[string][]store.CatalogItem{
+				"wii": wiiItems, "gamecube": gameCubeItems,
+			}, 2)
+			if err == nil {
+				result.Games, err = decodeWiiItems(
+					catalogs["wii"], sourcehealth.StateAvailable)
+			}
+			if err == nil {
+				gcResult.Games, err = decodeGameCubeItems(
+					catalogs["gamecube"], sourcehealth.StateAvailable)
+			}
+		}
+	}
+	if err != nil {
+		http.Error(w, "catalog reconciliation failed; prior runtime catalog preserved",
+			http.StatusInternalServerError)
 		return
 	}
 	disk, err := vdisk.Build("all", result.Games, version)
@@ -1207,16 +1561,38 @@ func (a *app) rescan(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "snapshot build failed", http.StatusInternalServerError)
 		return
 	}
-	gcResult, err := gamecube.Scan(a.root)
-	if err != nil {
-		http.Error(w, "GameCube scan failed", http.StatusInternalServerError)
+	disk.SetObserver(a.metricsRegistry, a.queueSourceFailure)
+	record := sourcehealth.Successful(preflight.Record, wiiCount+gameCubeCount)
+	if err = a.store.UpsertSource(record); err != nil {
+		http.Error(w, "source status persistence failed", http.StatusInternalServerError)
 		return
+	}
+	gcUpdate := false
+	if _, managedErr := a.gcLibrary.ManagedActive(); managedErr == nil {
+		gcUpdate = true
+		if recheckErr := a.gcLibrary.RecheckActive(); recheckErr != nil {
+			switch {
+			case errors.Is(recheckErr, gamecube.ErrGameCubeSourceChanged):
+				record = sourcehealth.RuntimeFailure(
+					record, "SOURCE-IDENTITY-CHANGED")
+				for index := range gcResult.Games {
+					gcResult.Games[index].Availability =
+						string(sourcehealth.AvailabilitySourceChanged)
+				}
+			case errors.Is(recheckErr, gamecube.ErrGameCubeSourceUnavailable):
+				record = sourcehealth.RuntimeFailure(record, "SOURCE-READ-FAILED")
+				for index := range gcResult.Games {
+					gcResult.Games[index].Availability =
+						string(sourcehealth.AvailabilitySourceOffline)
+				}
+			}
+			_ = a.store.UpsertSource(record)
+		}
 	}
 	a.mu.Lock()
 	a.scan, a.disk, a.gcScan = result, disk, gcResult
-	if _, activeErr := a.gcLibrary.Active(); activeErr == nil {
-		a.gcUpdate = true
-	}
+	a.source, a.ready = record, true
+	a.gcUpdate = gcUpdate
 	a.mu.Unlock()
 	if err := a.persistSnapshot(); err != nil {
 		http.Error(w, "snapshot persistence failed", http.StatusInternalServerError)
@@ -1344,12 +1720,20 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 	}
 	automatic := a.pi != nil
 	if automatic {
-		status, err := a.pi.Probe(r.Context())
+		operation := compat.OperationWiiConnect
+		if platform == "gamecube" {
+			if a.gcMode.IsLibraryEmulated() {
+				operation = compat.OperationGameCubeEmulated
+			} else {
+				operation = compat.OperationGameCubePhysical
+			}
+		}
+		status, compatibility, err := a.freshCompatibility(r, operation)
 		if err != nil {
 			slog.Warn("automatic export switch blocked",
-				"platform", platform, "reason", "Pi controller unavailable")
+				"platform", platform, "compatibility", compatibility.Status)
 			http.Error(w,
-				"automatic switching is unavailable because the Raspberry Pi is not connected",
+				"automatic switching is blocked by the Host/firmware compatibility check",
 				http.StatusServiceUnavailable)
 			return
 		}
@@ -1364,8 +1748,21 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 	var next exportprofile.Profile = a.wii
 	var selectedManifest *gamecube.VolumeManifest
 	var selectedLibrary *gamecube.LibraryManifest
+	var selectedSaves *gamecube.SaveStore
 	connectAction := "connect-wii"
 	if platform == "gamecube" {
+		a.mu.RLock()
+		sourceState, saveError := a.source.State, a.gcSaveError
+		a.mu.RUnlock()
+		if sourceState != sourcehealth.StateAvailable {
+			http.Error(w, "GameCube source is unavailable; its generation and saves were retained",
+				http.StatusServiceUnavailable)
+			return
+		}
+		if saveError != "" && a.gcMode.IsLibraryEmulated() {
+			http.Error(w, saveError, http.StatusConflict)
+			return
+		}
 		manifest, err := a.gcLibrary.Active()
 		if err != nil {
 			http.Error(w, "complete GameCube library is not ready; build it before activation",
@@ -1378,11 +1775,13 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 				http.StatusConflict)
 			return
 		}
-		backend, err := gamecube.OpenLibraryBackend(a.gcLibrary.Root(), manifest)
+		backend, saves, err := gamecube.OpenLibraryBackendAndSaveStore(
+			a.gcLibrary.Root(), manifest, a.metricsRegistry)
 		if err != nil {
 			http.Error(w, "GameCube backend open failed", http.StatusInternalServerError)
 			return
 		}
+		backend.SetSourceFailureHandler(a.queueSourceFailure)
 		next = &exportprofile.BasicProfile{
 			Name: "gamecube", BlockBackend: backend,
 			Immutable: a.gcMode == gamecube.MemoryCardPhysical,
@@ -1398,18 +1797,19 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 			},
 			CloseProfile: backend.Close,
 		}
-		if a.gcMode == gamecube.MemoryCardEmulated {
+		if a.gcMode.IsLibraryEmulated() {
 			connectAction = "connect-gamecube-emulated"
 		} else {
 			connectAction = "connect-gamecube-physical"
 		}
 		selectedLibrary = &manifest
+		selectedSaves = saves
 	}
 	a.mu.RLock()
 	previousManifest := a.activeGC
 	previousLibrary := a.activeGCLibrary
+	previousSaves := a.gcSaves
 	a.mu.RUnlock()
-	previousPlatform := a.exports.Platform()
 	if automatic {
 		if err := a.pi.Action(r.Context(), "detach"); err != nil {
 			_ = next.Close()
@@ -1437,6 +1837,24 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if platform == "wii" && previousLibrary != nil &&
+		previousLibrary.Mode.IsLibraryEmulated() && previousSaves != nil {
+		if err := previousSaves.Sync(); err != nil {
+			_ = next.Close()
+			http.Error(w, "GameCube save flush failed; USB remains detached",
+				http.StatusInternalServerError)
+			return
+		}
+		for _, saveStatus := range previousSaves.Statuses() {
+			if _, err := previousSaves.Backup(saveStatus.ID, "detach"); err != nil {
+				_ = next.Close()
+				http.Error(w, "GameCube save backup failed; USB remains detached",
+					http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+	a.endPerformanceSession("switched")
 	if err := a.exports.Select(next); err != nil {
 		_ = next.Close()
 		http.Error(w, "export selection failed: "+err.Error(), http.StatusConflict)
@@ -1445,22 +1863,13 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 	a.mu.Lock()
 	a.activeGC = selectedManifest
 	a.activeGCLibrary = selectedLibrary
+	a.gcSaves = selectedSaves
 	a.mu.Unlock()
 	if platform == "wii" && previousManifest != nil {
 		if _, err := gamecube.BackupMemoryCards(*previousManifest,
 			filepath.Join(a.dataDir, "gamecube", "save-backups"),
 			gamecube.DefaultSaveBackupRetention); err != nil {
 			http.Error(w, "Wii mode selected, but GameCube save backup failed: "+err.Error(),
-				http.StatusInternalServerError)
-			return
-		}
-	}
-	if platform == "wii" && previousPlatform == "gamecube" &&
-		previousLibrary != nil && previousLibrary.Mode == gamecube.MemoryCardEmulated {
-		if err := gamecube.BackupLibraryMemoryCards(
-			*previousLibrary, filepath.Join(a.dataDir, "gamecube", "save-backups"),
-			gamecube.DefaultSaveBackupRetention); err != nil {
-			http.Error(w, "Wii mode selected, but GameCube save backup failed",
 				http.StatusInternalServerError)
 			return
 		}
@@ -1478,6 +1887,7 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 				http.StatusBadGateway)
 			return
 		}
+		a.startPerformanceSession()
 	}
 	notice := "Host export switched to " + platform + "."
 	if automatic {
@@ -1532,7 +1942,7 @@ func (a *app) currentConnectAction() string {
 	if a.exports.Platform() == "wii" {
 		return "connect-wii"
 	}
-	if a.gcMode == gamecube.MemoryCardEmulated {
+	if a.gcMode.IsLibraryEmulated() {
 		return "connect-gamecube-emulated"
 	}
 	return "connect-gamecube-physical"
@@ -1543,14 +1953,54 @@ func (a *app) piStorageAction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Pi coordination is not configured", http.StatusServiceUnavailable)
 		return
 	}
+	a.switchMu.Lock()
+	defer a.switchMu.Unlock()
 	action := r.PathValue("action")
+	operation := compat.OperationStatus
+	switch action {
+	case "detach":
+		operation = compat.OperationUSBDetach
+	case "disconnect":
+		operation = compat.OperationSafeDisconnect
+	case "connect":
+		if a.exports.Platform() == "wii" {
+			operation = compat.OperationWiiConnect
+		} else if a.gcMode.IsLibraryEmulated() {
+			operation = compat.OperationGameCubeEmulated
+		} else {
+			operation = compat.OperationGameCubePhysical
+		}
+	case "attach":
+		operation = compat.OperationUSBAttach
+	case "reconcile":
+		operation = compat.OperationAutomaticSwitch
+	default:
+		http.Error(w, "invalid action", http.StatusBadRequest)
+		return
+	}
+	if _, result, compatibilityErr := a.freshCompatibility(r, operation); compatibilityErr != nil {
+		writeJSONStatus(w, http.StatusConflict, result)
+		return
+	}
 	var err error
 	switch action {
 	case "detach":
 		err = a.pi.Action(r.Context(), "detach")
+		if err == nil {
+			err = a.syncGameCubeSaves()
+		}
+		if err == nil {
+			a.endPerformanceSession("detached")
+		}
 	case "disconnect":
 		if err = a.pi.Action(r.Context(), "detach"); err == nil {
+			err = a.syncGameCubeSaves()
+		}
+		if err == nil {
 			err = a.pi.Action(r.Context(), "disconnect")
+		}
+		if err == nil {
+			a.endPerformanceSession("disconnected")
 		}
 	case "connect":
 		err = a.pi.Action(r.Context(), a.currentConnectAction())
@@ -1564,10 +2014,14 @@ func (a *app) piStorageAction(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			err = a.pi.Action(r.Context(), "attach")
 		}
+		if err == nil {
+			a.startPerformanceSession()
+		}
 	case "reconcile":
-		a.switchMu.Lock()
-		defer a.switchMu.Unlock()
 		if err = a.pi.Action(r.Context(), "detach"); err == nil {
+			err = a.syncGameCubeSaves()
+		}
+		if err == nil {
 			err = a.pi.Action(r.Context(), "disconnect")
 		}
 		if err == nil {
@@ -1578,6 +2032,10 @@ func (a *app) piStorageAction(w http.ResponseWriter, r *http.Request) {
 		}
 		if err == nil {
 			err = a.pi.Action(r.Context(), "attach")
+		}
+		if err == nil {
+			a.endPerformanceSession("reconciled")
+			a.startPerformanceSession()
 		}
 		if err != nil {
 			a.safePiDisconnect()
@@ -1617,8 +2075,16 @@ func (a *app) piPowerAction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "explicit Pi power confirmation is required", http.StatusBadRequest)
 		return
 	}
+	operation := compat.OperationReboot
+	if action == "shutdown" {
+		operation = compat.OperationShutdown
+	}
 	a.switchMu.Lock()
 	defer a.switchMu.Unlock()
+	if _, result, compatibilityErr := a.freshCompatibility(r, operation); compatibilityErr != nil {
+		writeJSONStatus(w, http.StatusConflict, result)
+		return
+	}
 	if err := a.pi.Action(r.Context(), helperAction); err != nil {
 		slog.Warn("Pi power action failed", "action", helperAction)
 		http.Error(w, "Pi "+label+" failed", http.StatusBadGateway)
@@ -1697,9 +2163,33 @@ func (a *app) persistSnapshot() error {
 
 func (a *app) metrics(w http.ResponseWriter, _ *http.Request) {
 	a.mu.RLock()
-	defer a.mu.RUnlock()
+	games, rejections := len(a.scan.Games)+len(a.gcScan.Games),
+		len(a.scan.Rejected)+len(a.gcScan.Rejected)
+	sourceState := a.source.State
+	a.mu.RUnlock()
+	snapshot := a.performanceSnapshot()
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-	fmt.Fprintf(w, "wiibridge_catalog_games %d\nwiibridge_scan_rejections %d\n", len(a.scan.Games), len(a.scan.Rejected))
+	fmt.Fprintf(w, "wiibridge_catalog_games %d\n", games)
+	fmt.Fprintf(w, "wiibridge_scan_rejections %d\n", rejections)
+	fmt.Fprintf(w, "wiibridge_source_state{state=%q} 1\n", sourceState)
+	fmt.Fprintf(w, "wiibridge_source_read_operations %d\n",
+		snapshot.Source.Counters["read_operations"])
+	fmt.Fprintf(w, "wiibridge_source_bytes_read %d\n",
+		snapshot.Source.Counters["bytes_read"])
+	fmt.Fprintf(w, "wiibridge_source_read_errors %d\n",
+		snapshot.Source.Counters["read_errors"])
+	fmt.Fprintf(w, "wiibridge_nbd_active_connections %d\n",
+		snapshot.NBD.Counters["active_connections"])
+	fmt.Fprintf(w, "wiibridge_nbd_read_requests %d\n",
+		snapshot.NBD.Counters["read_requests"])
+	fmt.Fprintf(w, "wiibridge_nbd_bytes_sent %d\n",
+		snapshot.NBD.Counters["bytes_sent"])
+	fmt.Fprintf(w, "wiibridge_save_dirty_blocks %d\n",
+		snapshot.Save.Counters["dirty_blocks"])
+	fmt.Fprintf(w, "wiibridge_save_journal_bytes %d\n",
+		snapshot.Save.Counters["journal_bytes"])
+	fmt.Fprintf(w, "wiibridge_save_flush_failures %d\n",
+		snapshot.Save.Counters["flush_failures"])
 }
 
 func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
@@ -1710,6 +2200,10 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 	gameCubeRejections := append([]gamecube.Rejection(nil), a.gcScan.Rejected...)
 	libraryRoot := a.root
 	gcUpdate := a.gcUpdate
+	sourceRecord := a.source
+	compatibility := a.compatibility
+	saveSelection := a.gcSaveSelection
+	saveError := a.gcSaveError
 	a.mu.RUnlock()
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	matches := func(title, id string) bool {
@@ -1791,6 +2285,12 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 	generation := ""
 	if activeReady {
 		generation = active.GenerationID
+	} else if managed, managedErr := a.gcLibrary.ManagedActive(); managedErr == nil {
+		generation = managed.GenerationID
+	}
+	compatibilityState := compatibility.Status
+	if compatibilityState == "" {
+		compatibilityState = compat.StateUnknown
 	}
 	data := map[string]any{
 		"Version": version, "Wii": filteredWii, "GameCube": filteredGC,
@@ -1799,7 +2299,10 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"Notice":   strings.TrimSpace(r.URL.Query().Get("notice")),
 		"TotalWii": len(wiiGames), "TotalGameCube": len(gameCubeGames),
 		"GameCubeDiscs": totalDiscs, "GameCubeMode": strings.Title(string(a.gcMode)),
-		"GCBuild": a.gcLibrary.Progress(), "GCReady": activeReady,
+		"GameCubeModeRaw": string(a.gcMode), "SaveSelection": saveSelection,
+		"SaveBackupInterval": (time.Duration(saveSelection.AutomaticBackupInterval) * time.Second).String(),
+		"SaveError":          saveError,
+		"GCBuild":            a.gcLibrary.Progress(), "GCReady": activeReady,
 		"GCGeneration": generation, "GCUpdate": gcUpdate,
 		"GCLegacy": len(a.gcLibrary.LegacyGenerations()) > 0,
 		"Rejected": len(review), "Review": review,
@@ -1807,6 +2310,10 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"PiSwitchReady":   piSwitchReady,
 		"StorageControls": storageControls,
 		"DefaultPassword": a.browser.DefaultActive(),
+		"Source":          sourceRecord, "Compatibility": map[string]any{"Status": compatibilityState},
+		"HostRevision":       gitCommit,
+		"HostProtocol":       fmt.Sprintf("%d–%d", compat.ProtocolMin, compat.ProtocolMax),
+		"DashboardRefreshMS": max(a.dashboardRefresh.Milliseconds(), int64(2000)),
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := a.web.Execute(w, "dashboard.html", data); err != nil {

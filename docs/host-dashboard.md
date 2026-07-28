@@ -44,6 +44,22 @@ control selects the current complete validated generation and is disabled until
 one exists. Building and updating are separate background operations; opening
 the page never starts a build.
 
+The dashboard also has four integrated status areas:
+
+- Source reconciliation preserves the prior catalog when the dataset is
+  offline and distinguishes availability from validation.
+- Compatibility displays Host/Pi descriptors, protocol overlap, capabilities,
+  warnings, and operation blockers; Retry performs a fresh authenticated probe.
+- Save Overlay manages physical/individual/shared modes, card creation,
+  verification, backup history, restore, upload, and download.
+- Performance displays the observable Source → Host → NBD/TLS → Pi → USB path
+  and bounded session history. Missing Pi metrics does not affect serving.
+
+Source acknowledgement, save restore/upload, mode changes, switching, and
+power actions use the existing authentication, per-session CSRF, and explicit
+confirmation conventions. Save mode changes and restore are unavailable while
+the Wii owns the GameCube export.
+
 Raspberry Pi storage and power controls are grouped inside the **Raspberry Pi
 bridge** status panel. Reboot and shutdown retain their required confirmation
 checkboxes. The **Catalog Viewer** below that panel is collapsed by default and

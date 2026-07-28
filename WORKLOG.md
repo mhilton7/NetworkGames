@@ -767,3 +767,126 @@
   `/readyz` redirected to login, while TCP 10809 was reachable. The fixed image
   is therefore not yet running. Runtime-level digest verification still needs
   the TrueNAS shell after the pinned YAML is installed.
+
+## 2026-07-28 — Four-feature implementation inspection and design
+
+- Inspected current commit `ce73242`, schema-2 GameCube generation/read-through
+  backend, legacy per-title save code, NBD routing, export switching, Host/Pi
+  management channel, scanners, SQLite schema, dashboard, benchmarks,
+  diagnostics, deployment, firmware packaging, worklog, and release gates.
+- Confirmed complete-library `emulated` mode is rejected in
+  `gamecube/library.go`; `fat32virtual.Backend` is wholly read-only; scanners
+  have no persistent source-health transaction; the Pi has authenticated
+  status/actions but no protocol descriptor; and routine Host metrics contain
+  only catalog counts.
+- Recorded the scoped implementation map, trusted save-extent and crash
+  recovery model, protocol capability matrix approach, source reconciliation
+  transaction, bounded metrics/session architecture, security boundary, and
+  rollback constraints in `docs/four-feature-implementation-map.md`.
+
+## 2026-07-28 — Save overlay, compatibility, source health, and performance
+
+- Implemented save-overlay format 1 for `emulated-individual` and
+  `emulated-shared` GameCube modes. Physical mode remains read-only. Schema-2
+  generations now carry host-authored, checksummed writable extents, and the
+  NBD backend accepts only complete writes inside one approved card extent.
+  ISO/GCM/CISO/CSO/FST source writes and all FAT, directory, padding, and
+  unallocated writes remain rejected.
+- Added bounded 512-byte dirty-block accounting, a 64 MiB append journal,
+  16 MiB pending-write/card/upload limits, same-filesystem checkpoint staging,
+  file and directory synchronization, previous-confirmed rollback pairs,
+  startup recovery, ambiguity blocking, bounded automatic/manual backups, and
+  transactional restore/upload/download/verification. Save administration is
+  confined beneath `/data/gamecube/saves`, rejects symlinks and special files,
+  and remains independent of payload availability.
+- Added descriptor schema 1 and protocol 1 in `shared/compat`. Host and Pi
+  descriptors report linked product/revision/build-time/dirty metadata,
+  platform/board/device identity, and stable versioned capabilities. Every
+  coordinated state-changing action performs a fresh authenticated Pi probe
+  under the platform-switch lock and evaluates operation-specific
+  capabilities; the persisted compatibility result is display-only.
+- Added the additive SQLite schema-2 migration for source roots, catalog item
+  state, missing observations, bounded failure events, compatibility display
+  state, and bounded performance sessions. Source scans now separate
+  read-only preflight, discovery, validation, reconciliation, and commit.
+  Failed or partial scans preserve the last complete Wii and GameCube
+  catalogs; an absent item requires two complete available scans before
+  `missing-confirmed`.
+- The migration transaction seeds legacy Wii catalog rows from the active
+  schema-1 snapshot. Its historical count also protects the first upgraded
+  preflight from an unexpectedly empty failed mount. Runtime source failure
+  persistence is normalized to a fixed code set and limited to once per code
+  per 30 seconds. Before the first schema-2 transaction, an existing
+  checkpointed database is copied and flushed to the non-overwriting
+  `wiibridge.sqlite3.pre-schema2.bak` rollback path.
+- Active GameCube generations and save associations survive an offline source.
+  Reconnect reuses an unchanged trusted generation after identity checks;
+  changed sources revoke validation trust. Runtime source-read failures return
+  errors rather than zeroes, increment bounded metrics, evict the failed
+  handle for controlled recovery, and queue rate-limited reconciliation
+  outside the NBD hot path.
+- Added fixed atomic counters, fixed latency histograms, 300 one-second rolling
+  buckets, bounded warning evaluation, and bounded session summaries across
+  source, synthetic disk, NBD/TLS, save, Host runtime/network, Pi runtime/NBD,
+  and USB state. The Pi caches system collection for 10 seconds; the Host
+  shares one cached Pi sample and never makes telemetry calls from a read
+  path. Only bounded session summaries and low-frequency atomic aggregate
+  checkpoints are persisted.
+- Extended the authenticated, CSRF-protected dashboard with memory-card
+  management, compatibility, source-state diagnostics and acknowledgement,
+  performance overview/data path/details/session history, and bounded JSON/CSV
+  exports. Missing Pi metrics degrades telemetry without blocking service.
+- Added and updated the architecture, security, protocol, recovery, source
+  reconciliation, save-overlay, performance, deployment, dashboard, and
+  support documentation. `/library` remains read-only, Compose hardening and
+  non-root/read-only-root execution remain unchanged, and no full GameCube
+  image or game payload is copied.
+- Managed save directories are created one checked component at a time, so a
+  pre-planted `individual` or `shared` symlink cannot redirect creation.
+  Active writable extents are validated against the generation, layout
+  checksum, object identity, and card size before backend activation.
+
+### Validation
+
+- `make test`: PASS across Host, NBD, Pi, shared packages, FAT32, integration,
+  and utility suites.
+- `make static`: PASS, including builds, `go vet`, shellcheck, and Pi static
+  validation.
+- `make compose`: PASS (`static compose policy: PASS`; Docker Compose parser
+  PASS).
+- `make oci`: PASS;
+  `wiibridge-host:0.1.0-rc.1@sha256:5615d069317bef23d8e0703fd461488a3e0832ccd0694b3c439452385db54a4f`.
+- `go test -race ./server/host-daemon/... ./server/nbd-plugin ./shared/... ./pi/controller/...`:
+  PASS.
+- `go vet ./server/host-daemon/...` and `git diff --check`: PASS.
+- The current controller cross-builds with `CGO_ENABLED=0 GOOS=linux
+  GOARCH=arm GOARM=6` as a stripped, statically linked 32-bit ARM EABI5
+  executable; SHA-256
+  `a540e6542a721df54e3a4ac8f696677176c94d313f99d5210ebc5712cc46b650`.
+- `go mod tidy` could not traverse pre-existing root-owned Pi build-root files
+  below `build/pi-gen-zero-w-armhf`; it stopped with permission denied and did
+  not change `go.sum`. Targeted module builds, all tests, `go vet`, and static
+  validation pass with the intentional direct `golang.org/x/sys` declaration.
+- The full Pi image was not rebuilt because doing so would delete and recreate
+  the existing 1.2 GiB ignored pi-gen work tree. The affected ARMv6 controller
+  and packaging metadata were validated directly.
+
+### Measured overhead and remaining validation
+
+- `reports/four-feature-performance.json` records median 64 KiB GameCube
+  backend reads of 3,099 ns with telemetry disabled and 3,239 ns enabled:
+  +140 ns or 4.52%, with the same 288 B/op and two existing allocations.
+  The in-memory NBD transmission microbenchmark measured +90 ns (9.55% in
+  the deliberately storage/TLS-free fixture), again with no added allocation.
+  Enabled counter observation was 61.47 ns/op with zero allocations. No
+  per-read persistence, blocking telemetry network call, or unbounded label
+  set exists.
+- Cached Pi snapshot access measured 31.42 ns/op with zero allocation; the
+  authenticated metrics endpoint measured 2,205 ns/op on amd64. These are not
+  Pi Zero W measurements.
+- Physical GameCube/Nintendont save creation, flush, reconnect, restore, and
+  sustained I/O remain `DEFERRED_HARDWARE_UNAVAILABLE`. Pi Zero W telemetry
+  cost, current firmware-image boot, and deployment of the current dirty
+  Host OCI image to TrueNAS also remain unverified. Prior physical Wii launch,
+  read-only NBD, and Pi recovery evidence is retained but was not repeated for
+  this uncommitted worktree.

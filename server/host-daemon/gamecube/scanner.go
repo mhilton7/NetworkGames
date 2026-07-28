@@ -44,14 +44,15 @@ type Disc struct {
 }
 
 type Game struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	Region     string `json:"region"`
-	Revision   byte   `json:"revision"`
-	DiscCount  int    `json:"disc_count"`
-	Format     string `json:"format"`
-	Validation string `json:"validation_status"`
-	Discs      []Disc `json:"discs"`
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	Region       string `json:"region"`
+	Revision     byte   `json:"revision"`
+	DiscCount    int    `json:"disc_count"`
+	Format       string `json:"format"`
+	Validation   string `json:"validation_status"`
+	Discs        []Disc `json:"discs"`
+	Availability string `json:"availability,omitempty"`
 }
 
 type Rejection struct {
@@ -82,8 +83,7 @@ func Scan(root string) (Result, error) {
 	var count int
 	err = filepath.WalkDir(realRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			rejected = append(rejected, Rejection{Path: path, Reason: walkErr.Error()})
-			return nil
+			return fmt.Errorf("SOURCE-PARTIAL-SCAN: %w", walkErr)
 		}
 		if path == realRoot {
 			return nil

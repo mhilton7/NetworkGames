@@ -18,13 +18,20 @@ case "$target" in
   *) echo "unsupported target: $target" >&2; exit 64 ;;
 esac
 source_root=$(pwd)
+project_version=${PROJECT_VERSION:-$(awk '$1 == "VERSION" { print $3; exit }' Makefile)}
+test -n "$project_version"
+build_revision=$(git rev-parse HEAD)
+build_timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+build_dirty=$([ -z "$(git status --porcelain --untracked-files=normal)" ] && echo false || echo true)
 tree="build/pi-gen-${target}"
 binary="build/pi/${target}/wiibridge-pi-controller"
 mkdir -p "$(dirname "$binary")"
 GOCACHE="${GOCACHE:-/tmp/wiibridge-go-cache}" \
 GOPATH="${GOPATH:-/tmp/wiibridge-gopath}" \
 CGO_ENABLED=0 GOOS=linux GOARCH="$goarch" GOARM="$goarm" \
-  go build -trimpath -ldflags="-s -w -buildid=" -o "$binary" ./pi/controller
+  go build -trimpath \
+  -ldflags="-s -w -buildid= -X main.productVersion=${project_version} -X main.gitCommit=${build_revision} -X main.buildTime=${build_timestamp} -X main.buildDirty=${build_dirty}" \
+  -o "$binary" ./pi/controller
 if test -e "$tree"; then
   sudo rm -rf -- "$tree"
 fi
@@ -39,7 +46,7 @@ sed "s|@WIIBRIDGE_STAGE@|$stage|" \
 export WIIBRIDGE_BOARD_TARGET="$target"
 export WIIBRIDGE_SOURCE="$source_root"
 export PI_GEN_DIR="$source_root/$tree"
-log="dist/wiibridge-0.1.0-rc.1-${target}.build.log"
+log="dist/wiibridge-${project_version}-${target}.build.log"
 mkdir -p dist
 if test -s "$log"; then
   mkdir -p "reports/firmware/${target}/rejected-builds"
@@ -51,7 +58,7 @@ fi
     ./build.sh
 ) 2>&1 | tee "$source_root/$log"
 image=$(find "$tree/deploy" -maxdepth 1 \
-  -name "*wiibridge-0.1.0-rc.1-${target}.img" -print -quit)
+  -name "*wiibridge-${project_version}-${target}.img" -print -quit)
 test -n "$image"
 "$source_root/scripts/sanitize-firmware-image.sh" "$image"
-cp --reflink=auto "$image" "dist/wiibridge-0.1.0-rc.1-${target}.img"
+cp --reflink=auto "$image" "dist/wiibridge-${project_version}-${target}.img"

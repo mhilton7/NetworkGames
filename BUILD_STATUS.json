@@ -2,9 +2,14 @@
   "schema_version": 1,
   "project_version": "0.1.0-rc.1",
   "prompt_version": 3,
-  "status": "software-complete-gamecube-no-copy-hardware-unverified",
+  "status": "software-complete-four-features-host-verified-hardware-unverified",
   "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
-  "application_commit": "a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
+  "application_commit": null,
+  "implementation_base_commit": "ce732427b1805cfa580ba0d5a865e2aed47eeeac",
+  "last_published_application_commit": "a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
+  "worktree_state": "validated-uncommitted",
+  "local_oci_digest": "sha256:5615d069317bef23d8e0703fd461488a3e0832ccd0694b3c439452385db54a4f",
+  "controller_armv6_sha256": "a540e6542a721df54e3a4ac8f696677176c94d313f99d5210ebc5712cc46b650",
   "build_host": {
     "os": "Debian GNU/Linux 13 (trixie)",
     "kernel": "6.12.96+deb13-amd64",
@@ -27,15 +32,15 @@
   },
   "phases": {
     "baseline": "complete",
-    "server": "wii-fat-on-demand-and-gamecube-no-copy-host-verified",
-    "container": "ghcr-startupfix-published-truenas-deployment-pending",
-    "pi_bridge": "strict-readonly-live-wii-launch-verified",
-    "firmware_zero_w": "server-wait-cleanup-vidpid-export-installed-offline-verified",
+    "server": "four-feature-host-race-and-static-verified",
+    "container": "local-hardened-oci-verified-truenas-deployment-pending",
+    "pi_bridge": "compatibility-and-bounded-metrics-source-verified-armv6-built",
+    "firmware_zero_w": "controller-armv6-verified-current-full-image-not-rebuilt",
     "firmware_pi4": "firmware-offline-verified",
     "firmware_pi5": "firmware-offline-verified",
-    "release": "software-complete-gamecube-hardware-validation-deferred",
+    "release": "software-complete-four-features-hardware-validation-deferred",
     "truenas_startup": "host-validated-live-digest-verification-pending"
   },
-  "physical_tests": "gamecube-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
-  "updated_utc": "2026-07-28T03:02:00Z"
+  "physical_tests": "gamecube-emulated-save-and-pi-zero-telemetry-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
+  "updated_utc": "2026-07-28T17:25:02Z"
 }

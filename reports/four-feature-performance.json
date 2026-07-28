@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "measured_utc": "2026-07-28T17:15:11Z",
+  "host": {
+    "os": "linux",
+    "architecture": "amd64",
+    "cpu": "redacted host CPU",
+    "go_benchmark_procs": 8
+  },
+  "method": {
+    "repetitions": 3,
+    "read_benchtime": "1s",
+    "counter_benchtime": "2s",
+    "save_benchtime": "100x",
+    "statistics": "median of the three reported ns/op values",
+    "commands": [
+      "go test -run '^$' -bench 'Benchmark(ReadPathMetrics|NBDReadPathMetrics|ObserveNBDRead|PerformanceSummarySerialization|CachedPiMetrics)$' -benchmem -benchtime=1s -count=3 ./server/host-daemon/fat32virtual ./server/nbd-plugin ./shared/perf ./server/host-daemon ./pi/controller",
+      "go test -run '^$' -bench 'BenchmarkObserveNBDRead(Enabled|Disabled)$' -benchmem -benchtime=2s -count=3 ./shared/perf",
+      "go test -run '^$' -bench '^BenchmarkSaveOverlayWriteAccounting$' -benchmem -benchtime=100x -count=3 ./server/host-daemon/gamecube",
+      "go test -run '^$' -bench '^BenchmarkPiMetricsEndpoint$' -benchmem -benchtime=1s -count=3 ./pi/controller"
+    ]
+  },
+  "results": {
+    "gamecube_backend_read_64k": {
+      "metrics_disabled_ns_per_op": 3099,
+      "metrics_enabled_ns_per_op": 3239,
+      "absolute_overhead_ns_per_op": 140,
+      "measured_overhead_percent": 4.52,
+      "disabled_bytes_per_op": 288,
+      "enabled_bytes_per_op": 288,
+      "disabled_allocations_per_op": 2,
+      "enabled_allocations_per_op": 2,
+      "note": "Telemetry added no allocations to the existing backend request path."
+    },
+    "nbd_transmission_read_64k_in_memory": {
+      "metrics_disabled_ns_per_op": 942,
+      "metrics_enabled_ns_per_op": 1032,
+      "absolute_overhead_ns_per_op": 90,
+      "measured_overhead_percent": 9.55,
+      "disabled_bytes_per_op": 64,
+      "enabled_bytes_per_op": 64,
+      "disabled_allocations_per_op": 10,
+      "enabled_allocations_per_op": 10,
+      "note": "This deliberately removes storage and TLS costs, so it magnifies the percentage of the fixed 90 ns telemetry cost. Telemetry added no allocations."
+    },
+    "counter_observation": {
+      "metrics_disabled_ns_per_op": 0.8762,
+      "metrics_enabled_ns_per_op": 61.47,
+      "enabled_bytes_per_op": 0,
+      "enabled_allocations_per_op": 0
+    },
+    "cached_pi_collection": {
+      "ns_per_op": 31.42,
+      "bytes_per_op": 0,
+      "allocations_per_op": 0
+    },
+    "authenticated_pi_metrics_endpoint": {
+      "ns_per_op": 2205,
+      "bytes_per_op": 1970,
+      "allocations_per_op": 13
+    },
+    "host_dashboard_summary_serialization": {
+      "ns_per_op": 166229,
+      "bytes_per_op": 30443,
+      "allocations_per_op": 305
+    },
+    "save_overlay_write_4k_with_journal_sync": {
+      "ns_per_op": 132829,
+      "megabytes_per_second": 30.84,
+      "bytes_per_op": 5399,
+      "allocations_per_op": 9,
+      "note": "Includes append-only journal checksum/write/sync and bounded dirty-block accounting on the validation host filesystem."
+    }
+  },
+  "acceptance": {
+    "unbounded_allocation_growth_observed": false,
+    "telemetry_added_read_path_allocations": false,
+    "persistent_write_per_nbd_read": false,
+    "network_call_in_nbd_hot_path": false,
+    "high_cardinality_metric_labels": false
+  },
+  "limitations": [
+    "The NBD microbenchmark uses an in-memory connection and does not measure TLS, network, source storage, Raspberry Pi, USB gadget, or Wii latency.",
+    "The Pi collector and endpoint numbers were measured on amd64 Linux, not a Raspberry Pi Zero W.",
+    "No Pi Zero W telemetry-overhead, physical GameCube, Nintendont, USB, or physical-Wii performance claim is made."
+  ]
+}

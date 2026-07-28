@@ -14,7 +14,10 @@ import (
 	"log/slog"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"wiibridge/shared/perf"
 )
 
 const (
@@ -47,6 +50,8 @@ const (
 	errInvalid     = uint32(22)
 )
 
+var errObservedRead = errors.New("NBD read failed")
+
 type Backend interface {
 	Size() int64
 	ReadAt([]byte, int64) (int, error)
@@ -75,13 +80,19 @@ type Server struct {
 	Deadline        time.Duration
 	MaxRequest      uint32
 	Logger          *slog.Logger
+	Metrics         *perf.Registry
 	mu              sync.Mutex
 	active          map[net.Conn]struct{}
 	requestBuffers  sync.Pool
+	accepted        atomic.Uint64
 }
 
 type requestBuffer struct {
 	data []byte
+}
+
+func (s *Server) metricsEnabled() bool {
+	return s.Metrics != nil && s.Metrics.Enabled()
 }
 
 func (s *Server) acquireRequestBuffer(length int) *requestBuffer {
@@ -141,21 +152,43 @@ func (s *Server) Serve(ctx context.Context, listener net.Listener) error {
 		s.mu.Lock()
 		s.active[conn] = struct{}{}
 		s.mu.Unlock()
+		if s.metricsEnabled() {
+			s.Metrics.NBD.ActiveConnections.Add(1)
+			if s.accepted.Add(1) > 1 {
+				s.Metrics.NBD.Reconnects.Add(1)
+			}
+		}
 		go func() {
 			defer func() {
 				conn.Close()
 				s.mu.Lock()
 				delete(s.active, conn)
 				s.mu.Unlock()
+				if s.metricsEnabled() {
+					s.Metrics.NBD.ActiveConnections.Add(-1)
+					s.Metrics.RecordNBDDisconnect()
+				}
 			}()
 			if err := s.handle(conn); err != nil && !errors.Is(err, io.EOF) {
+				if s.metricsEnabled() {
+					var networkError net.Error
+					if errors.As(err, &networkError) && networkError.Timeout() {
+						s.Metrics.NBD.Timeouts.Add(1)
+					}
+				}
 				s.Logger.Warn("NBD session closed", "error", err)
 			}
 		}()
 	}
 }
 
-func (s *Server) handle(raw net.Conn) error {
+func (s *Server) handle(raw net.Conn) (returnErr error) {
+	negotiated := false
+	defer func() {
+		if returnErr != nil && !negotiated && s.metricsEnabled() {
+			s.Metrics.NBD.NegotiationFailure.Add(1)
+		}
+	}()
 	backend := s.Backend
 	release := func() {}
 	if s.BackendAcquirer != nil {
@@ -240,8 +273,16 @@ func (s *Server) handle(raw net.Conn) error {
 				return err
 			}
 			tlsConn := tls.Server(raw, s.TLS.Clone())
+			tlsStarted := time.Now()
 			if err := tlsConn.Handshake(); err != nil {
+				if s.metricsEnabled() {
+					s.Metrics.NBD.TLSFailures.Add(1)
+					s.Metrics.NBD.TLSLatency.Observe(time.Since(tlsStarted))
+				}
 				return err
+			}
+			if s.metricsEnabled() {
+				s.Metrics.NBD.TLSLatency.Observe(time.Since(tlsStarted))
 			}
 			conn, secured = tlsConn, true
 			continue
@@ -260,6 +301,7 @@ func (s *Server) handle(raw net.Conn) error {
 			if err := binary.Write(conn, binary.BigEndian, transmissionFlags); err != nil {
 				return err
 			}
+			negotiated = true
 			return s.transmission(conn, backend, readOnly)
 		case optInfo, optGo:
 			name, ok := parseInfoName(payload)
@@ -288,6 +330,7 @@ func (s *Server) handle(raw net.Conn) error {
 				return err
 			}
 			if option == optGo {
+				negotiated = true
 				return s.transmission(conn, backend, readOnly)
 			}
 		default:
@@ -339,6 +382,9 @@ func (s *Server) transmission(conn net.Conn, backend Backend, readOnly bool) err
 			}
 		}
 		if magic != requestMagic {
+			if s.metricsEnabled() {
+				s.Metrics.NBD.ProtocolErrors.Add(1)
+			}
 			return errors.New("invalid request magic")
 		}
 		command := uint16(flagsType)
@@ -348,6 +394,18 @@ func (s *Server) transmission(conn net.Conn, backend Backend, readOnly bool) err
 		status := uint32(0)
 		var data []byte
 		var readBuffer *requestBuffer
+		requestStarted := time.Time{}
+		if s.metricsEnabled() {
+			requestStarted = time.Now()
+			depth := s.Metrics.NBD.QueueDepth.Add(1)
+			for {
+				maximum := s.Metrics.NBD.MaxQueueDepth.Load()
+				if depth <= maximum ||
+					s.Metrics.NBD.MaxQueueDepth.CompareAndSwap(maximum, depth) {
+					break
+				}
+			}
+		}
 		switch command {
 		case cmdRead:
 			if length == 0 || length > s.MaxRequest || offset > uint64(backend.Size()) ||
@@ -369,26 +427,52 @@ func (s *Server) transmission(conn net.Conn, backend Backend, readOnly bool) err
 				}
 			}
 		case cmdWrite:
+			if s.metricsEnabled() {
+				s.Metrics.NBD.WriteRequests.Add(1)
+			}
 			if length == 0 || length > s.MaxRequest || offset > uint64(backend.Size()) ||
 				uint64(length) > uint64(backend.Size())-offset {
 				status = errInvalid
 				if length <= s.MaxRequest {
 					if _, err := io.CopyN(io.Discard, conn, int64(length)); err != nil {
+						if s.metricsEnabled() {
+							s.Metrics.NBD.QueueDepth.Add(-1)
+						}
 						return err
 					}
 				}
 				break
 			}
-			data = make([]byte, length)
+			readBuffer = s.acquireRequestBuffer(int(length))
+			data = readBuffer.data
 			if _, err := io.ReadFull(conn, data); err != nil {
+				s.releaseRequestBuffer(readBuffer)
+				readBuffer = nil
+				if s.metricsEnabled() {
+					s.Metrics.NBD.QueueDepth.Add(-1)
+				}
 				return err
 			}
 			if readOnly {
 				status = errPerm
+				if s.metricsEnabled() {
+					s.Metrics.NBD.RejectedWrites.Add(1)
+				}
 			} else {
 				n, err := backend.(writeBackend).WriteAt(data, int64(offset))
 				if err != nil || n != len(data) {
 					status = errIO
+					var coded interface{ ErrorCode() string }
+					if errors.As(err, &coded) {
+						switch coded.ErrorCode() {
+						case "SAVE-WRITE-OUTSIDE-EXTENT",
+							"SAVE-WRITE-CROSSES-BOUNDARY":
+							status = errPerm
+						}
+					}
+					if s.metricsEnabled() {
+						s.Metrics.NBD.RejectedWrites.Add(1)
+					}
 				}
 			}
 		case cmdTrim, cmdWriteZeroes:
@@ -396,6 +480,9 @@ func (s *Server) transmission(conn net.Conn, backend Backend, readOnly bool) err
 			// operations. Nintendont does not require them, and rejecting them
 			// avoids destructive sparse-file surprises.
 			status = errPerm
+			if s.metricsEnabled() {
+				s.Metrics.NBD.RejectedWrites.Add(1)
+			}
 			if command == cmdWriteZeroes && length > s.MaxRequest {
 				status = errInvalid
 			}
@@ -407,24 +494,59 @@ func (s *Server) transmission(conn net.Conn, backend Backend, readOnly bool) err
 			}
 		default:
 			status = errInvalid
+			if s.metricsEnabled() {
+				s.Metrics.NBD.ProtocolErrors.Add(1)
+			}
 		}
 		if command == cmdWrite && length > s.MaxRequest {
 			// Oversized payloads cannot be safely resynchronized; close the
 			// session after returning no reply.
+			if s.metricsEnabled() {
+				s.Metrics.NBD.QueueDepth.Add(-1)
+			}
 			return errors.New("oversized write request")
 		}
 		for _, v := range []any{replyMagic, status, handle} {
 			if err := binary.Write(conn, binary.BigEndian, v); err != nil {
 				s.releaseRequestBuffer(readBuffer)
+				if s.metricsEnabled() {
+					if command == cmdRead {
+						s.Metrics.ObserveNBDRead(
+							0, time.Since(requestStarted), errObservedRead)
+					}
+					s.Metrics.NBD.QueueDepth.Add(-1)
+				}
 				return err
 			}
 		}
 		if status == 0 && command == cmdRead {
-			if _, err := conn.Write(data); err != nil {
+			written, err := conn.Write(data)
+			if err != nil || written != len(data) {
 				s.releaseRequestBuffer(readBuffer)
+				if s.metricsEnabled() {
+					s.Metrics.ObserveNBDRead(
+						written, time.Since(requestStarted), errObservedRead)
+					s.Metrics.NBD.QueueDepth.Add(-1)
+				}
+				if err == nil {
+					err = io.ErrShortWrite
+				}
 				return err
 			}
 		}
 		s.releaseRequestBuffer(readBuffer)
+		if s.metricsEnabled() {
+			if command == cmdRead {
+				var observedErr error
+				if status != 0 {
+					observedErr = errObservedRead
+				}
+				s.Metrics.ObserveNBDRead(
+					len(data), time.Since(requestStarted), observedErr)
+			} else {
+				s.Metrics.NBD.RequestLatency.Observe(time.Since(requestStarted))
+			}
+			s.Metrics.NBD.QueueDepth.Add(-1)
+		}
 	}
 }

@@ -2,7 +2,11 @@
 
 NBD plaintext export selection is refused until `NBD_OPT_STARTTLS` completes
 with TLS 1.3 and a client certificate chained to the configured client CA.
-Exports are read-only; write, trim, and write-zero requests return errors.
+Wii and physical-card GameCube exports are read-only; write, trim, and
+write-zero requests return errors. Emulated GameCube permits writes only when
+the active schema-2 generation contains a checksummed Host-generated save
+extent and the entire request fits one extent. Guest FAT metadata cannot
+authorize a write, and source-file handles are never used for writes.
 GameCube sources are fully validated during generation build and whenever a
 current deep-validation receipt is unavailable. Startup and activation verify
 compact generation checksums plus bounded device/inode/size/mtime source
@@ -24,6 +28,18 @@ connections retain their normal identity verification.
 The container is non-root with a read-only root, all capabilities dropped,
 no-new-privileges, bounded PIDs/logs/tmpfs, no devices, and no Docker
 socket. `/library` and `/certs` are read-only binds.
+
+Save objects live only below `/data/gamecube/saves`. Server-generated names,
+root confinement, regular-file checks, exact size/checksum/association
+validation, bounded uploads, and symlink/special-file rejection apply to
+create, backup, restore, upload, download, cleanup, and recovery. Restore
+requires an inactive GameCube export and first creates a safety backup.
+
+Host-to-Pi descriptors and runtime metrics use the existing authenticated
+HTTPS channel, exact Pi certificate pin, management token, timeouts, and
+device identity. Cached compatibility is diagnostic only; every coordinated
+mutation performs a fresh probe. Telemetry contains no tokens, keys,
+certificates, save bytes, raw headers, or path-valued labels.
 
 Each Pi generates machine identity, setup TLS identity, and an administrator
 token on first boot. Production client credentials are provisioned uniquely and
