@@ -44,6 +44,12 @@ control selects the current complete validated generation and is disabled until
 one exists. Building and updating are separate background operations; opening
 the page never starts a build.
 
+Raspberry Pi power controls are placed above the library profile cards so
+reboot and shutdown remain easy to reach. The **Catalog Viewer** below the Pi
+status panel is collapsed by default and can be expanded to search or filter
+the complete Wii and GameCube source catalogs. It opens automatically for a
+search, a platform filter, or rejected-source review.
+
 GameCube builds report titles, discs, mapped files, current phase, generated
 metadata bytes, extent count, and validation rather than payload-copy bytes.
 The generated FAT32 disk reads game

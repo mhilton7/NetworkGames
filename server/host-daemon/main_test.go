@@ -28,6 +28,7 @@ import (
 
 type fakePiController struct {
 	actions   []string
+	probes    int
 	fail      string
 	status    bridgecontrol.Status
 	statusErr error
@@ -225,6 +226,11 @@ func (f *fakePiController) Action(_ context.Context, action string) error {
 	return nil
 }
 
+func (f *fakePiController) Probe(_ context.Context) (bridgecontrol.Status, error) {
+	f.probes++
+	return f.status, f.statusErr
+}
+
 func (f *fakePiController) Status(_ context.Context) (bridgecontrol.Status, error) {
 	return f.status, f.statusErr
 }
@@ -237,6 +243,14 @@ func (f *fakePiController) SetAddress(_ context.Context, address string) error {
 	}
 	f.address = address
 	return nil
+}
+
+func readyPiController() *fakePiController {
+	return &fakePiController{status: bridgecontrol.Status{
+		Target: "zero-w-armhf", Board: "Raspberry Pi Zero W Rev 1.1",
+		BoardOK: true, Provisioned: true, WiFiReady: true,
+		USBController: "20980000.usb", USBState: "not attached", State: "ready",
+	}}
 }
 
 func testApp(t *testing.T) *app {
@@ -340,9 +354,34 @@ func TestDashboardProvidesPlatformFiltersWithoutHidingWii(t *testing.T) {
 	body := response.Body.String()
 	for _, expected := range []string{
 		"All", "Wii", "GameCube", "Synthetic Wii", "Synthetic GameCube",
-		"Complete Wii game catalog", "Complete Wii catalog",
+		"Complete Wii Catalog", "Complete GameCube Catalog", "Catalog Viewer",
 		"Source review", "broken.wbfs", "invalid WBFS magic",
 		"unsupported.nkit.iso", "NKit images are unsupported", "Rescan library",
+		"Activate Wii Library", "Activate GameCube Library",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("dashboard missing %q", expected)
+		}
+	}
+}
+
+func TestDashboardPrioritizesPiPowerAndCollapsesCatalogViewer(t *testing.T) {
+	a := testApp(t)
+	a.pi = readyPiController()
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	response := httptest.NewRecorder()
+	a.dashboard(response, request)
+	body := response.Body.String()
+	power := strings.Index(body, "Raspberry Pi Power")
+	profiles := strings.Index(body, `aria-label="Complete library profiles"`)
+	viewer := strings.Index(body, `<details class="card catalog-viewer"`)
+	if power < 0 || profiles < 0 || viewer < 0 ||
+		!(power < profiles && profiles < viewer) {
+		t.Fatalf("dashboard order power=%d profiles=%d viewer=%d", power, profiles, viewer)
+	}
+	for _, expected := range []string{
+		"<summary><span><strong>Catalog Viewer</strong>",
+		"Complete Wii Catalog", "Complete GameCube Catalog",
 		"Activate Wii Library", "Activate GameCube Library",
 	} {
 		if !strings.Contains(body, expected) {
@@ -407,7 +446,7 @@ func TestBrowserActionsRedirectBackToDashboard(t *testing.T) {
 
 func TestAutomaticWiiSwitchUsesSafeActionOrder(t *testing.T) {
 	a := testApp(t)
-	pi := &fakePiController{}
+	pi := readyPiController()
 	a.pi = pi
 	request := httptest.NewRequest("POST", "/api/v1/export/wii", nil)
 	request.SetPathValue("platform", "wii")
@@ -424,7 +463,8 @@ func TestAutomaticWiiSwitchUsesSafeActionOrder(t *testing.T) {
 
 func TestAutomaticAttachFailureLeavesPiDisconnected(t *testing.T) {
 	a := testApp(t)
-	pi := &fakePiController{fail: "attach"}
+	pi := readyPiController()
+	pi.fail = "attach"
 	a.pi = pi
 	request := httptest.NewRequest("POST", "/api/v1/export/wii", nil)
 	request.SetPathValue("platform", "wii")
@@ -436,6 +476,46 @@ func TestAutomaticAttachFailureLeavesPiDisconnected(t *testing.T) {
 	got := strings.Join(pi.actions, ",")
 	if got != "detach,disconnect,connect-wii,attach,detach,disconnect" {
 		t.Fatalf("failed switch did not return to safe detached state: %s", got)
+	}
+}
+
+func TestAutomaticSwitchRejectsUnavailablePiBeforeChangingExport(t *testing.T) {
+	a := testApp(t)
+	pi := &fakePiController{statusErr: errors.New("synthetic unavailable Pi")}
+	a.pi = pi
+	previousPlatform := a.exports.Platform()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/export/wii", nil)
+	request.SetPathValue("platform", "wii")
+	response := httptest.NewRecorder()
+	a.selectExport(response, request)
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if pi.probes != 1 || len(pi.actions) != 0 ||
+		a.exports.Platform() != previousPlatform {
+		t.Fatalf("unavailable Pi changed state: probes=%d actions=%v platform=%s",
+			pi.probes, pi.actions, a.exports.Platform())
+	}
+}
+
+func TestAutomaticSwitchRejectsUnreadyPiBeforeChangingExport(t *testing.T) {
+	a := testApp(t)
+	pi := readyPiController()
+	pi.status.State = "setup"
+	pi.status.Provisioned = false
+	a.pi = pi
+	previousPlatform := a.exports.Platform()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/export/wii", nil)
+	request.SetPathValue("platform", "wii")
+	response := httptest.NewRecorder()
+	a.selectExport(response, request)
+	if response.Code != http.StatusConflict {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if pi.probes != 1 || len(pi.actions) != 0 ||
+		a.exports.Platform() != previousPlatform {
+		t.Fatalf("unready Pi changed state: probes=%d actions=%v platform=%s",
+			pi.probes, pi.actions, a.exports.Platform())
 	}
 }
 
@@ -617,6 +697,24 @@ func TestBrowserRedirectAPITokenCompatibilityAndBootstrapRestriction(t *testing.
 	}
 }
 
+func TestDashboardDisablesAutomaticSwitchingWhilePiIsUnavailable(t *testing.T) {
+	a := testApp(t)
+	a.pi = &fakePiController{
+		statusErr: errors.New("synthetic unavailable Pi"),
+		address:   "192.0.2.10",
+	}
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	response := httptest.NewRecorder()
+	a.dashboard(response, request)
+	body := response.Body.String()
+	if response.Code != http.StatusOK ||
+		!strings.Contains(body, "Automatic library switching is disabled") ||
+		strings.Count(body, `data-pi-guard="blocked"`) != 2 {
+		t.Fatalf("unavailable Pi did not disable profile switches: status=%d body=%s",
+			response.Code, body)
+	}
+}
+
 func TestDashboardExactLibraryControlsAndNoPerTitleActivation(t *testing.T) {
 	a := testApp(t)
 	a.pi = &fakePiController{}
@@ -662,7 +760,7 @@ func TestCompleteGameCubeActivationNeedsNoGameIDAndUsesSafeSequence(t *testing.T
 	if _, err = a.gcLibrary.Build(context.Background(), scan.Games); err != nil {
 		t.Fatal(err)
 	}
-	pi := &fakePiController{}
+	pi := readyPiController()
 	a.pi = pi
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/export/gamecube", nil)
 	request.SetPathValue("platform", "gamecube")

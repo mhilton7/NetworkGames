@@ -30,6 +30,15 @@ reconnection or attachment fails, WiiBridge performs a best-effort detach and
 disconnect and reports that USB remains detached. It never switches the backing
 store while the Wii is connected.
 
+When automatic coordination is configured, the Host disables both library
+activation controls unless the most recent Pi status reports a compatible,
+provisioned board with an available USB gadget controller. Every activation
+also performs a fresh authenticated status probe before the detach sequence.
+If the Pi is powered off, unreachable, still in setup, on the wrong board, or
+missing its gadget controller, no Pi action runs and the Host export remains
+unchanged. A Pi that disappears after the probe is still caught by the existing
+detach-first sequence before export selection.
+
 ## Enable it
 
 Automatic switching is deliberately opt-in. On the Pi, identify its management

@@ -2,6 +2,9 @@ package bridgecontrol
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,6 +51,55 @@ func TestManagerStatusIsCachedAndNeverPollsOnRequest(t *testing.T) {
 	manager := &Manager{statusErr: os.ErrNotExist}
 	if _, err := manager.Status(context.Background()); err == nil {
 		t.Fatal("empty cached status was reported as connected")
+	}
+}
+
+func TestManagerProbePerformsFreshAuthenticatedStatusRequest(t *testing.T) {
+	const token = "independent-pi-token"
+	certPEM, keyPEM := certificate(t, "device")
+	certPath := filepath.Join(t.TempDir(), "device.crt")
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	requests := 0
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, password, ok := r.BasicAuth()
+		if r.URL.Path != "/api/v1/status" || !ok || user != "admin" ||
+			password != token {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		requests++
+		_ = json.NewEncoder(w).Encode(Status{
+			Target: "zero-w-armhf", BoardOK: true, Provisioned: true,
+			WiFiReady: true, USBController: "20980000.usb",
+			USBState: "not attached", State: "ready",
+		})
+	}))
+	server.TLS = serverTLS(t, certPEM, keyPEM)
+	server.StartTLS()
+	defer server.Close()
+	client, err := New(server.URL, token, certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := &Manager{
+		client: client, statusErr: os.ErrNotExist,
+	}
+	status, err := manager.Probe(context.Background())
+	if err != nil || requests != 1 || status.State != "ready" {
+		t.Fatalf("probe status=%#v requests=%d err=%v", status, requests, err)
+	}
+	cached, err := manager.Status(context.Background())
+	if err != nil || cached.State != "ready" || requests != 1 {
+		t.Fatalf("cached status=%#v requests=%d err=%v", cached, requests, err)
+	}
+}
+
+func TestManagerProbeRejectsMissingPiAddress(t *testing.T) {
+	manager := &Manager{statusErr: os.ErrNotExist}
+	if _, err := manager.Probe(context.Background()); err == nil {
+		t.Fatal("missing Pi client passed a fresh status probe")
 	}
 }
 

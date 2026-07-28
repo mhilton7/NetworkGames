@@ -5,6 +5,16 @@
     if (element) element.textContent = value;
   };
   const yes = (value, enabled, disabled) => value ? enabled : disabled;
+  const automaticSwitch = panel && panel.dataset.automaticSwitch === "true";
+  const switchButtons = document.querySelectorAll("[data-profile-switch]");
+  const setSwitchReady = (ready) => {
+    if (!automaticSwitch) return;
+    switchButtons.forEach((button) => {
+      button.disabled = button.dataset.baseDisabled === "true" || !ready;
+    });
+    const warning = document.getElementById("pi-switch-warning");
+    if (warning) warning.hidden = ready;
+  };
   async function refreshPi() {
     if (!panel) return;
     const dot = document.getElementById("pi-dot");
@@ -27,10 +37,16 @@
       text("pi-provision", yes(pi.provisioned, "Ready", "Incomplete"));
       text("pi-attach", yes(pi.auto_attach, "Enabled", "Disabled"));
       text("pi-updated", "Updated " + new Date().toLocaleTimeString());
+      setSwitchReady(pi.state === "ready" && pi.board_compatible &&
+        pi.provisioned && pi.wifi_provisioned &&
+        pi.usb_controller && pi.usb_controller !== "none" &&
+        pi.usb_state && pi.usb_state !== "unknown" &&
+        pi.usb_state !== "unavailable");
     } catch (_) {
       dot.classList.add("offline");
       text("pi-connection", "Unavailable");
       text("pi-updated", "Retrying");
+      setSwitchReady(false);
     }
   }
   const build = document.querySelector("[data-build-url]");
