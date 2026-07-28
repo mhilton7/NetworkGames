@@ -4,12 +4,12 @@
   "prompt_version": 3,
   "status": "software-complete-four-features-host-verified-hardware-unverified",
   "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
-  "application_commit": null,
+  "application_commit": "7097d8a2ba2bc269e7a759b521a6ec16251cc12f",
   "implementation_base_commit": "ce732427b1805cfa580ba0d5a865e2aed47eeeac",
-  "last_published_application_commit": "a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
-  "worktree_state": "validated-uncommitted",
-  "local_oci_digest": "sha256:5615d069317bef23d8e0703fd461488a3e0832ccd0694b3c439452385db54a4f",
-  "controller_armv6_sha256": "a540e6542a721df54e3a4ac8f696677176c94d313f99d5210ebc5712cc46b650",
+  "last_published_application_commit": "7097d8a2ba2bc269e7a759b521a6ec16251cc12f",
+  "worktree_state": "committed-clean-build-validated",
+  "local_oci_digest": "sha256:f34bd8d2036d918dd2ab841e53cbf6b924369c8dfbaa4b375bc1f142fe2b0d4e",
+  "controller_armv6_sha256": "5418fd2008debd021c8c55d853eedc6ce80b01c41a01795d7f97618841c74857",
   "build_host": {
     "os": "Debian GNU/Linux 13 (trixie)",
     "kernel": "6.12.96+deb13-amd64",
@@ -42,5 +42,5 @@
     "truenas_startup": "host-validated-live-digest-verification-pending"
   },
   "physical_tests": "gamecube-emulated-save-and-pi-zero-telemetry-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
-  "updated_utc": "2026-07-28T17:25:02Z"
+  "updated_utc": "2026-07-28T17:33:31Z"
 }
