@@ -9,14 +9,6 @@ Nintendo Wii. The host indexes a read-only game library, publishes it over
 mutual-TLS NBD, and the Pi presents the selected storage profile to the Wii
 through USB gadget mass-storage mode.
 
-The Host dashboard is the normal control center. Its primary controls switch
-between the two complete storage profiles:
-
-```text
-Activate Wii Library
-Activate GameCube Library
-```
-
 On a fresh `/data` directory, browser login is `admin` / `wiibridge`; the first
 login must replace that bootstrap password. See
 [Host dashboard](docs/host-dashboard.md) for authentication, aggregate
