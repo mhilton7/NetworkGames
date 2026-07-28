@@ -169,6 +169,24 @@ func TestVersionReportsBuildIdentity(t *testing.T) {
 	}
 }
 
+func TestDisplayRevisionAbbreviatesLongGitHash(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		revision string
+		want     string
+	}{
+		{name: "full hash", revision: "c36fad2193f50a594a8baf66be6e14427e89b6ba", want: "c36fad2193f5"},
+		{name: "short revision", revision: "development", want: "development"},
+		{name: "unknown revision", revision: "unknown", want: "unknown"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := displayRevision(test.revision); got != test.want {
+				t.Fatalf("displayRevision(%q) = %q, want %q", test.revision, got, test.want)
+			}
+		})
+	}
+}
+
 func TestHealthCheckAcceptsTrustedLoopbackCertificateWithoutIPSAN(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/healthz" {

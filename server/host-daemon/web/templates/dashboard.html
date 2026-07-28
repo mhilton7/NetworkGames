@@ -55,7 +55,7 @@
 <article class="card" id="compatibility-panel" data-status-url="/api/v1/compatibility">
 <div class="section-title"><div><p class="eyebrow">Compatibility contract</p><h2>Host and firmware negotiation</h2></div><span class="tag" id="compat-state">{{.Compatibility.Status}}</span></div>
 <dl class="compact">
-<div><dt>Host version / revision</dt><dd id="compat-host">{{.Version}} · {{.HostRevision}}</dd></div>
+<div><dt>Host version / revision</dt><dd id="compat-host" title="{{.Version}} · {{.HostRevision}}">{{.Version}} · {{.HostRevisionShort}}</dd></div>
 <div><dt>Host protocol</dt><dd id="compat-host-protocol">{{.HostProtocol}}</dd></div>
 <div><dt>Firmware version / revision</dt><dd id="compat-firmware">Unknown</dd></div>
 <div><dt>Firmware board</dt><dd id="compat-board">Unknown</dd></div>
@@ -70,7 +70,7 @@
 </article>
 </section>
 
-<details class="card" data-persist-details="save-overlay">
+<details class="card feature-panel" data-persist-details="save-overlay">
 <summary><span><strong>GameCube Save Overlay</strong><small>Bounded, save-only copy-on-write cards</small></span></summary>
 <div class="catalog-content" id="save-overlay" data-status-url="/api/v1/gamecube/saves" data-csrf="{{.CSRF}}">
 <div class="section-title"><div><p class="eyebrow">Memory cards</p><h2>Managed save cards</h2></div><span class="tag" id="save-mode">{{.GameCubeModeRaw}}</span></div>
@@ -114,7 +114,7 @@
 <p><a id="save-download-link" href="/api/v1/gamecube/saves/download">Download selected active card</a></p>
 </div></details>
 
-<details class="card" data-persist-details="performance">
+<details class="card feature-panel" data-persist-details="performance">
 <summary><span><strong>Performance</strong><small>Source → Host backend → NBD/TLS → Pi NBD → USB gadget → Wii</small></span></summary>
 <div class="catalog-content" id="performance-panel" data-summary-url="/api/performance/summary" data-refresh-ms="{{.DashboardRefreshMS}}">
 <div class="status-grid">
