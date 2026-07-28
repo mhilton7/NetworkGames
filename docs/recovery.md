@@ -1,5 +1,12 @@
 # Bridge recovery
 
+If a large library takes time to scan after a Host restart, open the normal
+Host HTTPS address. WiiBridge displays `Scanning Wii library`, `Building Wii
+virtual disk`, `Scanning GameCube library`, or `Finalizing validated exports`
+instead of leaving the port closed. Do not repeatedly restart the container:
+NBD remains unavailable until the startup page is replaced by the authenticated
+dashboard.
+
 On backend loss the bridge must remain detached until the configured export,
 snapshot identity, and virtual size validate again. A changed identity is never
 accepted as a reconnect. The local recovery service exposes diagnostics and

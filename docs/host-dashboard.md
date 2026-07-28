@@ -15,6 +15,11 @@ Sessions are server-side and use a Secure, HttpOnly, SameSite=Strict cookie.
 Existing Bearer and Basic API authentication continues to use
 `WIIBRIDGE_ADMIN_TOKEN`; it is never placed in a browser cookie.
 
+During Host startup, HTTPS opens before the potentially long Wii and GameCube
+library scans. The browser displays a small auto-refreshing startup page with
+the current phase. The health endpoint reports `starting`, while NBD and USB
+exports remain unavailable until the validated Wii virtual disk is ready.
+
 The two primary controls are:
 
 ```text

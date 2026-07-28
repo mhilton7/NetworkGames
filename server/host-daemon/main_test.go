@@ -32,6 +32,48 @@ type fakePiController struct {
 	address   string
 }
 
+func TestStartupHandlerExposesProgressBeforeLibraryIsReady(t *testing.T) {
+	startup := &startupHandler{}
+	startup.SetPhase("Scanning GameCube library")
+
+	health := httptest.NewRecorder()
+	startup.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if health.Code != http.StatusOK ||
+		!strings.Contains(health.Body.String(), `"status":"starting"`) ||
+		!strings.Contains(health.Body.String(), "Scanning GameCube library") {
+		t.Fatalf("startup health status=%d body=%s", health.Code, health.Body.String())
+	}
+
+	page := httptest.NewRecorder()
+	startup.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/login", nil))
+	if page.Code != http.StatusOK ||
+		!strings.Contains(page.Body.String(), "WiiBridge is starting") ||
+		!strings.Contains(page.Body.String(), "refreshes automatically") {
+		t.Fatalf("startup page status=%d body=%s", page.Code, page.Body.String())
+	}
+}
+
+func TestSwitchingHandlerAtomicallyPublishesReadyUI(t *testing.T) {
+	startup := &startupHandler{}
+	startup.SetPhase("Scanning Wii library")
+	handler := &switchingHandler{handler: startup}
+
+	before := httptest.NewRecorder()
+	handler.ServeHTTP(before, httptest.NewRequest(http.MethodGet, "/", nil))
+	if !strings.Contains(before.Body.String(), "WiiBridge is starting") {
+		t.Fatalf("startup handler was not active: %s", before.Body.String())
+	}
+
+	handler.Set(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ready"))
+	}))
+	after := httptest.NewRecorder()
+	handler.ServeHTTP(after, httptest.NewRequest(http.MethodGet, "/", nil))
+	if after.Body.String() != "ready" {
+		t.Fatalf("ready handler was not published: %s", after.Body.String())
+	}
+}
+
 func (f *fakePiController) Action(_ context.Context, action string) error {
 	f.actions = append(f.actions, action)
 	if action == f.fail {

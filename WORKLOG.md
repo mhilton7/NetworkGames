@@ -706,3 +706,7 @@
   compact chains builds in under one millisecond on the validation Host.
 - Sanitized live-looking administrator credentials from the checked-in TrueNAS
   restore example. Previously exposed credentials must still be rotated.
+- Moved the HTTPS listener ahead of the two synchronous source-library scans.
+  A minimal auto-refreshing page and `/healthz` startup response now expose the
+  current scan phase immediately. NBD, Pi coordination, and Wii/GameCube
+  exports are not started until the validated Wii backend is complete.
