@@ -188,14 +188,7 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 		}
 		cursor += ((vf.length + clusterSize - 1) / clusterSize) * sectorsPerCluster
 	}
-	hash := sha256.New()
-	if err := d.forEachMetadataSector(func(_ int64, data []byte) error {
-		_, err := hash.Write(data)
-		return err
-	}); err != nil {
-		return nil, err
-	}
-	metaHash := hex.EncodeToString(hash.Sum(nil))
+	metaHash := d.metadataIdentity()
 	var virtualFiles []model.VirtualFile
 	for _, file := range files {
 		virtualFiles = append(virtualFiles, model.VirtualFile{
@@ -231,6 +224,50 @@ func locate(sources []model.Source, logical int64) (*model.Source, int64, error)
 
 func (d *Disk) Size() int64              { return d.size }
 func (d *Disk) Snapshot() model.Snapshot { return d.snapshot }
+
+// metadataIdentity fingerprints the compact description used to synthesize the
+// disk. Hashing every apparent FAT sector would make Host startup proportional
+// to virtual library capacity even though those sectors are generated on
+// demand and consume no resident storage.
+func (d *Disk) metadataIdentity() string {
+	hash := sha256.New()
+	_, _ = hash.Write([]byte("wiibridge-vdisk-compact-metadata-v1\x00"))
+	var number [8]byte
+	writeInt64 := func(value int64) {
+		binary.LittleEndian.PutUint64(number[:], uint64(value))
+		_, _ = hash.Write(number[:])
+	}
+	writeUint32 := func(value uint32) {
+		binary.LittleEndian.PutUint32(number[:4], value)
+		_, _ = hash.Write(number[:4])
+	}
+	writeInt64(d.size)
+	writeInt64(sectorSize)
+	writeInt64(sectorsPerCluster)
+	writeInt64(d.fatStart)
+	writeInt64(d.fatSectors)
+	writeInt64(numFATs)
+
+	keys := make([]int64, 0, len(d.metadata))
+	for sector := range d.metadata {
+		keys = append(keys, sector)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	writeInt64(int64(len(keys)))
+	for _, sector := range keys {
+		data := d.metadata[sector]
+		writeInt64(sector)
+		writeInt64(int64(len(data)))
+		_, _ = hash.Write(data)
+	}
+
+	writeInt64(int64(len(d.fatChains)))
+	for _, chain := range d.fatChains {
+		writeUint32(chain.first)
+		writeUint32(chain.count)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
 
 func (d *Disk) fatSectorIndex(sector int64) (int64, bool) {
 	relative := sector - d.fatStart

@@ -692,3 +692,17 @@
   29.4 microseconds under concurrent callers. Full results and limitations are
   recorded in `reports/gamecube-no-copy-performance.json`. No physical hardware
   performance claim is made.
+
+## 2026-07-28 — Bounded Wii startup identity
+
+- Corrected a regression in the on-demand Wii FAT implementation: startup
+  still synthesized and hashed every apparent FAT sector when constructing the
+  snapshot identity, keeping HTTPS/NBD listeners closed for a long time on
+  large virtual disks.
+- Snapshot metadata identity now hashes the deterministic compact disk
+  geometry, resident metadata sectors, and FAT chain descriptors. It no longer
+  walks unallocated virtual FAT capacity.
+- A 512 GiB regression fixture with 1,048,577 FAT sectors per copy and 131
+  compact chains builds in under one millisecond on the validation Host.
+- Sanitized live-looking administrator credentials from the checked-in TrueNAS
+  restore example. Previously exposed credentials must still be rotated.

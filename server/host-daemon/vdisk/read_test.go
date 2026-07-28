@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"time"
 
 	"wiibridge/shared/model"
 )
@@ -172,6 +173,55 @@ func TestLargeVirtualFATIsSynthesizedInsteadOfResident(t *testing.T) {
 		binary.LittleEndian.Uint32(first[:4]) != 0x0ffffff8 ||
 		binary.LittleEndian.Uint32(first[4:8]) != 0xffffffff {
 		t.Fatal("synthetic FAT copies differ or have invalid reserved entries")
+	}
+}
+
+func TestLargeVirtualFATBuildDoesNotWalkApparentFATSectors(t *testing.T) {
+	const payloadSize = int64(512 << 30)
+	game := model.Game{
+		ID: "FAST01", Size: payloadSize,
+		Sources: []model.Source{{
+			Path: "/synthetic/not-opened", Length: payloadSize, Size: payloadSize,
+		}},
+	}
+	started := time.Now()
+	disk, err := Build("bounded-startup", []model.Game{game}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	elapsed := time.Since(started)
+	if disk.fatSectors < 1_000_000 {
+		t.Fatalf("fixture FAT is too small to exercise bounded startup: %d sectors",
+			disk.fatSectors)
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("compact metadata identity walked the apparent FAT: build took %s",
+			elapsed)
+	}
+	if disk.Snapshot().MetadataHash != disk.metadataIdentity() {
+		t.Fatal("snapshot does not use the compact deterministic metadata identity")
+	}
+	t.Logf("512 GiB fixture: FAT sectors per copy=%d chains=%d build=%s",
+		disk.fatSectors, len(disk.fatChains), elapsed)
+}
+
+func TestCompactMetadataIdentityChangesWithFATLayout(t *testing.T) {
+	base := &Disk{
+		size: 4096, fatStart: 32, fatSectors: 64,
+		metadata:  map[int64][]byte{0: bytes.Repeat([]byte{0xa5}, 512)},
+		fatChains: []clusterChain{{first: 2, count: 3}},
+	}
+	same := &Disk{
+		size: base.size, fatStart: base.fatStart, fatSectors: base.fatSectors,
+		metadata:  map[int64][]byte{0: append([]byte(nil), base.metadata[0]...)},
+		fatChains: append([]clusterChain(nil), base.fatChains...),
+	}
+	if base.metadataIdentity() != same.metadataIdentity() {
+		t.Fatal("equivalent compact layouts produced different identities")
+	}
+	same.fatChains[0].count++
+	if base.metadataIdentity() == same.metadataIdentity() {
+		t.Fatal("different FAT chains produced the same compact identity")
 	}
 }
 
