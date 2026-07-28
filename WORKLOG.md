@@ -756,3 +756,9 @@
   comparison remain pending because this workspace has no TrueNAS runtime
   access. Evidence and exact acceptance checks are in
   `reports/truenas-startup-investigation.json`.
+- GitHub Actions run `30325015690` published clean commit `a6b7c67` as
+  `ghcr.io/OWNER/wiibridge-host:sha-a6b7c670c722cecf501d8a89a20e72e7b1a2b15e@sha256:f11c6aed6cd576caeff737100ed4a7254a4dce44960833fece817abe2d78bd11`.
+  Pull-back verification reports image ID `sha256:f32a283...`, linux/amd64,
+  build time `2026-07-28T03:06:50Z`, `dirty=false`, and equal binary and OCI
+  revisions. The TrueNAS paste YAML now pins this digest; live deployment
+  remains pending.

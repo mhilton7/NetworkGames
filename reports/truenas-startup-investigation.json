@@ -2,7 +2,7 @@
   "schema_version": 1,
   "captured_utc": "2026-07-28T02:59:00Z",
   "source_base_commit": "43ccb384961097b1f82ed1735d0c711f72d77740",
-  "implementation_commit": null,
+  "implementation_commit": "a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
   "known_revisions": {
     "bounded_wii_startup": "7bb60d2deb0b867501d1673a448e4a880c2474c7",
     "early_startup_page": "401176d9e17e7e6566790f4dd45d19d61ed00c55",
@@ -65,6 +65,17 @@
     "routine_fst_scan_full_hash": false,
     "startup_recursive_generation_deletion": false,
     "gamecube_disabled_until_receipt_current": true
+  },
+  "published_image": {
+    "image_reference": "ghcr.io/OWNER/wiibridge-host:sha-a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
+    "registry_digest": "sha256:f11c6aed6cd576caeff737100ed4a7254a4dce44960833fece817abe2d78bd11",
+    "local_image_id_after_registry_pull": "sha256:f32a2838249775ed3b9cc4a2b66545637950f9cfeac812ba03d73848a2f7f6d2",
+    "architecture": "amd64",
+    "build_timestamp": "2026-07-28T03:06:50Z",
+    "binary_revision": "a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
+    "binary_dirty": false,
+    "oci_revision_label": "a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
+    "github_workflow_run": 30325015690
   },
   "local_fast_validation_benchmark": {
     "source_payload_bytes": 6291456,
