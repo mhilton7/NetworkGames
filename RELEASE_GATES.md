@@ -99,3 +99,4 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | GameCube read coalescing | PASS | A 1 MiB request inside one ISO produces one source ReadAt; a 128 KiB request crossing two source extents produces exactly two |
 | GameCube host performance matrix | PASS | Sequential, random, 32-source switching, 5,000-file FST, boundary, and concurrent benchmarks recorded in `reports/gamecube-no-copy-performance.json` |
 | End-to-end physical GameCube performance | DEFERRED_HARDWARE_UNAVAILABLE | Host benchmarks and mutual-TLS protocol tests do not prove Pi Zero W/Wii/Nintendont gameplay throughput |
+| Bounded Wii Host startup | PASS | 512 GiB fixture with 1,048,577 FAT sectors per copy builds from 131 compact chains in under one millisecond without walking the apparent FAT |

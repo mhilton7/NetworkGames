@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "fixture_payload_bytes": 8589934592,
   "virtual_fat_sectors_per_copy": 16385,
   "fat_copies": 2,
@@ -7,10 +7,15 @@
   "new_compact_chain_descriptors": 5,
   "new_resident_non_fat_metadata_sectors": 21,
   "new_resident_non_fat_metadata_bytes": 10752,
+  "startup_regression_fixture_payload_bytes": 549755813888,
+  "startup_regression_fat_sectors_per_copy": 1048577,
+  "startup_regression_compact_chain_descriptors": 131,
+  "startup_regression_build_duration": "458.492us",
+  "startup_hash_walks_apparent_fat": false,
   "test_process_inuse_profile_bytes": 1051136,
   "container_memory_limit": "512m",
   "go_memory_limit": "384MiB",
   "measurement_command": "go test -count=1 -run TestLargeVirtualFATIsSynthesizedInsteadOfResident -memprofile=/tmp/wiibridge-vdisk-memory.pprof ./server/host-daemon/vdisk",
   "result": "PASS",
-  "note": "The old raw FAT figure excludes Go map and per-sector allocation overhead. The new FAT is generated per requested sector and is not retained on the heap."
+  "note": "The old raw FAT figure excludes Go map and per-sector allocation overhead. The new FAT is generated per requested sector and is not retained on the heap. Startup hashes the compact geometry, resident metadata, and chain descriptors instead of synthesizing every apparent FAT sector."
 }
