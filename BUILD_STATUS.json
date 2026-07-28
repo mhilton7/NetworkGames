@@ -4,7 +4,7 @@
   "prompt_version": 3,
   "status": "software-complete-gamecube-no-copy-hardware-unverified",
   "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
-  "application_commit": "43ccb384961097b1f82ed1735d0c711f72d77740",
+  "application_commit": "a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
   "build_host": {
     "os": "Debian GNU/Linux 13 (trixie)",
     "kernel": "6.12.96+deb13-amd64",
@@ -28,7 +28,7 @@
   "phases": {
     "baseline": "complete",
     "server": "wii-fat-on-demand-and-gamecube-no-copy-host-verified",
-    "container": "ghcr-wbfsattrfix1-live-verified",
+    "container": "ghcr-startupfix-published-truenas-deployment-pending",
     "pi_bridge": "strict-readonly-live-wii-launch-verified",
     "firmware_zero_w": "server-wait-cleanup-vidpid-export-installed-offline-verified",
     "firmware_pi4": "firmware-offline-verified",
