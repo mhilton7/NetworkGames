@@ -88,6 +88,28 @@ func (m *Manager) Action(ctx context.Context, action string) error {
 	return client.Action(ctx, action)
 }
 
+// Probe performs one fresh, authenticated status request. Mutating workflows
+// use it immediately before acting so a stale successful poll cannot authorize
+// a platform switch after the Pi has gone offline.
+func (m *Manager) Probe(parent context.Context) (Status, error) {
+	m.mu.RLock()
+	client := m.client
+	m.mu.RUnlock()
+	if client == nil {
+		return Status{}, errors.New("Pi address is not configured")
+	}
+	ctx, cancel := context.WithTimeout(parent, statusTimeout)
+	status, err := client.Status(ctx)
+	cancel()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if client != m.client {
+		return Status{}, errors.New("Pi address changed during status check")
+	}
+	m.status, m.statusErr = status, err
+	return status, err
+}
+
 // Status returns only the cached result. It never performs network I/O.
 func (m *Manager) Status(context.Context) (Status, error) {
 	m.mu.RLock()
@@ -143,26 +165,7 @@ func (m *Manager) Run(ctx context.Context) {
 }
 
 func (m *Manager) poll(parent context.Context) {
-	m.mu.RLock()
-	client := m.client
-	m.mu.RUnlock()
-	if client == nil {
-		m.mu.Lock()
-		if m.client == nil {
-			m.status, m.statusErr = Status{}, errors.New("Pi address is not configured")
-		}
-		m.mu.Unlock()
-		return
-	}
-	ctx, cancel := context.WithTimeout(parent, statusTimeout)
-	status, err := client.Status(ctx)
-	cancel()
-	m.mu.Lock()
-	// Do not publish a result from an address that was replaced mid-request.
-	if client == m.client {
-		m.status, m.statusErr = status, err
-	}
-	m.mu.Unlock()
+	_, _ = m.Probe(parent)
 }
 
 func persistAddress(path, address string) error {

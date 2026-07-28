@@ -85,6 +85,7 @@ type app struct {
 
 type piController interface {
 	Action(context.Context, string) error
+	Probe(context.Context) (bridgecontrol.Status, error)
 	Status(context.Context) (bridgecontrol.Status, error)
 	Address() string
 	SetAddress(context.Context, string) error
@@ -1341,6 +1342,25 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unsupported platform", http.StatusBadRequest)
 		return
 	}
+	automatic := a.pi != nil
+	if automatic {
+		status, err := a.pi.Probe(r.Context())
+		if err != nil {
+			slog.Warn("automatic export switch blocked",
+				"platform", platform, "reason", "Pi controller unavailable")
+			http.Error(w,
+				"automatic switching is unavailable because the Raspberry Pi is not connected",
+				http.StatusServiceUnavailable)
+			return
+		}
+		if err = validatePiSwitchReadiness(status); err != nil {
+			slog.Warn("automatic export switch blocked",
+				"platform", platform, "reason", err.Error())
+			http.Error(w, "automatic switching is unavailable: "+err.Error(),
+				http.StatusConflict)
+			return
+		}
+	}
 	var next exportprofile.Profile = a.wii
 	var selectedManifest *gamecube.VolumeManifest
 	var selectedLibrary *gamecube.LibraryManifest
@@ -1390,7 +1410,6 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 	previousLibrary := a.activeGCLibrary
 	a.mu.RUnlock()
 	previousPlatform := a.exports.Platform()
-	automatic := a.pi != nil
 	if automatic {
 		if err := a.pi.Action(r.Context(), "detach"); err != nil {
 			_ = next.Close()
@@ -1467,6 +1486,21 @@ func (a *app) selectExport(w http.ResponseWriter, r *http.Request) {
 	respondAction(w, r, http.StatusOK,
 		map[string]any{"platform": a.exports.Platform(), "state": a.exports.State()},
 		notice, platform)
+}
+
+func validatePiSwitchReadiness(status bridgecontrol.Status) error {
+	if !status.BoardOK || status.State == "wrong-board-recovery" {
+		return errors.New("Raspberry Pi board validation has not completed")
+	}
+	if !status.Provisioned || !status.WiFiReady || status.State != "ready" {
+		return errors.New("Raspberry Pi provisioning is not ready")
+	}
+	if status.USBController == "" || status.USBController == "none" ||
+		status.USBState == "" || status.USBState == "unknown" ||
+		status.USBState == "unavailable" {
+		return errors.New("Raspberry Pi USB gadget controller is unavailable")
+	}
+	return nil
 }
 
 func (a *app) waitForExportDisconnect(ctx context.Context) error {
@@ -1741,8 +1775,11 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		csrf = session.CSRF
 	}
 	piAddress := ""
+	piSwitchReady := true
 	if a.pi != nil {
 		piAddress = a.pi.Address()
+		status, statusErr := a.pi.Status(r.Context())
+		piSwitchReady = statusErr == nil && validatePiSwitchReadiness(status) == nil
 	}
 	storageControls := []map[string]string{
 		{"Action": "detach", "Label": "Safely Detach USB"},
@@ -1767,6 +1804,7 @@ func (a *app) dashboard(w http.ResponseWriter, r *http.Request) {
 		"GCLegacy": len(a.gcLibrary.LegacyGenerations()) > 0,
 		"Rejected": len(review), "Review": review,
 		"AutomaticSwitch": a.pi != nil, "PiAddress": piAddress,
+		"PiSwitchReady":   piSwitchReady,
 		"StorageControls": storageControls,
 		"DefaultPassword": a.browser.DefaultActive(),
 	}
