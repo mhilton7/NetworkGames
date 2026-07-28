@@ -3,10 +3,10 @@
 <title>Sign in · WiiBridge</title><link rel="stylesheet" href="/assets/app.css"></head>
 <body class="auth-page"><main class="auth-card"><div class="brand-mark">WB</div>
 <p class="eyebrow">WiiBridge Host</p><h1>Welcome back</h1>
-<p class="muted">Sign in to manage library exports and your Raspberry Pi bridge.</p>
+<p class="muted">Sign in to choose your game library and manage the Raspberry Pi bridge.</p>
 {{if .Error}}<div class="notice error" role="alert">{{.Error}}</div>{{end}}
-<form method="post" action="/login" class="form-stack">
+<form method="post" action="/login" class="form-stack" autocomplete="on">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>Username<input name="username" autocomplete="username" required autofocus></label>
-<label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+<label for="login-username">Username<input id="login-username" type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></label>
+<label for="login-password">Password<input id="login-password" type="password" name="password" autocomplete="current-password" required></label>
 <button type="submit">Sign in</button></form></main></body></html>{{end}}

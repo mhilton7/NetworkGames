@@ -44,11 +44,12 @@ control selects the current complete validated generation and is disabled until
 one exists. Building and updating are separate background operations; opening
 the page never starts a build.
 
-Raspberry Pi power controls are placed above the library profile cards so
-reboot and shutdown remain easy to reach. The **Catalog Viewer** below the Pi
-status panel is collapsed by default and can be expanded to search or filter
-the complete Wii and GameCube source catalogs. It opens automatically for a
-search, a platform filter, or rejected-source review.
+Raspberry Pi storage and power controls are grouped inside the **Raspberry Pi
+bridge** status panel. Reboot and shutdown retain their required confirmation
+checkboxes. The **Catalog Viewer** below that panel is collapsed by default and
+can be expanded to search or filter the complete Wii and GameCube source
+catalogs. Its open state and page position survive dashboard refreshes, and it
+opens automatically for a search, a platform filter, or rejected-source review.
 
 GameCube builds report titles, discs, mapped files, current phase, generated
 metadata bytes, extent count, and validation rather than payload-copy bytes.
@@ -62,6 +63,12 @@ token. It exposes only typed operations: detach USB, disconnect NBD, connect the
 current trusted profile, attach USB, reconcile, reboot, and power off. It does
 not expose a shell, arbitrary helper actions, provisioning, firmware flashing,
 private keys, or filesystem access.
+
+The sign-in and password-change forms use standard browser password-manager
+fields, so Chrome can offer to save and update the WiiBridge username and
+password. Open the dashboard through its normal HTTPS address with a certificate
+Chrome trusts; Chrome may suppress credential saving on a connection opened
+through a certificate-warning bypass.
 
 ## Password recovery
 

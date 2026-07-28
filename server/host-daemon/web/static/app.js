@@ -1,4 +1,63 @@
 (() => {
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  const scrollKey = `wiibridge:scroll:${window.location.pathname}`;
+  const rememberScroll = () => {
+    try {
+      window.sessionStorage.setItem(scrollKey, String(window.scrollY));
+    } catch (_) {}
+  };
+  const restoreScroll = () => {
+    let saved = null;
+    try {
+      saved = window.sessionStorage.getItem(scrollKey);
+      window.sessionStorage.removeItem(scrollKey);
+    } catch (_) {}
+    if (saved === null) return;
+    const top = Number(saved);
+    if (!Number.isFinite(top)) return;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.scrollTo(0, top));
+    });
+  };
+  window.addEventListener("beforeunload", rememberScroll);
+  document.addEventListener("submit", rememberScroll, true);
+  document.addEventListener("click", (event) => {
+    const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+    if (!link) return;
+    try {
+      if (new URL(link.href, window.location.href).pathname === window.location.pathname) {
+        rememberScroll();
+      }
+    } catch (_) {}
+  }, true);
+
+  document.querySelectorAll("details[data-persist-details]").forEach((details) => {
+    const stateKey = `wiibridge:details:${details.dataset.persistDetails}`;
+    try {
+      const saved = window.sessionStorage.getItem(stateKey);
+      if (saved !== null) details.open = saved === "open";
+    } catch (_) {}
+    const summary = details.querySelector(":scope > summary");
+    let summaryTop = null;
+    if (summary) {
+      summary.addEventListener("click", () => {
+        summaryTop = summary.getBoundingClientRect().top;
+      });
+    }
+    details.addEventListener("toggle", () => {
+      try {
+        window.sessionStorage.setItem(stateKey, details.open ? "open" : "closed");
+      } catch (_) {}
+      if (summaryTop === null || !summary) return;
+      const previousTop = summaryTop;
+      summaryTop = null;
+      window.requestAnimationFrame(() => {
+        window.scrollBy(0, summary.getBoundingClientRect().top - previousTop);
+      });
+    });
+  });
+  restoreScroll();
+
   const panel = document.getElementById("pi-live");
   const text = (id, value) => {
     const element = document.getElementById(id);
@@ -66,7 +125,10 @@
         progress.max = value.progress.total_titles || 1;
         progress.value = value.progress.titles_processed;
       }
-      if (value.progress.state !== "Building") window.location.reload();
+      if (value.progress.state !== "Building") {
+        rememberScroll();
+        window.location.reload();
+      }
     } catch (_) {}
   }
   refreshPi();
