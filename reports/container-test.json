@@ -1,5 +1,5 @@
 {
-  "image": "sha256:7f03cc77667830ab60def3dc546851d8f1fdbdd3f4e602ddcaee0fe98630101c",
+  "image": "sha256:24c3252a6bc8dbd176f179548b81b4ce62219cc896f7a4b0aa0a61b0f0f11d4d",
   "user": "568:568",
   "health": null,
   "readonly_root": true,
@@ -14,7 +14,7 @@
   "mounts": [
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-24034/library",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-30123/library",
       "Destination": "/library",
       "Mode": "ro",
       "RW": false,
@@ -22,7 +22,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-24034/config",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-30123/config",
       "Destination": "/config",
       "Mode": "rw",
       "RW": true,
@@ -30,7 +30,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-24034/data",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-30123/data",
       "Destination": "/data",
       "Mode": "rw",
       "RW": true,
@@ -38,7 +38,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-24034/certs",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-30123/certs",
       "Destination": "/certs",
       "Mode": "ro",
       "RW": false,
@@ -46,7 +46,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-24034/logs",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-30123/logs",
       "Destination": "/logs",
       "Mode": "rw",
       "RW": true,
@@ -54,7 +54,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-24034/backups",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-30123/backups",
       "Destination": "/backups",
       "Mode": "rw",
       "RW": true,

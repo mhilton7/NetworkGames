@@ -40,10 +40,16 @@ const (
 	maxLBA32DiskSectors    = int64(1 << 32)
 
 	// USB Loader GX and the Wii FAT stack conventionally use 32 KiB clusters
-	// for large FAT32 disks. Merely choosing the smallest mathematically valid
-	// cluster size leaves a multi-hundred-megabyte FAT on terabyte libraries
-	// and stalls physical Wii initialization during the mount path.
+	// for large FAT32 disks. This also keeps the FAT substantially smaller on
+	// terabyte libraries than the minimum mathematically valid cluster size.
 	largeWiiVolumeThreshold = int64(32 << 30)
+
+	// USB Loader GX's bundled libfat treats both zero and 0xffffffff FSInfo
+	// free-cluster counts as a request to walk the complete FAT at mount time.
+	// Always retain at least one real free cluster so the synthetic disk can
+	// publish an exact, non-sentinel count and keep mounting proportional to
+	// directory metadata rather than virtual disk capacity.
+	minFreeClusters = int64(1)
 )
 
 var wiiSectorsPerCluster = [...]int64{8, 16, 32, 64}
@@ -77,6 +83,8 @@ type diskGeometry struct {
 	sectorsPerCluster int64
 	clusterSize       int64
 	wbfsDirClusters   int64
+	allocatedClusters int64
+	freeClusters      int64
 	totalClusters     int64
 	fatSectors        int64
 	firstData         int64
@@ -122,7 +130,8 @@ func selectDiskGeometry(fileLengths []int64, wbfsEntries int64) (diskGeometry, e
 			wbfsDirClusters = 1
 		}
 		const rootClusters = int64(1)
-		totalClusters := rootClusters + wbfsDirClusters + dataClusters
+		allocatedClusters := rootClusters + wbfsDirClusters + dataClusters
+		totalClusters := allocatedClusters + minFreeClusters
 		// FAT32 requires at least 65,525 clusters. Unallocated clusters are
 		// virtual zero space and do not consume persistent storage.
 		if totalClusters < 65525 {
@@ -142,6 +151,8 @@ func selectDiskGeometry(fileLengths []int64, wbfsEntries int64) (diskGeometry, e
 			sectorsPerCluster: sectorsPerCluster,
 			clusterSize:       clusterSize,
 			wbfsDirClusters:   wbfsDirClusters,
+			allocatedClusters: allocatedClusters,
+			freeClusters:      totalClusters - allocatedClusters,
 			totalClusters:     totalClusters,
 			fatSectors:        fatSectors,
 			firstData:         firstData,
@@ -221,8 +232,10 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 	boot := bootSector(partSectors, fatSectors, sectorsPerCluster, uint32(2), diskSignature)
 	d.metadata[partitionStart] = boot
 	d.metadata[partitionStart+6] = append([]byte(nil), boot...)
-	d.metadata[partitionStart+1] = fsInfo()
-	d.metadata[partitionStart+7] = fsInfo()
+	firstFreeCluster := uint32(2 + geometry.allocatedClusters)
+	info := fsInfo(uint32(geometry.freeClusters), firstFreeCluster)
+	d.metadata[partitionStart+1] = info
+	d.metadata[partitionStart+7] = append([]byte(nil), info...)
 	nextCluster := uint32(2)
 	chain := func(count int64) uint32 {
 		first := nextCluster
@@ -240,6 +253,9 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 	wbfsCluster := chain(wbfsDirClusters)
 	for i := range files {
 		files[i].first = chain((files[i].length + clusterSize - 1) / clusterSize)
+	}
+	if nextCluster != firstFreeCluster {
+		return nil, errors.New("internal Wii FAT32 allocation mismatch")
 	}
 	dataStartSector := partitionStart + firstData
 	rootDir := make([]byte, rootClusters*clusterSize)
@@ -643,12 +659,12 @@ func bootSector(sectors, fatSectors, sectorsPerCluster int64, root, volumeID uin
 	return b
 }
 
-func fsInfo() []byte {
+func fsInfo(freeClusters, nextFreeCluster uint32) []byte {
 	b := make([]byte, 512)
 	copy(b[0:4], []byte("RRaA"))
 	copy(b[484:488], []byte("rrAa"))
-	binary.LittleEndian.PutUint32(b[488:492], 0xffffffff)
-	binary.LittleEndian.PutUint32(b[492:496], 0xffffffff)
+	binary.LittleEndian.PutUint32(b[488:492], freeClusters)
+	binary.LittleEndian.PutUint32(b[492:496], nextFreeCluster)
 	b[510], b[511] = 0x55, 0xaa
 	return b
 }
