@@ -250,6 +250,37 @@ func TestLiveScaleSelectsValidFAT32Geometry(t *testing.T) {
 		t.Fatalf("FAT32 geometry exposes %d data clusters, maximum is %d",
 			dataClusters, maxFAT32DataClusters)
 	}
+	info := make([]byte, sectorSize)
+	if _, err = disk.ReadAt(info, (partitionStart+1)*sectorSize); err != nil {
+		t.Fatal(err)
+	}
+	freeClusters := binary.LittleEndian.Uint32(info[488:492])
+	nextFreeCluster := binary.LittleEndian.Uint32(info[492:496])
+	var allocatedClusters uint32
+	for _, chain := range disk.fatChains {
+		allocatedClusters += chain.count
+	}
+	if freeClusters != uint32(dataClusters)-allocatedClusters {
+		t.Fatalf("FSInfo reports %d free clusters, want %d",
+			freeClusters, uint32(dataClusters)-allocatedClusters)
+	}
+	if freeClusters == 0 || freeClusters == 0xffffffff {
+		t.Fatalf("FSInfo uses libfat full-scan sentinel %#x", freeClusters)
+	}
+	if nextFreeCluster != 2+allocatedClusters {
+		t.Fatalf("FSInfo next-free cluster is %d, want %d",
+			nextFreeCluster, 2+allocatedClusters)
+	}
+	if disk.fatValue(nextFreeCluster) != 0 {
+		t.Fatalf("FSInfo next-free cluster %d is allocated", nextFreeCluster)
+	}
+	backupInfo := make([]byte, sectorSize)
+	if _, err = disk.ReadAt(backupInfo, (partitionStart+7)*sectorSize); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(info, backupInfo) {
+		t.Fatal("primary and backup FSInfo sectors differ")
+	}
 	if fatSectors > 500_000 {
 		t.Fatalf("large-volume FAT is too large for the Wii mount path: %d sectors",
 			fatSectors)
