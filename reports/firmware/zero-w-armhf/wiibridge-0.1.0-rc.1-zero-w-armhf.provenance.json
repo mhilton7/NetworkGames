@@ -4,13 +4,13 @@
     {
       "name": "zero-w-armhf.img",
       "digest": {
-        "sha256": "8ebd370e874eba9d5598bb80bf26201aaf2d1b132b4967e964539de416a987c8"
+        "sha256": "89167db6b8dcd7e544589e90306f36e42c9066779430b5964ef19073f6a3f8e5"
       }
     },
     {
       "name": "zero-w-armhf.img.xz",
       "digest": {
-        "sha256": "6fcb9a4bbe27523269ea91916b5ea51958f54aa7f85314fb49441ca4360d5ff2"
+        "sha256": "2873476d07fa63f5b3b3ef25cf71379b0179322297f1a1915aca860a765a3e73"
       }
     }
   ],
@@ -35,8 +35,8 @@
       {
         "uri": "git+local:wiibridge",
         "digest": {
-          "gitCommit": "d727bdd11ba582b63a5127d8b7ad84910525065a",
-          "sourceTreeSha256": "de1bd3657fcb5bce748ef31f152b16334f60e8424aa9eb33b4795953ea3f7d22"
+          "gitCommit": "c60d4b500944044a581e039570d3a8432b1921e2",
+          "sourceTreeSha256": "c7d2346f16d03bb4c1031d9e6026bd50d54f4b688c6c78d909a509b01fee8dfe"
         }
       }
     ]
@@ -47,7 +47,7 @@
     },
     "metadata": {
       "invocationId": "zero-w-armhf-20260724",
-      "finishedOn": "2026-07-27T06:51:36Z",
+      "finishedOn": "2026-07-28T23:26:19Z",
       "sourceWorktreeDirty": true
     }
   }

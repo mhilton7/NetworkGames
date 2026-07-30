@@ -2,14 +2,16 @@
   "schema_version": 1,
   "project_version": "0.1.0-rc.1",
   "prompt_version": 3,
-  "status": "software-complete-four-features-host-verified-hardware-unverified",
+  "status": "large-wii-fat32-geometry-repair-local-verified-truenas-deployment-pending",
   "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
-  "application_commit": "7097d8a2ba2bc269e7a759b521a6ec16251cc12f",
+  "application_commit": "c60d4b500944044a581e039570d3a8432b1921e2",
   "implementation_base_commit": "ce732427b1805cfa580ba0d5a865e2aed47eeeac",
-  "last_published_application_commit": "7097d8a2ba2bc269e7a759b521a6ec16251cc12f",
-  "worktree_state": "committed-clean-build-validated",
-  "local_oci_digest": "sha256:f34bd8d2036d918dd2ab841e53cbf6b924369c8dfbaa4b375bc1f142fe2b0d4e",
-  "controller_armv6_sha256": "5418fd2008debd021c8c55d853eedc6ce80b01c41a01795d7f97618841c74857",
+  "last_published_application_commit": "c60d4b500944044a581e039570d3a8432b1921e2",
+  "worktree_state": "large-wii-fat32-geometry-repair-local-validated-uncommitted",
+  "local_oci_digest": "sha256:7150b81412b643c99cf996247371d4098529a4355dd9a688b743439c5e5d31fe",
+  "controller_armv6_sha256": "c380f33b36f6408c46619e81f07585fe1b2f7e77e5a4225c5736988618b02b01",
+  "firmware_zero_w_image_sha256": "89167db6b8dcd7e544589e90306f36e42c9066779430b5964ef19073f6a3f8e5",
+  "firmware_zero_w_xz_sha256": "2873476d07fa63f5b3b3ef25cf71379b0179322297f1a1915aca860a765a3e73",
   "build_host": {
     "os": "Debian GNU/Linux 13 (trixie)",
     "kernel": "6.12.96+deb13-amd64",
@@ -28,19 +30,19 @@
       "nbd_tls": 10809,
       "availability_verified_on_target": true
     },
-    "state": "LIVE_WBFS_ARCHIVE_ATTRIBUTE_AND_READONLY_NBD_VERIFIED"
+    "state": "LIVE_OLD_INVALID_LARGE_WII_FAT32_EXPORT_REPLACEMENT_PENDING"
   },
   "phases": {
     "baseline": "complete",
-    "server": "four-feature-host-race-and-static-verified",
-    "container": "local-hardened-oci-verified-truenas-deployment-pending",
-    "pi_bridge": "compatibility-and-bounded-metrics-source-verified-armv6-built",
-    "firmware_zero_w": "controller-armv6-verified-current-full-image-not-rebuilt",
+    "server": "large-wii-fat32-geometry-repair-tests-race-static-verified",
+    "container": "local-fat32-repair-oci-and-hardened-lifecycle-verified-truenas-deployment-pending",
+    "pi_bridge": "compatibility-and-bounded-metrics-current-armv6-image-offline-verified",
+    "firmware_zero_w": "current-full-image-offline-verified-physical-retest-deferred",
     "firmware_pi4": "firmware-offline-verified",
     "firmware_pi5": "firmware-offline-verified",
     "release": "software-complete-four-features-hardware-validation-deferred",
     "truenas_startup": "host-validated-live-digest-verification-pending"
   },
-  "physical_tests": "gamecube-emulated-save-and-pi-zero-telemetry-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
-  "updated_utc": "2026-07-28T17:33:31Z"
+  "physical_tests": "large-library USB Loader GX retest pending corrected TrueNAS deployment; gamecube-emulated-save-and-pi-zero-telemetry-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
+  "updated_utc": "2026-07-30T02:49:44Z"
 }

@@ -1,7 +1,7 @@
 {
   "status": "firmware-offline-verified",
   "target": "zero-w-armhf",
-  "architecture": "/tmp/tmp.vQRnySfSqX/root/usr/bin/wiibridge-pi-controller: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, stripped",
+  "architecture": "/tmp/tmp.RpPT8B6O6U/root/usr/bin/wiibridge-pi-controller: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, stripped",
   "partition_table": "PASS",
   "filesystems_non_destructive_fsck": "PASS",
   "filesystems_read_only_inspection": "PASS",
@@ -11,6 +11,7 @@
   "services": "PASS",
   "nbd_kernel_modules": "PASS",
   "nbd_boot_preload": "PASS",
+  "usb_gadget_kernel_modules": "PASS",
   "qemu_application_smoke": "PASS",
   "no_payloads": "PASS",
   "no_embedded_identity": "PASS",

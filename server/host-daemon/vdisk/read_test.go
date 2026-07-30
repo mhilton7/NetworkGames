@@ -205,14 +205,60 @@ func TestLargeVirtualFATBuildDoesNotWalkApparentFATSectors(t *testing.T) {
 		disk.fatSectors, len(disk.fatChains), elapsed)
 }
 
+func TestLiveScaleSelectsValidFAT32Geometry(t *testing.T) {
+	// This synthetic payload reproduces the scale of the 1,816,313,603,072-byte
+	// export that USB Loader GX could not initialize. A fixed 4 KiB cluster
+	// layout needs more FAT32 data clusters than the format can represent.
+	const payloadSize = int64(1_812_700_000_000)
+	game := model.Game{
+		ID: "BIG001", Size: payloadSize,
+		Sources: []model.Source{{
+			Path: "/synthetic/not-opened", Length: payloadSize, Size: payloadSize,
+		}},
+	}
+	disk, err := Build("live-scale-regression", []model.Game{game}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disk.sectorsPerCluster != 16 {
+		t.Fatalf("selected %d sectors per cluster, want 16", disk.sectorsPerCluster)
+	}
+
+	mbrSector := make([]byte, sectorSize)
+	if _, err = disk.ReadAt(mbrSector, 0); err != nil {
+		t.Fatal(err)
+	}
+	partitionSectors := int64(binary.LittleEndian.Uint32(mbrSector[458:462]))
+	boot := make([]byte, sectorSize)
+	if _, err = disk.ReadAt(boot, partitionStart*sectorSize); err != nil {
+		t.Fatal(err)
+	}
+	sectorsPerCluster := int64(boot[13])
+	fatSectors := int64(binary.LittleEndian.Uint32(boot[36:40]))
+	firstData := int64(binary.LittleEndian.Uint16(boot[14:16])) +
+		int64(boot[16])*fatSectors
+	dataClusters := (partitionSectors - firstData) / sectorsPerCluster
+	if dataClusters > maxFAT32DataClusters {
+		t.Fatalf("FAT32 geometry exposes %d data clusters, maximum is %d",
+			dataClusters, maxFAT32DataClusters)
+	}
+	if disk.Size()/sectorSize > maxLBA32DiskSectors {
+		t.Fatalf("disk uses %d sectors, 32-bit LBA maximum is %d",
+			disk.Size()/sectorSize, maxLBA32DiskSectors)
+	}
+	t.Logf("live-scale fixture: size=%d sectors/cluster=%d data clusters=%d FAT sectors/copy=%d",
+		disk.Size(), sectorsPerCluster, dataClusters, fatSectors)
+}
+
 func TestCompactMetadataIdentityChangesWithFATLayout(t *testing.T) {
 	base := &Disk{
-		size: 4096, fatStart: 32, fatSectors: 64,
+		size: 4096, sectorsPerCluster: 8, fatStart: 32, fatSectors: 64,
 		metadata:  map[int64][]byte{0: bytes.Repeat([]byte{0xa5}, 512)},
 		fatChains: []clusterChain{{first: 2, count: 3}},
 	}
 	same := &Disk{
-		size: base.size, fatStart: base.fatStart, fatSectors: base.fatSectors,
+		size: base.size, sectorsPerCluster: base.sectorsPerCluster,
+		fatStart: base.fatStart, fatSectors: base.fatSectors,
 		metadata:  map[int64][]byte{0: append([]byte(nil), base.metadata[0]...)},
 		fatChains: append([]clusterChain(nil), base.fatChains...),
 	}
@@ -222,6 +268,11 @@ func TestCompactMetadataIdentityChangesWithFATLayout(t *testing.T) {
 	same.fatChains[0].count++
 	if base.metadataIdentity() == same.metadataIdentity() {
 		t.Fatal("different FAT chains produced the same compact identity")
+	}
+	same.fatChains[0].count = base.fatChains[0].count
+	same.sectorsPerCluster *= 2
+	if base.metadataIdentity() == same.metadataIdentity() {
+		t.Fatal("different sectors-per-cluster values produced the same compact identity")
 	}
 }
 

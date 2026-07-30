@@ -23,14 +23,24 @@ import (
 )
 
 const (
-	sectorSize        = int64(512)
-	sectorsPerCluster = int64(8)
-	clusterSize       = sectorSize * sectorsPerCluster
-	partitionStart    = int64(2048)
-	reservedSectors   = int64(32)
-	numFATs           = int64(2)
-	maxSegment        = int64(0xfffff000)
+	sectorSize      = int64(512)
+	partitionStart  = int64(2048)
+	reservedSectors = int64(32)
+	numFATs         = int64(2)
+	maxSegment      = int64(0xfffff000)
+
+	// FAT32 cluster numbers 0x0ffffff0 through 0x0ffffff6 are reserved.
+	// Because data clusters begin at number 2, this is the largest safe count
+	// whose final cluster number remains below the reserved range.
+	maxFAT32DataClusters = int64(0x0fffffee)
+
+	// A classic MBR partition length is a uint32 sector count, while a 32-bit
+	// LBA disk can contain sectors 0 through 0xffffffff.
+	maxMBRPartitionSectors = int64(1<<32 - 1)
+	maxLBA32DiskSectors    = int64(1 << 32)
 )
+
+var wiiSectorsPerCluster = [...]int64{8, 16, 32, 64}
 
 type extent struct {
 	start, length int64
@@ -45,6 +55,7 @@ type clusterChain struct {
 
 type Disk struct {
 	size              int64
+	sectorsPerCluster int64
 	metadata          map[int64][]byte
 	fatStart          int64
 	fatSectors        int64
@@ -54,6 +65,70 @@ type Disk struct {
 	metrics           *perf.Registry
 	onSourceFailure   func(string)
 	lastSourceFailure atomic.Int64
+}
+
+type diskGeometry struct {
+	sectorsPerCluster int64
+	clusterSize       int64
+	wbfsDirClusters   int64
+	totalClusters     int64
+	fatSectors        int64
+	firstData         int64
+	partSectors       int64
+	diskSectors       int64
+}
+
+func clustersForBytes(size, clusterSize int64) int64 {
+	if size <= 0 {
+		return 0
+	}
+	return 1 + (size-1)/clusterSize
+}
+
+func selectDiskGeometry(fileLengths []int64, wbfsEntries int64) (diskGeometry, error) {
+	for _, sectorsPerCluster := range wiiSectorsPerCluster {
+		clusterSize := sectorSize * sectorsPerCluster
+		var dataClusters int64
+		for _, length := range fileLengths {
+			if length < 0 || dataClusters > maxFAT32DataClusters-clustersForBytes(length, clusterSize) {
+				dataClusters = maxFAT32DataClusters + 1
+				break
+			}
+			dataClusters += clustersForBytes(length, clusterSize)
+		}
+		wbfsDirClusters := clustersForBytes(wbfsEntries*32, clusterSize)
+		if wbfsDirClusters < 1 {
+			wbfsDirClusters = 1
+		}
+		const rootClusters = int64(1)
+		totalClusters := rootClusters + wbfsDirClusters + dataClusters
+		// FAT32 requires at least 65,525 clusters. Unallocated clusters are
+		// virtual zero space and do not consume persistent storage.
+		if totalClusters < 65525 {
+			totalClusters = 65525
+		}
+		if totalClusters > maxFAT32DataClusters {
+			continue
+		}
+		fatSectors := ((totalClusters+2)*4 + sectorSize - 1) / sectorSize
+		firstData := reservedSectors + numFATs*fatSectors
+		partSectors := firstData + totalClusters*sectorsPerCluster
+		diskSectors := partitionStart + partSectors
+		if partSectors > maxMBRPartitionSectors || diskSectors > maxLBA32DiskSectors {
+			continue
+		}
+		return diskGeometry{
+			sectorsPerCluster: sectorsPerCluster,
+			clusterSize:       clusterSize,
+			wbfsDirClusters:   wbfsDirClusters,
+			totalClusters:     totalClusters,
+			fatSectors:        fatSectors,
+			firstData:         firstData,
+			partSectors:       partSectors,
+			diskSectors:       diskSectors,
+		}, nil
+	}
+	return diskGeometry{}, errors.New("Wii library exceeds FAT32/MBR capacity")
 }
 
 func Build(catalog string, games []model.Game, appVersion string) (*Disk, error) {
@@ -69,7 +144,6 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 		first       uint32
 	}
 	var files []virtualFile
-	var dataClusters int64
 	for _, g := range games {
 		for off, seg := int64(0), 0; off < g.Size; seg++ {
 			n := g.Size - off
@@ -84,27 +158,27 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 			sum := sha256.Sum256([]byte(longName))
 			short := fmt.Sprintf("%-8s%-3s", fmt.Sprintf("%.2s%05X", g.ID, sum[:3]), "WBF")
 			files = append(files, virtualFile{name: longName, short: short, game: g, off: off, length: n})
-			dataClusters += (n + clusterSize - 1) / clusterSize
 			off += n
 		}
 	}
 	// Each payload uses one VFAT long-name entry plus one unique 8.3 alias.
 	wbfsEntries := int64(2 + 2*len(files))
-	wbfsDirClusters := (wbfsEntries*32 + clusterSize - 1) / clusterSize
-	if wbfsDirClusters < 1 {
-		wbfsDirClusters = 1
+	fileLengths := make([]int64, len(files))
+	for index := range files {
+		fileLengths[index] = files[index].length
 	}
+	geometry, err := selectDiskGeometry(fileLengths, wbfsEntries)
+	if err != nil {
+		return nil, err
+	}
+	sectorsPerCluster := geometry.sectorsPerCluster
+	clusterSize := geometry.clusterSize
+	wbfsDirClusters := geometry.wbfsDirClusters
 	const rootClusters = int64(1)
-	totalClusters := rootClusters + wbfsDirClusters + dataClusters
-	// FAT32 requires at least 65,525 clusters. Unallocated clusters are virtual
-	// zero space and do not consume persistent storage.
-	if totalClusters < 65525 {
-		totalClusters = 65525
-	}
-	fatSectors := ((totalClusters+2)*4 + sectorSize - 1) / sectorSize
-	firstData := reservedSectors + numFATs*fatSectors
-	partSectors := firstData + totalClusters*sectorsPerCluster
-	diskSectors := partitionStart + partSectors
+	fatSectors := geometry.fatSectors
+	firstData := geometry.firstData
+	partSectors := geometry.partSectors
+	diskSectors := geometry.diskSectors
 	signatureHash := sha256.New()
 	signatureHash.Write([]byte(catalog))
 	for _, file := range files {
@@ -118,9 +192,12 @@ func Build(catalog string, games []model.Game, appVersion string) (*Disk, error)
 		// assign and persist a replacement signature.
 		diskSignature = 0x57424d53
 	}
-	d := &Disk{size: diskSectors * sectorSize, metadata: map[int64][]byte{}}
+	d := &Disk{
+		size: diskSectors * sectorSize, sectorsPerCluster: sectorsPerCluster,
+		metadata: map[int64][]byte{},
+	}
 	d.metadata[0] = mbr(partitionStart, partSectors, diskSignature)
-	boot := bootSector(partSectors, fatSectors, uint32(2), diskSignature)
+	boot := bootSector(partSectors, fatSectors, sectorsPerCluster, uint32(2), diskSignature)
 	d.metadata[partitionStart] = boot
 	d.metadata[partitionStart+6] = append([]byte(nil), boot...)
 	d.metadata[partitionStart+1] = fsInfo()
@@ -256,7 +333,7 @@ func (d *Disk) metadataIdentity() string {
 	}
 	writeInt64(d.size)
 	writeInt64(sectorSize)
-	writeInt64(sectorsPerCluster)
+	writeInt64(d.sectorsPerCluster)
 	writeInt64(d.fatStart)
 	writeInt64(d.fatSectors)
 	writeInt64(numFATs)
@@ -517,7 +594,7 @@ func mbr(start, sectors int64, signature uint32) []byte {
 	return b
 }
 
-func bootSector(sectors, fatSectors int64, root, volumeID uint32) []byte {
+func bootSector(sectors, fatSectors, sectorsPerCluster int64, root, volumeID uint32) []byte {
 	b := make([]byte, 512)
 	copy(b[0:3], []byte{0xeb, 0x58, 0x90})
 	copy(b[3:11], "WIIBRDG ")

@@ -892,3 +892,72 @@
   Host OCI image to TrueNAS also remain unverified. Prior physical Wii launch,
   read-only NBD, and Pi recovery evidence is retained but was not repeated for
   this implementation.
+
+## 2026-07-28 — Current Pi Zero W full firmware image
+
+- Started from a clean worktree at published commit
+  `c60d4b500944044a581e039570d3a8432b1921e2` and rebuilt the complete
+  `zero-w-armhf` pi-gen image. The controller was linked with product version
+  `0.1.0-rc.1`, that exact revision, build time `2026-07-28T22:59:31Z`, and
+  `dirty=false`.
+- Used pinned pi-gen commit
+  `314262cb286b8f33327a6f0cbabe14c625021ca0`. The resulting controller is a
+  stripped, statically linked 32-bit ARM EABI5 executable with SHA-256
+  `c380f33b36f6408c46619e81f07585fe1b2f7e77e5a4225c5736988618b02b01`.
+- Generated the 2,751,463,424-byte flashable image and 535,258,860-byte XZ
+  archive. Image SHA-256 is
+  `89167db6b8dcd7e544589e90306f36e42c9066779430b5964ef19073f6a3f8e5`;
+  compressed SHA-256 is
+  `2873476d07fa63f5b3b3ef25cf71379b0179322297f1a1915aca860a765a3e73`.
+  Both checksum files pass, `xz --test` passes, and streaming decompression
+  reproduced the original image checksum.
+- Offline validation passed partition layout, non-destructive FAT/ext4 checks,
+  read-only inspection, Zero W board metadata and boot files, `dwc2` gadget
+  configuration, required services, NBD preload/module presence,
+  `libcomposite` and USB mass-storage gadget modules, QEMU ARM application
+  smoke, no game payloads, and no embedded machine/device identity.
+- Generated a bmap, 643-package manifest/SPDX SBOM, provenance, retained build
+  log, and offline validation report. The first combined shell was externally
+  terminated with `SIGTERM` only after the image and offline validation had
+  completed, while XZ compression was running. The incomplete archive was
+  replaced by a successful standalone packaging pass; the final hashes above
+  were independently rechecked.
+- The packaging script's existing provenance template conservatively records
+  `sourceWorktreeDirty:true` even though the build log and preflight confirmed
+  the worktree was clean before image construction. This metadata limitation
+  does not change the embedded revision or image hashes.
+- Flashing, first boot, authenticated descriptor/metrics collection, USB
+  gadget enumeration, and performance measurement on the physical Pi Zero W
+  remain `DEFERRED_HARDWARE_UNAVAILABLE`.
+
+## 2026-07-30 — USB Loader GX large-library freeze diagnosis and repair
+
+- Captured the live failure while USB Loader GX remained frozen. The Pi Zero W
+  reported `ready`, NBD connected, USB attached/configured, export profile
+  `wii`, zero USB resets, zero request failures, and no increase beyond 74
+  completed requests during an 11-second sample. The transport was healthy and
+  the Wii stopped issuing block reads.
+- Attached the live mutual-TLS NBD export read-only for diagnosis. It was
+  1,816,313,603,072 bytes with an MBR FAT32 LBA partition, but its BPB fixed
+  sectors-per-cluster at 8. The resulting approximately 442.6 million data
+  clusters exceed FAT32's usable 28-bit cluster-number range and cross into
+  reserved values. This explains the initialization stall before payload I/O.
+- Confirmed the current Pi controller and Host both identify as revision
+  `c60d4b5`. The earlier Pi controller update did not change the NBD helper,
+  gadget setup, USB auto-attach unit, or controller unit, eliminating that
+  update as the storage regression.
+- Reworked the Wii virtual-disk builder to select a power-of-two cluster size
+  dynamically. Existing small disks retain their 4 KiB geometry. Large disks
+  increase cluster size only as needed to remain under the last usable FAT32
+  data-cluster number and within MBR and 32-bit LBA capacity.
+- Added a synthetic 1.65 TiB-scale regression. It selects 16 sectors per
+  cluster (8 KiB), exposes approximately 221 million clusters, keeps the FAT
+  compact/on-demand, and builds without opening a payload source.
+- `make test`, `make static`, `make compose`, targeted race tests,
+  `git diff --check`, the hardened Docker lifecycle test, and OCI inspection
+  pass. The local dirty-worktree OCI manifest digest is
+  `sha256:7150b81412b643c99cf996247371d4098529a4355dd9a688b743439c5e5d31fe`;
+  it is diagnostic evidence, not a published clean release.
+- The live TrueNAS container has not been replaced because this workspace has
+  HTTPS/NBD client access but no authenticated TrueNAS management shell or
+  API. Physical USB Loader GX retesting remains pending that deployment.
