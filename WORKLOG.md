@@ -988,3 +988,32 @@
   pass. The local dirty-worktree OCI manifest digest is
   `sha256:2541660dbf0085b0ccad6f9294ed4446f9ece6aa74ab07efcdb97c4ba71f1789`;
   it is validation evidence, not a clean published release.
+
+### 32 KiB physical failure and FSInfo mount-scan diagnosis
+
+- Published commit `2a7383a` and deployed immutable GHCR digest
+  `sha256:5538addc6e525d0ffac405192c97a3ef955eef4d9974e327e22e3e070f487b3f`.
+  The live Host identifies as that clean revision and reports ready.
+- Independently attached the live mutual-TLS NBD export read-only. It is
+  1,813,217,565,696 bytes with a 3,541,438,510-sector MBR partition, 32 KiB
+  FAT32 clusters, and a 432,199-sector FAT per copy. This proves that the
+  intended image and geometry were active for the physical retest.
+- The retest still froze at `Initializing USB devices`. The Pi remained ready,
+  NBD-connected, and USB configured. Completed NBD requests stayed at 143
+  across a 40-second sample with zero read failures, reconnects, USB resets,
+  or recent errors.
+- Read the deployed primary FSInfo sector directly and confirmed that both the
+  free-cluster count and next-free hint are `0xffffffff`. USB Loader GX r1283
+  bundles custom libfat 1.1.5. Its exact source treats the unknown free-count
+  sentinel by calling `_FAT_updateFS_INFO`, which invokes
+  `_FAT_fat_freeClusterCount` and walks the entire FAT as part of `fatMount`.
+  The synthetic builder has always emitted these unknown sentinels.
+- Changed geometry generation to retain at least one real free cluster and
+  write exact, nonzero free-cluster and next-free values to both FSInfo copies.
+  The live-scale regression verifies the values against the compact FAT chains
+  and proves that the advertised next-free cluster is actually unallocated.
+- `make test`, independent FAT32 validation, `make static`, `make compose`,
+  the targeted race test, `git diff --check`, hardened Docker lifecycle, and
+  OCI inspection pass. The local dirty-worktree OCI manifest digest is
+  `sha256:93d6056a9ce0dab0030a55e7a74abf76c7ee64f564c8899b430fbb50cc350ce8`;
+  it is validation evidence, not a clean published release.
