@@ -38,6 +38,12 @@ const (
 	// LBA disk can contain sectors 0 through 0xffffffff.
 	maxMBRPartitionSectors = int64(1<<32 - 1)
 	maxLBA32DiskSectors    = int64(1 << 32)
+
+	// USB Loader GX and the Wii FAT stack conventionally use 32 KiB clusters
+	// for large FAT32 disks. Merely choosing the smallest mathematically valid
+	// cluster size leaves a multi-hundred-megabyte FAT on terabyte libraries
+	// and stalls physical Wii initialization during the mount path.
+	largeWiiVolumeThreshold = int64(32 << 30)
 )
 
 var wiiSectorsPerCluster = [...]int64{8, 16, 32, 64}
@@ -86,11 +92,26 @@ func clustersForBytes(size, clusterSize int64) int64 {
 }
 
 func selectDiskGeometry(fileLengths []int64, wbfsEntries int64) (diskGeometry, error) {
-	for _, sectorsPerCluster := range wiiSectorsPerCluster {
+	candidates := wiiSectorsPerCluster[:]
+	var logicalBytes int64
+	for _, length := range fileLengths {
+		if length < 0 {
+			return diskGeometry{}, errors.New("Wii library contains a negative file size")
+		}
+		if length >= largeWiiVolumeThreshold-logicalBytes {
+			// Preserve the proven 4 KiB layout for smaller libraries, but use
+			// the Wii-compatible 32 KiB layout once payload size reaches the
+			// conventional large-volume threshold.
+			candidates = wiiSectorsPerCluster[len(wiiSectorsPerCluster)-1:]
+			break
+		}
+		logicalBytes += length
+	}
+	for _, sectorsPerCluster := range candidates {
 		clusterSize := sectorSize * sectorsPerCluster
 		var dataClusters int64
 		for _, length := range fileLengths {
-			if length < 0 || dataClusters > maxFAT32DataClusters-clustersForBytes(length, clusterSize) {
+			if dataClusters > maxFAT32DataClusters-clustersForBytes(length, clusterSize) {
 				dataClusters = maxFAT32DataClusters + 1
 				break
 			}

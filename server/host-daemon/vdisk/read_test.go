@@ -158,6 +158,10 @@ func TestLargeVirtualFATIsSynthesizedInsteadOfResident(t *testing.T) {
 		t.Fatalf("FAT chain representation scales with clusters: %d chains",
 			len(disk.fatChains))
 	}
+	if disk.sectorsPerCluster != 8 {
+		t.Fatalf("small-library geometry changed to %d sectors per cluster",
+			disk.sectorsPerCluster)
+	}
 	t.Logf("8 GiB fixture: virtual FAT sectors per copy=%d compact chains=%d resident metadata sectors=%d",
 		disk.fatSectors, len(disk.fatChains), len(disk.metadata))
 	first := make([]byte, sectorSize)
@@ -190,9 +194,13 @@ func TestLargeVirtualFATBuildDoesNotWalkApparentFATSectors(t *testing.T) {
 		t.Fatal(err)
 	}
 	elapsed := time.Since(started)
-	if disk.fatSectors < 1_000_000 {
+	if disk.fatSectors < 100_000 {
 		t.Fatalf("fixture FAT is too small to exercise bounded startup: %d sectors",
 			disk.fatSectors)
+	}
+	if disk.sectorsPerCluster != 64 {
+		t.Fatalf("large Wii volume selected %d sectors per cluster, want 64",
+			disk.sectorsPerCluster)
 	}
 	if elapsed > 5*time.Second {
 		t.Fatalf("compact metadata identity walked the apparent FAT: build took %s",
@@ -220,8 +228,8 @@ func TestLiveScaleSelectsValidFAT32Geometry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if disk.sectorsPerCluster != 16 {
-		t.Fatalf("selected %d sectors per cluster, want 16", disk.sectorsPerCluster)
+	if disk.sectorsPerCluster != 64 {
+		t.Fatalf("selected %d sectors per cluster, want 64", disk.sectorsPerCluster)
 	}
 
 	mbrSector := make([]byte, sectorSize)
@@ -241,6 +249,10 @@ func TestLiveScaleSelectsValidFAT32Geometry(t *testing.T) {
 	if dataClusters > maxFAT32DataClusters {
 		t.Fatalf("FAT32 geometry exposes %d data clusters, maximum is %d",
 			dataClusters, maxFAT32DataClusters)
+	}
+	if fatSectors > 500_000 {
+		t.Fatalf("large-volume FAT is too large for the Wii mount path: %d sectors",
+			fatSectors)
 	}
 	if disk.Size()/sectorSize > maxLBA32DiskSectors {
 		t.Fatalf("disk uses %d sectors, 32-bit LBA maximum is %d",
