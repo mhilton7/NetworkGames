@@ -1,5 +1,5 @@
 {
-  "image": "sha256:5ffbb5cf073213351117b9651e33c3bd732c83411af07ae8b675baef8b17efa4",
+  "image": "sha256:e4869cf6ee7deed9dc6151017e2d259d3c430ceebddd11cc285db4ee1532b827",
   "user": "568:568",
   "health": null,
   "readonly_root": true,
@@ -14,31 +14,7 @@
   "mounts": [
     {
       "Type": "bind",
-      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/data",
-      "Destination": "/data",
-      "Mode": "rw",
-      "RW": true,
-      "Propagation": "rprivate"
-    },
-    {
-      "Type": "bind",
-      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/certs",
-      "Destination": "/certs",
-      "Mode": "ro",
-      "RW": false,
-      "Propagation": "rprivate"
-    },
-    {
-      "Type": "bind",
-      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/logs",
-      "Destination": "/logs",
-      "Mode": "rw",
-      "RW": true,
-      "Propagation": "rprivate"
-    },
-    {
-      "Type": "bind",
-      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/backups",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-19318/backups",
       "Destination": "/backups",
       "Mode": "rw",
       "RW": true,
@@ -46,7 +22,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/library",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-19318/library",
       "Destination": "/library",
       "Mode": "ro",
       "RW": false,
@@ -54,8 +30,32 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/[redacted-uuid]/networkgames-livebridge/build/container-test-203982/config",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-19318/config",
       "Destination": "/config",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-19318/data",
+      "Destination": "/data",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-19318/certs",
+      "Destination": "/certs",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-19318/logs",
+      "Destination": "/logs",
       "Mode": "rw",
       "RW": true,
       "Propagation": "rprivate"
