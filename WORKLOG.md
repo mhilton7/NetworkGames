@@ -961,3 +961,30 @@
 - The live TrueNAS container has not been replaced because this workspace has
   HTTPS/NBD client access but no authenticated TrueNAS management shell or
   API. Physical USB Loader GX retesting remains pending that deployment.
+
+### Valid FAT32 deployment and physical follow-up
+
+- Published and deployed the first geometry repair at commit `a0b2023`. The
+  replacement export is 1,814,543,805,440 bytes, uses 8 KiB clusters, stays
+  below FAT32's usable cluster-number limit, identifies as FAT32 through
+  `blkid`, and exposes the root and 987-entry `/wbfs` directory through
+  independent `mtools` reads.
+- The physical Wii retest still froze at `Initializing USB devices`. During
+  the freeze the Pi remained ready, NBD-connected, USB attached/configured,
+  and error-free. Completed NBD requests remained at 60 across a 22-second
+  sample, with no request failure, reconnect, or USB reset.
+- Confirmed against USB Loader GX r1283 source that this screen covers USB
+  spin-up and `MountAllUSB`, including partition parsing and the libfat mount,
+  before the startup message advances. The absence of continued NBD traffic
+  localizes the failure to initial storage discovery/mount rather than a slow
+  remote directory scan.
+- Changed the large-library policy to use 32 KiB FAT32 clusters at 32 GiB and
+  above while preserving the proven 4 KiB layout below that threshold. The
+  1.65 TiB-scale synthetic regression now exposes approximately 55.3 million
+  data clusters and a 432,182-sector FAT per copy; the 8 GiB regression still
+  uses 4 KiB clusters.
+- `make test`, `make static`, `make compose`, the targeted race test,
+  `git diff --check`, the hardened Docker lifecycle test, and OCI inspection
+  pass. The local dirty-worktree OCI manifest digest is
+  `sha256:2541660dbf0085b0ccad6f9294ed4446f9ece6aa74ab07efcdb97c4ba71f1789`;
+  it is validation evidence, not a clean published release.
