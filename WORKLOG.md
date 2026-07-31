@@ -1172,3 +1172,43 @@
   container recreation, regenerated live-disk audit, and physical acceptance
   remain open. The existing application was not disturbed, and the rollback
   digest remains `sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`.
+
+### Corrected live deployment and paused physical investigation
+
+- The operator installed the corrected digest. Live `/healthz` reports clean
+  revision `2851a568`, build `2026-07-31T21:33:14Z`, and `/readyz` is Ready.
+  Management-plane configured/running digest equality remains unavailable.
+- Reattached the live NBD export with mutual TLS and read-only enforcement.
+  The regenerated 1,813,215,665,152-byte disk retains 32 KiB clusters. Its two
+  boot sectors, FSInfo sectors, and complete FAT copies match; FSInfo reports
+  one free cluster and next-free 55,321,413, whose FAT entry is zero.
+- All 987 WBFS segments remain archive-only. Fifty-nine full segments are now
+  exactly 4,294,934,528 bytes and none retain 4,294,963,200 bytes.
+  `fsck.fat -n -v` passes with 989 files and 55,321,411 of 55,321,412 clusters
+  allocated; the prior zero-chain errors are absent.
+- Performed USB detach, NBD disconnect, Wii-mode reconnect, and USB attach on
+  the Pi. It reported the corrected disk size, zero NBD failures, zero USB
+  resets, bounded memory, safe temperature, and a healthy Wi-Fi link.
+- USB Loader GX reached the complete catalog and permitted game selection.
+  This physically confirms the safe split correction removed the former
+  post-enumeration `Loading resources` blocker. Exact cold/warm timing was not
+  captured, so the timing matrix remains open.
+- LEGO The Lord of the Rings (`SLREWR`) is unsplit, archive-only, and has an
+  exact contiguous chain, but its selection dialog froze. Pi requests stayed
+  at 113 for 34 seconds with no errors or resets and idle CPU.
+- 10 Minute Solution (`SM2E52`) displayed its animated banner and Start screen,
+  proving banner extraction is not globally broken, but its launch failed. The
+  exact visual failure mode was not captured before moving to the next control.
+- FlingSmash (`R22E01`) passed WIT verification for both update and data
+  partitions directly through a read-only live mount. It occupies clusters
+  5-39,364 and loaded once after a delay. The operator returned using the
+  configured Return To USB Loader path; a second selection froze with Pi
+  requests fixed at 5,787 for 28 seconds, zero failures/reconnects/resets, and
+  idle CPU.
+- The repeated low-LBA freeze rejects a simple high-LBA-only explanation. The
+  next one-variable experiment is a physical Wii Reset, cold Loader relaunch,
+  and repeat `R22E01` selection while leaving Host, Pi, firmware, cIOS, and
+  Loader settings unchanged.
+- Investigation paused at operator request. Live monitoring was stopped; no
+  trace service is enabled, the corrected deployment remains Ready, and the
+  prior immutable digest/YAML/configuration remain the rollback path.

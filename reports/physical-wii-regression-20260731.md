@@ -1,7 +1,7 @@
 # Physical Wii performance and loading regression report
 
-Status: correction validated and published; TrueNAS deployment and
-post-correction physical acceptance pending.
+Status: correction deployed and live metadata validated; catalog regression
+corrected; stateful banner/game-return failures remain under investigation.
 
 ## Identity and environment
 
@@ -9,21 +9,23 @@ post-correction physical acceptance pending.
 - Repair branch: `agent/diagnose-physical-regressions`.
 - Initially published/live image:
   `ghcr.io/mhilton7/wiibridge-host@sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`.
-- Live Host binary revision: `8e8ec4014e9d2bf0e85d63cad3241f4e39613c33`;
+- Initial Host binary revision: `8e8ec4014e9d2bf0e85d63cad3241f4e39613c33`;
   build time `2026-07-30T03:39:38Z`; `/healthz` healthy and `/readyz` ready.
 - Corrected image:
   `ghcr.io/mhilton7/wiibridge-host:sha-2851a568f0f6af1aacd24150e5e6c10d035a154b@sha256:dc9a1b7b9223efca9dd174e3c8129e28330d7ded20a95d7ea2039db2b1e8bab5`.
 - Corrected revision: `2851a568f0f6af1aacd24150e5e6c10d035a154b`;
   build time `2026-07-31T21:33:14Z`; independently pulled binary and OCI
-  revision agree; `dirty false`.
+  revision agree; `dirty false`. After operator deployment, live `/healthz`
+  reports this revision and `/readyz` reports Ready.
 - Pi: Raspberry Pi Zero W Rev 1.1, target `zero-w-armhf`, clean firmware
   revision `c60d4b500944044a581e039570d3a8432b1921e2`, build time
   `2026-07-28T22:59:31Z`.
 - Loader: USB Loader GX r1283. Wii system version and active cIOS slot/base:
   `NOT_CAPTURED`; no cIOS was changed.
-- Three named legal control titles and their WIT integrity receipts:
-  `NOT_CAPTURED_SOURCE_DATASET_NOT_MOUNTED_ON_WORKSTATION`. No source was
-  treated as verified merely because its virtual directory entry exists.
+- Current low-LBA control FlingSmash (`R22E01`) passed WIT verification for
+  both update and data partitions directly through a read-only live mount.
+  Earlier project evidence records 10 Minute Solution (`SM2E52`) as verified.
+  LEGO The Lord of the Rings (`SLREWR`) has not received a current WIT receipt.
 - TrueNAS version, Apps backend, running container ID/digest, configured
   digest, start time, restart count, and host process/container counters:
   `UNVERIFIED_MANAGEMENT_ACCESS_UNAVAILABLE`. Runtime binary identity was
@@ -49,6 +51,9 @@ post-correction physical acceptance pending.
 
 ## Exact live export audit
 
+The following values describe the initial exact-FSInfo image before the split
+correction:
+
 - Disk size: 1,813,217,599,488 bytes.
 - Partition: MBR type `0x0c`, start 2,048, length 3,541,438,576 sectors;
   signature `0x55aa`; deterministic nonzero disk signature `0x25bc05e4`.
@@ -63,6 +68,20 @@ post-correction physical acceptance pending.
 - Attributes: 987/987 archive set; 0/987 DOS read-only; 0 hidden; 0 system.
 - Current full-segment size: 4,294,963,200 bytes (`4 GiB - 4 KiB`).
   Affected live segments: 59.
+
+After deploying the corrected image, a fresh mutual-TLS read-only audit found:
+
+- Disk size 1,813,215,665,152 bytes; MBR type `0x0c`, start 2,048, partition
+  length 3,541,434,798 sectors, signature `0x55aa`, disk ID `0x2ac96a22`.
+- FAT32 remains 512 bytes/sector and 64 sectors/cluster (32 KiB), with 32
+  reserved sectors, two 432,199-sector FATs, root cluster 2, and 55,321,412
+  data clusters. Primary/backup boot sectors and complete FAT copies match.
+- Primary and backup FSInfo match with valid signatures, free count 1, and
+  next-free cluster 55,321,413; that cluster's FAT entry is zero.
+- All 987 WBFS segments remain archive-only. Exactly 59 full segments now use
+  4,294,934,528 bytes; zero retain the old 4,294,963,200-byte boundary.
+- Independent `fsck.fat -n -v` passes with `989 files,
+  55321411/55321412 clusters`; the prior zero-chain errors are absent.
 
 ## Root causes and correction
 
@@ -80,10 +99,10 @@ post-correction physical acceptance pending.
    enforcement, caching, Pi firmware, and cIOS remain unchanged.
 
 The live archive-only attributes reject a recurrence of the earlier DOS
-read-only regression. The corrected split boundary is a locally verified root
-cause candidate for the post-enumeration, banner, and large-game failures, but
-those symptoms are not reported fixed until the candidate is deployed and the
-physical matrix passes.
+read-only regression. The physical loader now reaches the complete catalog and
+allows game selection, confirming the split boundary as the remaining
+post-enumeration catalog blocker. It did not correct every banner/game symptom;
+those are retained as independent failures below.
 
 ## Rejected or separated hypotheses
 
@@ -102,8 +121,11 @@ physical matrix passes.
   about 90–100 ns/request on this host. Physical enabled/disabled Pi testing is
   still pending.
 - SD corruption/cache state: the dirty/divergent Wii SD was repaired and its
-  caches were reversibly isolated. A physical clean-cache result has not yet
-  been supplied, so it remains a separated pending experiment.
+  caches were reversibly isolated. The loader subsequently reached the full
+  catalog, but later selection/return behavior is still stateful.
+- A simple high-LBA-only boot failure is not accepted: the verified low-LBA
+  FlingSmash control booted once, then froze during its next selection after a
+  configured Return-To-Loader cycle.
 
 ## Local regression and validation results
 
@@ -152,12 +174,12 @@ for physical Pi Zero W or Wii throughput.
 
 ## Deployment and rollback
 
-Publication is complete; deployment is pending. Before replacement, retain the
-current digest shown above and export the active TrueNAS YAML/configuration.
-With the Wii powered off and USB/NBD detached, replace only the image reference
-with the corrected digest-pinned reference above, recreate the app, run
-`deploy/truenas/verify-runtime-identity.sh`, re-audit the regenerated live FAT
-and split sizes, then reconnect NBD and USB in order.
+Publication and operator deployment are complete. Live binary revision,
+health/readiness, regenerated disk bytes, and corrected filesystem capability
+are verified. TrueNAS management-plane configured/running digest equality is
+still unavailable from this workstation and is not inferred from the binary.
+The Pi completed a controlled USB detach, NBD disconnect, Wii-mode reconnect,
+and USB attach; it reported the corrected disk size and zero failures/resets.
 
 If readiness, live metadata, or physical acceptance fails: detach USB,
 disconnect NBD, restore
@@ -168,10 +190,29 @@ failed candidate evidence.
 
 ## Physical acceptance still required
 
+Observed post-deployment results:
+
+- The complete catalog became visible and allowed selection. Exact cold/warm
+  timing was not captured, so the six-run timing gate remains open.
+- LEGO The Lord of the Rings (`SLREWR`) is an unsplit 3,896,508,416-byte,
+  archive-only file with an exact contiguous chain. Its selection dialog froze;
+  Pi requests stayed at 113 for 34 seconds with no failure/reset.
+- 10 Minute Solution (`SM2E52`) displayed its animated banner and Start screen,
+  but the game launch failed. The exact visual failure mode was not captured.
+- FlingSmash (`R22E01`) passed both WIT partitions and occupies clusters
+  5-39,364. It loaded once after a delay. The operator returned through the
+  configured Return To USB Loader path; a second selection then froze with Pi
+  requests fixed at 5,787 for 28 seconds, zero errors/resets, and idle CPU.
+- This repeat classifies the remaining boundary before useful NBD reads and
+  makes Loader/cIOS return-session state the next controlled hypothesis. The
+  pending experiment is a physical Wii Reset, cold Loader relaunch, and repeat
+  FlingSmash selection without changing Pi or TrueNAS state.
+
 - Three cold and three warm catalog timings with request/byte/FAT-sector counts.
 - Animated banners: 3/3 verified titles.
 - Three verified games through at least 20 minutes and a later loading event.
 - No unexpected USB reset, NBD reconnect, source failure, or payload mismatch.
 - Detach/disconnect/reconnect/reattach and one repeated game launch.
 
-No post-correction physical success is claimed.
+Only catalog visibility, one verified banner, and one initial low-LBA game load
+are claimed. Full physical acceptance is not claimed.
