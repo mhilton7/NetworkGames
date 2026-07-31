@@ -1156,3 +1156,19 @@
   1,039-1,043 ns/op enabled; atomic enabled observation 62.01-62.45 ns/op with
   zero allocations; cached Pi sample 31.64-31.89 ns/op with zero allocations.
   These are host-cache measurements, not physical Pi/Wii throughput.
+
+### Clean publication and operator deployment boundary
+
+- Committed the focused correction as `f9fc32c`; the clean local OCI layout
+  embeds that revision with `dirty false` and has manifest digest
+  `sha256:477ba2e3aa7322e9e04ce9facd7fad056ed3ef0d902ac3892531a77a1fca072e`.
+- GitHub pull request 8 passed the repository Docker Image CI identity check
+  and merged as `2851a568f0f6af1aacd24150e5e6c10d035a154b`. The main workflow published
+  `ghcr.io/mhilton7/wiibridge-host:sha-2851a568f0f6af1aacd24150e5e6c10d035a154b@sha256:dc9a1b7b9223efca9dd174e3c8129e28330d7ded20a95d7ea2039db2b1e8bab5`.
+  An independent pull confirms OCI revision `2851a568`, binary revision
+  `2851a568`, and `dirty false`.
+- TrueNAS SSH is disabled and no TrueNAS API/UI administrator credential is
+  available on this workstation. Therefore configured/running digest equality,
+  container recreation, regenerated live-disk audit, and physical acceptance
+  remain open. The existing application was not disturbed, and the rollback
+  digest remains `sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`.

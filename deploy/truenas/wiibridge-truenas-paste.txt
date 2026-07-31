@@ -1,6 +1,6 @@
 services:
   wiibridge-host:
-    image: "ghcr.io/mhilton7/wiibridge-host:sha-a6b7c670c722cecf501d8a89a20e72e7b1a2b15e@sha256:f11c6aed6cd576caeff737100ed4a7254a4dce44960833fece817abe2d78bd11"
+    image: "ghcr.io/mhilton7/wiibridge-host:sha-2851a568f0f6af1aacd24150e5e6c10d035a154b@sha256:dc9a1b7b9223efca9dd174e3c8129e28330d7ded20a95d7ea2039db2b1e8bab5"
     user: "568:568"
     restart: "unless-stopped"
     read_only: true
