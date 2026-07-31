@@ -1017,3 +1017,142 @@
   OCI inspection pass. The local dirty-worktree OCI manifest digest is
   `sha256:93d6056a9ce0dab0030a55e7a74abf76c7ee64f564c8899b430fbb50cc350ce8`;
   it is validation evidence, not a clean published release.
+
+### Exact FSInfo deployment and resource-stage observation
+
+- Published commit `8e8ec40` and deployed immutable GHCR digest
+  `sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`.
+  The live Host reports that clean revision and Ready.
+- Independently verified the live read-only export at block level. It is
+  1,813,217,599,488 bytes with 32 KiB clusters and a 432,200-sector FAT per
+  copy. FSInfo reports exactly one free cluster, points to cluster 55,321,472,
+  and the corresponding FAT entry is zero.
+- USB Loader GX advanced beyond `Initializing USB devices`, physically
+  confirming that the exact-FSInfo repair removed the prior mount blocker.
+- The next visible screen remained `Loading resources`. Pi telemetry proved
+  that the Wii was actively traversing the WiiBridge catalog: completed NBD
+  requests rose from 4,251 to 4,908 over 27 seconds at approximately
+  1.2-1.5 MB/s, then reached 5,518 and stopped. Pi CPU fell from 74% to below
+  1%, with zero NBD read failures, reconnects, USB resets, or recent errors.
+- USB Loader GX r1283 leaves the `Loading resources` startup text visible
+  after resource initialization while `MainMenu` calls
+  `MountGamePartition`, which enumerates `/wbfs` and reads each game header
+  before resuming the GUI. The observed finite I/O matches that catalog path.
+  The loader remained on that stale screen after the traversal completed,
+  localizing the current failure to USB Loader GX's post-enumeration
+  game-list/cache/UI path rather than WiiBridge transport, USB mounting, or
+  FAT reads. A reversible reset of the loader's SD-resident configuration and
+  caches is the next isolation step.
+
+### Wii SD repair and clean-cache isolation staging
+
+- Identified the connected removable card as the 59.5 GiB FAT32 Wii SD card
+  containing USB Loader GX r1283.
+- The pre-change read-only filesystem check found a dirty bit, divergent FAT
+  copies, and an incorrect free-cluster summary. Preserved a verified
+  3,815-entry allocated-file archive, partition table, and raw MBR/boot/FAT
+  prefix before repair. `fsck.fat` selected the intact first FAT, wrote the
+  repair, and the final unmounted read-only check reports no inconsistency.
+- Audited the loader caches before moving them aside. `WII.cache` is version
+  1282 with 928 unique, structurally valid Wii records. `TitlesCache.bin` is
+  version 1283 with 934 unique, sorted, structurally valid title records, and
+  covers every cached Wii ID. `GameTimestamps.txt` contains 938 unique IDs;
+  its ten non-Wii-cache entries are GameCube/channel records rather than
+  evidence of a truncated Wii cache.
+- Retained the previous loader files in the on-card
+  `apps/usbloader_gx/wiibridge-backup-20260730T040537Z` directory and in the
+  verified host recovery archive. No prior state was deleted.
+- Staged an isolation configuration that retains list view but changes title
+  source to disc headers, limits the source mask to Wii games, disables header
+  and banner caches, skips the cache CRC directory pass, and disables the
+  free-space calculation. The active header/title/timestamp caches were moved
+  aside so the next boot cannot reuse them.
+- Synchronized, unmounted, checked, and powered off the SD card. It is safe to
+  remove. The physical clean-cache boot remains pending.
+
+## 2026-07-31 — Physical-regression continuation and WBFS split diagnosis
+
+- Preserved the four existing uncommitted investigation/status files, fetched
+  both remotes without resetting, and created
+  `agent/diagnose-physical-regressions` at GitHub `main` merge commit
+  `8e8ec4014e9d2bf0e85d63cad3241f4e39613c33`. The prior branch content tree
+  was byte-identical to that merge commit.
+- Recovered and read the deleted controlling project specification from commit
+  `082aae0`; `AGENTS.md` still names the file although commit `ad08074` removed
+  it from the current tree.
+- Reverified live identity without relying on deployment YAML. Host
+  `/healthz` reports clean revision `8e8ec401`, build time
+  `2026-07-30T03:39:38Z`, and healthy/Ready. The local pulled OCI resolves to
+  published digest
+  `sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`
+  with the matching revision label. The Pi reports clean firmware revision
+  `c60d4b5`, Zero W Rev 1.1, NBD connected, USB configured, zero read failures,
+  reconnects, and USB resets. TrueNAS management-plane access is unavailable,
+  so configured/running container digest, container ID, restart count, exact
+  TrueNAS version/backend, and host process/container counters remain
+  unverified rather than inferred.
+- Attached a second client to the live NBD export with the existing mutual-TLS
+  identity and read-only flag. Verified the 1,813,217,599,488-byte disk and
+  1,813,216,550,912-byte partition: MBR signature/type/range, deterministic
+  nonzero disk signature, 512-byte sectors, 32 KiB clusters, two 432,200-sector
+  FATs, 55,321,471 data clusters, valid primary/backup boot sectors, exact
+  matching primary/backup FSInfo values of one free cluster and next-free
+  55,321,472, and a zero FAT entry at that next-free cluster.
+- Corrected a local comparison-harness `sudo`/process-substitution error and
+  reran the checks: primary/backup boot sectors match, both FSInfo sectors
+  match, and the two complete FAT copies stream-compare equal. `blkid` detects
+  FAT32 with 32 KiB filesystem blocks. `mtools` reads root and `/wbfs` and
+  enumerates 987 virtual segments. `mattrib` reports archive set on all 987,
+  with read-only, hidden, and system attributes clear on all 987. This rejects
+  a live recurrence of the prior DOS read-only attribute regression.
+- Independent read-only `fsck.fat -n` found that virtual segments sized
+  4,294,963,200 bytes have apparent zero-byte FAT chains. Targeted `mshowfat`
+  proved the chains are present and contiguous. The boundary explains both:
+  with 32 KiB clusters the current `4 GiB - 4 KiB` segment rounds up to exactly
+  2^32 allocated bytes, which wraps in 32-bit FAT chain-length accounting.
+  The live directory contains 59 such incompatible segments.
+- Audited USB Loader GX r1283 commit `e25c4f3`. Its split implementation uses
+  `4 GiB - 32 KiB`, documented in source as one cluster below 4 GiB, and opens
+  existing split parts with `O_RDWR`. The live archive attributes permit that
+  open, but WiiBridge's segment boundary did not match the loader's own
+  compatibility boundary.
+- Added the regression before changing the builder. It failed with the current
+  4,294,963,200-byte segments and reproduced the independent `fsck.fat`
+  zero-chain result on a compact sparse 32 GiB fixture. Changed only the
+  segment maximum to 4,294,934,528 bytes. The same regression then passed.
+  Additional focused coverage verifies ordered `.wbfs`/`.wbfN` parts,
+  archive-only attributes, LFN checksums, unique short aliases, directory
+  sizes, chains below 2^32 bytes, exact simulated banner-range reads, and an
+  exact read crossing the virtual split boundary.
+- Physical catalog, banner, launch, and sustained-play results remain pending.
+  The corrected builder has not yet completed full validation, clean OCI
+  publication, TrueNAS deployment, live snapshot regeneration, or Wii retest.
+
+### Split-boundary validation and deployment identity gate
+
+- Added Host capability `wii-fat32-exact-fsinfo-split-v1` so a deployment can
+  prove that the running binary contains the required filesystem format rather
+  than relying only on a version tag.
+- Added `deploy/truenas/verify-runtime-identity.sh`. It fails closed on an
+  unpinned/mismatched configured digest, running registry digest mismatch,
+  OCI/binary/API revision mismatch, dirty build, missing format capability, or
+  failed health/readiness. The administrator token is read into a mode-0600
+  temporary curl configuration and is not printed.
+- Added an automated deployment-check test. The exact clean mock passes;
+  digest mismatch and missing format capability are both rejected.
+- Validation passes: `make test`, `make static`, `make compose`,
+  `go test -race ./server/host-daemon/...`,
+  `go vet ./server/host-daemon/...`, `go test -v ./tests/fat32`,
+  `./tests/truenas/container-test.sh`, `make oci`, JSON validation, and
+  `git diff --check`. Dirty diagnostic container image ID is
+  `sha256:2b5b4bf0024e72ff9de2f2b21bcc4e2487c26cfdd575d24152609643b52f33da`;
+  dirty diagnostic OCI manifest is
+  `sha256:5ccac175a103c8d644edbae7a36f1ff2da5539b8afc3194feb48fff3e8ac5ffe`.
+  Neither is a release candidate.
+- Focused benchmark ranges on the Ryzen 9 9950X3D build host: 512 GiB FAT
+  synthesis 244-250 microseconds/op; FAT sector generation 640-664 ns/op;
+  Wii 1 MiB cached source read 29.4-29.8 microseconds/op; 10,000-extent lookup
+  10.13-10.20 ns/op; NBD 64 KiB read 936-952 ns/op with metrics disabled and
+  1,039-1,043 ns/op enabled; atomic enabled observation 62.01-62.45 ns/op with
+  zero allocations; cached Pi sample 31.64-31.89 ns/op with zero allocations.
+  These are host-cache measurements, not physical Pi/Wii throughput.
