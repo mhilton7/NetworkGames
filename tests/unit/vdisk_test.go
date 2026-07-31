@@ -98,7 +98,9 @@ func TestVirtualDiskDeterminismAndBounds(t *testing.T) {
 }
 
 func TestVirtualLargeFileSplitting(t *testing.T) {
-	const firstSegment = int64(0xfffff000)
+	// Match USB Loader GX's one-32-KiB-cluster-below-4-GiB boundary so a
+	// large-volume FAT chain never spans exactly 2^32 bytes.
+	const firstSegment = int64(4<<30) - int64(32<<10)
 	game := model.Game{ID: "SPLT01", Size: firstSegment + 8192,
 		Sources: []model.Source{{Path: "/synthetic/not-opened", Length: firstSegment + 8192}}}
 	disk, err := vdisk.Build("large-file", []model.Game{game}, "test")

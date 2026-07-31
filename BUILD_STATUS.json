@@ -2,12 +2,12 @@
   "schema_version": 1,
   "project_version": "0.1.0-rc.1",
   "prompt_version": 3,
-  "status": "large-wii-exact-fsinfo-followup-local-verified-publication-and-deployment-pending",
+  "status": "large-wii-split-boundary-regression-reproduced-local-correction-verified-deployment-pending",
   "final_label": "SOFTWARE-COMPLETE RELEASE CANDIDATE — HARDWARE UNVERIFIED",
-  "application_commit": "2a7383a531c7ab9f3435b30fcfdcc8f5a25c00fd",
+  "application_commit": "8e8ec4014e9d2bf0e85d63cad3241f4e39613c33",
   "implementation_base_commit": "ce732427b1805cfa580ba0d5a865e2aed47eeeac",
-  "last_published_application_commit": "2a7383a531c7ab9f3435b30fcfdcc8f5a25c00fd",
-  "worktree_state": "large-wii-exact-fsinfo-followup-local-validated-uncommitted",
+  "last_published_application_commit": "8e8ec4014e9d2bf0e85d63cad3241f4e39613c33",
+  "worktree_state": "usbloadergx-4g-minus-32k-split-correction-and-live-audit-evidence-uncommitted",
   "local_oci_digest": "sha256:93d6056a9ce0dab0030a55e7a74abf76c7ee64f564c8899b430fbb50cc350ce8",
   "controller_armv6_sha256": "c380f33b36f6408c46619e81f07585fe1b2f7e77e5a4225c5736988618b02b01",
   "firmware_zero_w_image_sha256": "89167db6b8dcd7e544589e90306f36e42c9066779430b5964ef19073f6a3f8e5",
@@ -30,19 +30,19 @@
       "nbd_tls": 10809,
       "availability_verified_on_target": true
     },
-    "state": "LIVE_VALID_32K_LARGE_WII_FAT32_EXPORT_PHYSICAL_MOUNT_FAIL_UNKNOWN_FSINFO_REPLACEMENT_PENDING"
+    "state": "LIVE_32K_EXACT_FSINFO_EXPORT_ARCHIVE_ATTRIBUTES_PASS_59_INCOMPATIBLE_SPLIT_SEGMENTS"
   },
   "phases": {
     "baseline": "complete",
-    "server": "large-wii-exact-fsinfo-followup-tests-race-static-fat32-verified",
-    "container": "local-exact-fsinfo-followup-oci-and-hardened-lifecycle-verified-publication-pending",
+    "server": "large-wii-split-boundary-full-tests-race-static-fat32-verified",
+    "container": "published-exact-fsinfo-oci-deployed-and-live-verified",
     "pi_bridge": "compatibility-and-bounded-metrics-current-armv6-image-offline-verified",
     "firmware_zero_w": "current-full-image-offline-verified-physical-retest-deferred",
     "firmware_pi4": "firmware-offline-verified",
     "firmware_pi5": "firmware-offline-verified",
     "release": "software-complete-four-features-hardware-validation-deferred",
-    "truenas_startup": "32k-host-deployed-and-healthy-exact-fsinfo-followup-pending"
+    "truenas_startup": "exact-fsinfo-host-deployed-ready-and-live-block-verified"
   },
-  "physical_tests": "large-library USB Loader GX retest failed on valid 32KiB export with unknown FSInfo sentinels; exact FSInfo follow-up deployment and retest pending; gamecube-emulated-save-and-pi-zero-telemetry-DEFERRED_HARDWARE_UNAVAILABLE; prior Wii launch evidence retained",
-  "updated_utc": "2026-07-30T03:36:55Z"
+  "physical_tests": "exact FSInfo large-library retest passes USB initialization; post-enumeration stall and absent useful reads retained; live export contains 59 4GiB-minus-4KiB segments whose 32KiB-cluster chains span exactly 2^32 bytes; USB Loader GX-compatible 4GiB-minus-32KiB correction passes focused sparse fsck/source-byte tests but is not deployed or physically retested; gamecube-emulated-save-DEFERRED_HARDWARE_UNAVAILABLE",
+  "updated_utc": "2026-07-31T21:27:33Z"
 }

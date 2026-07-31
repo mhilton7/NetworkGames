@@ -33,6 +33,19 @@ func TestProtocolAndOperationCompatibility(t *testing.T) {
 	}
 }
 
+func TestHostAdvertisesExactWiiFAT32Format(t *testing.T) {
+	found := false
+	for _, capability := range HostCapabilities() {
+		if capability == CapWiiFAT32ExactFSInfoSplit {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("host does not advertise the exact-FSInfo/safe-split FAT32 format")
+	}
+}
+
 func TestOverlappingAndNonOverlappingRanges(t *testing.T) {
 	host, firmware := descriptors()
 	host.ProtocolMin, host.ProtocolMax = 1, 3

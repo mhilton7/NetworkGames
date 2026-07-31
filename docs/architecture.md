@@ -5,6 +5,14 @@ extents. Snapshot construction creates only FAT32 metadata and an extent index.
 Every payload read revalidates source identity and opens the source read-only;
 no whole payload is read or persisted.
 
+The Wii FAT32 compatibility profile retains 32 KiB clusters for large volumes,
+one genuine free cluster, exact matching FSInfo copies, and archive-only WBFS
+entries. Virtual WBFS parts use USB Loader GX's `4 GiB - 32 KiB` boundary. A
+larger `4 GiB - 4 KiB` part still fits a FAT directory size field, but rounds
+to an exact 2^32-byte chain at 32 KiB clusters and overflows 32-bit chain-length
+accounting. Payload extents remain direct views into the immutable source; the
+boundary change does not copy or rewrite source data.
+
 Go was selected for memory safety, bounded concurrency, a mature TLS stack,
 small static amd64/ARM binaries, and shared host/Pi maintenance. SQLite uses a
 pinned pure-Go driver, WAL transactions, foreign keys, schema migrations, and

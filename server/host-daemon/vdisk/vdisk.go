@@ -27,7 +27,11 @@ const (
 	partitionStart  = int64(2048)
 	reservedSectors = int64(32)
 	numFATs         = int64(2)
-	maxSegment      = int64(0xfffff000)
+	// Match USB Loader GX r1283's FAT32 split boundary: one maximum WiiBridge
+	// cluster below 4 GiB. A 4 GiB-minus-4 KiB file rounds up to exactly 2^32
+	// bytes on a 32 KiB-cluster volume and overflows 32-bit FAT chain-length
+	// accounting even though the directory entry's file size still fits.
+	maxSegment = int64(4<<30) - int64(32<<10)
 
 	// FAT32 cluster numbers 0x0ffffff0 through 0x0ffffff6 are reserved.
 	// Because data clusters begin at number 2, this is the largest safe count
