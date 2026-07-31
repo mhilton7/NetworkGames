@@ -6,8 +6,49 @@ import (
 	"testing"
 
 	"wiibridge/server/host-daemon/scanner"
+	"wiibridge/shared/model"
 	"wiibridge/tests/testutil"
 )
+
+func BenchmarkLargeFATSynthesis(b *testing.B) {
+	const payloadSize = int64(512 << 30)
+	game := model.Game{
+		ID: "PERF02", Size: payloadSize,
+		Sources: []model.Source{{
+			Path: "/synthetic/not-opened", Length: payloadSize, Size: payloadSize,
+		}},
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := Build("large-fat-synthesis", []model.Game{game}, "benchmark"); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkLargeFATSectorRead(b *testing.B) {
+	const payloadSize = int64(512 << 30)
+	game := model.Game{
+		ID: "PERF03", Size: payloadSize,
+		Sources: []model.Source{{
+			Path: "/synthetic/not-opened", Length: payloadSize, Size: payloadSize,
+		}},
+	}
+	disk, err := Build("large-fat-sector", []model.Game{game}, "benchmark")
+	if err != nil {
+		b.Fatal(err)
+	}
+	buffer := make([]byte, sectorSize)
+	offset := (disk.fatStart + disk.fatSectors/2) * sectorSize
+	b.SetBytes(sectorSize)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		if _, err = disk.ReadAt(buffer, offset); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
 
 func BenchmarkPayloadRead1MiB(b *testing.B) {
 	root := b.TempDir()

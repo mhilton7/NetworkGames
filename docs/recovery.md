@@ -28,6 +28,28 @@ image. These commands do not print environment variables or credentials.
 During a delayed phase, use timestamped container logs and the JSON health
 endpoints to identify the exact phase before changing limits or timeouts.
 
+For a release deployment, prefer the fail-closed identity check:
+
+```sh
+WIIBRIDGE_EXPECTED_IMAGE='ghcr.io/<owner>/wiibridge-host@sha256:<digest>' \
+WIIBRIDGE_EXPECTED_REVISION='<40-character-commit>' \
+WIIBRIDGE_CONTAINER='<running-container>' \
+WIIBRIDGE_HOST_URL='https://<management-address>:8445' \
+WIIBRIDGE_CA_FILE='/mnt/<POOL>/apps/wiibridge/certs/ca.crt' \
+  deploy/truenas/verify-runtime-identity.sh
+```
+
+It fails on configured/running digest mismatch, OCI/API/binary revision
+mismatch, a dirty binary, failed health/readiness, or absence of the expected
+exact-FSInfo/safe-split FAT32 capability. It does not print the administrator
+token.
+
+When USB Loader GX is waiting but the Pi remains `configured`, compare NBD
+completed requests at two synchronized times. Fixed counters mean the Wii is
+not asking the transport for blocks. Do not respond by disabling TLS, adding
+an unbounded cache, or increasing TrueNAS resources. Verify live FAT metadata,
+WBFS attributes, split sizes, loader caches, and the USB/cIOS handoff first.
+
 On backend loss the bridge must remain detached until the configured export,
 snapshot identity, and virtual size validate again. A changed identity is never
 accepted as a reconnect. The local recovery service exposes diagnostics and

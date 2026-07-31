@@ -55,6 +55,13 @@ The dashboard also has four integrated status areas:
 - Performance displays the observable Source → Host → NBD/TLS → Pi → USB path
   and bounded session history. Missing Pi metrics does not affect serving.
 
+The USB state is electrical/configuration state, not a progress counter. A
+`configured` gadget with a connected NBD session can still be idle because USB
+Loader GX or a game stopped issuing commands. Diagnose a freeze by comparing
+timestamped NBD completed requests, source-read counters, throughput, failures,
+reconnects, and USB resets. A flat request count with zero errors is not a
+TrueNAS throughput failure.
+
 Source acknowledgement, save restore/upload, mode changes, switching, and
 power actions use the existing authentication, per-session CSRF, and explicit
 confirmation conventions. Save mode changes and restore are unavailable while

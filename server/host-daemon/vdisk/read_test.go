@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -291,6 +294,197 @@ func TestLiveScaleSelectsValidFAT32Geometry(t *testing.T) {
 	}
 	t.Logf("live-scale fixture: size=%d sectors/cluster=%d data clusters=%d FAT sectors/copy=%d",
 		disk.Size(), sectorsPerCluster, dataClusters, fatSectors)
+}
+
+func TestLargeWBFSVirtualSegmentsUseUSBLoaderGXBoundary(t *testing.T) {
+	// USB Loader GX r1283 deliberately keeps each FAT32 split one 32 KiB
+	// cluster below 4 GiB. A 4 GiB-minus-4 KiB file rounds up to exactly
+	// 2^32 bytes on WiiBridge's large-volume 32 KiB geometry, which overflows
+	// 32-bit FAT chain-length accounting in compatibility tools and the Wii
+	// storage stack.
+	const loaderSplitSize = int64(4<<30) - 32<<10
+	const payloadSize = int64(32<<30) + 512
+	game := model.Game{
+		ID: "SPL001", Size: payloadSize,
+		Sources: []model.Source{{
+			Path: "/synthetic/not-opened", Length: payloadSize, Size: payloadSize,
+		}},
+	}
+	disk, err := Build("usbloadergx-split-boundary", []model.Game{game}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disk.sectorsPerCluster != 64 {
+		t.Fatalf("selected %d sectors per cluster, want 64", disk.sectorsPerCluster)
+	}
+	files := disk.Snapshot().VirtualFiles
+	if len(files) != 9 {
+		t.Fatalf("created %d split segments, want 9", len(files))
+	}
+	firstDataSector := partitionStart + reservedSectors + numFATs*disk.fatSectors
+	wbfsDirectoryOffset := (firstDataSector +
+		int64(disk.fatChains[1].first-2)*disk.sectorsPerCluster) * sectorSize
+	directory := make([]byte, (2+2*len(files))*32)
+	if _, err = disk.ReadAt(directory, wbfsDirectoryOffset); err != nil {
+		t.Fatal(err)
+	}
+	shortAliases := make(map[string]struct{}, len(files))
+	for index, file := range files {
+		wantSuffix := ".wbfs"
+		if index > 0 {
+			wantSuffix = fmt.Sprintf(".wbf%d", index)
+		}
+		if !strings.HasSuffix(file.Path, wantSuffix) {
+			t.Fatalf("segment %d path %q does not end in %q", index, file.Path, wantSuffix)
+		}
+		if index < len(files)-1 && file.Length != loaderSplitSize {
+			t.Fatalf("segment %d length=%d, want USB Loader GX boundary %d",
+				index, file.Length, loaderSplitSize)
+		}
+		if index > 0 && file.LogicalStart != files[index-1].LogicalStart+files[index-1].Length {
+			t.Fatalf("segment %d does not immediately follow segment %d", index, index-1)
+		}
+		lfn := directory[(2+2*index)*32 : (3+2*index)*32]
+		short := directory[(3+2*index)*32 : (4+2*index)*32]
+		if short[11] != 0x20 {
+			t.Fatalf("segment %d attributes=%#x, want archive-only 0x20", index, short[11])
+		}
+		if lfn[13] != lfnChecksum(short[:11]) {
+			t.Fatalf("segment %d has invalid LFN checksum", index)
+		}
+		alias := string(short[:11])
+		if _, exists := shortAliases[alias]; exists {
+			t.Fatalf("segment %d reuses short alias %q", index, alias)
+		}
+		shortAliases[alias] = struct{}{}
+		if binary.LittleEndian.Uint32(short[28:32]) != uint32(file.Length) {
+			t.Fatalf("segment %d directory size does not match snapshot", index)
+		}
+	}
+	clusterSize := disk.sectorsPerCluster * sectorSize
+	// FAT chains are root, /wbfs, then one chain per virtual segment.
+	firstSegmentCapacity := int64(disk.fatChains[2].count) * clusterSize
+	if firstSegmentCapacity >= int64(1<<32) {
+		t.Fatalf("first segment FAT chain spans %d bytes; must remain below 2^32",
+			firstSegmentCapacity)
+	}
+}
+
+func TestLargeWBFSBannerAndSplitBoundaryReadsMatchSource(t *testing.T) {
+	const payloadSize = int64(32<<30) + 512
+	const markerSize = 4096
+	root := t.TempDir()
+	path := filepath.Join(root, "SPL003.wbfs")
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = file.Truncate(payloadSize); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	bannerOffset := int64(0x10000)
+	markers := []struct {
+		offset int64
+		value  byte
+	}{
+		{offset: bannerOffset, value: 0xb3},
+		{offset: maxSegment - markerSize/2, value: 0xa1},
+		{offset: maxSegment, value: 0xc2},
+	}
+	for _, marker := range markers {
+		if _, err = file.WriteAt(bytes.Repeat([]byte{marker.value}, markerSize), marker.offset); err != nil {
+			file.Close()
+			t.Fatal(err)
+		}
+	}
+	if err = file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stat := info.Sys().(*syscall.Stat_t)
+	source := model.Source{
+		Path: path, Length: payloadSize, Size: payloadSize,
+		ModUnix: info.ModTime().UnixNano(), Device: uint64(stat.Dev), Inode: stat.Ino,
+	}
+	disk, err := Build("banner-and-split-boundary", []model.Game{{
+		ID: "SPL003", Size: payloadSize, Sources: []model.Source{source},
+	}}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payloadExtents []extent
+	for _, item := range disk.extents {
+		if !item.zero {
+			payloadExtents = append(payloadExtents, item)
+		}
+	}
+	if len(payloadExtents) < 2 {
+		t.Fatalf("created %d payload extents, want at least two", len(payloadExtents))
+	}
+	banner := make([]byte, markerSize)
+	if _, err = disk.ReadAt(banner, payloadExtents[0].start+bannerOffset); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(banner, bytes.Repeat([]byte{0xb3}, len(banner))) {
+		t.Fatal("banner-region virtual bytes differ from source")
+	}
+	boundary := make([]byte, markerSize)
+	if _, err = disk.ReadAt(boundary, payloadExtents[0].start+maxSegment-markerSize/2); err != nil {
+		t.Fatal(err)
+	}
+	want := append(bytes.Repeat([]byte{0xa1}, markerSize/2),
+		bytes.Repeat([]byte{0xc2}, markerSize/2)...)
+	if !bytes.Equal(boundary, want) {
+		t.Fatal("read crossing the virtual WBFS split boundary differs from source")
+	}
+}
+
+func TestLargeWBFSVirtualSegmentsPassIndependentFsck(t *testing.T) {
+	const fsck = "/usr/sbin/fsck.vfat"
+	if _, err := os.Stat(fsck); err != nil {
+		t.Skip("fsck.vfat unavailable")
+	}
+	const payloadSize = int64(32<<30) + 512
+	game := model.Game{
+		ID: "SPL002", Size: payloadSize,
+		Sources: []model.Source{{
+			Path: "/synthetic/not-opened", Length: payloadSize, Size: payloadSize,
+		}},
+	}
+	disk, err := Build("usbloadergx-split-fsck", []model.Game{game}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	partitionPath := filepath.Join(t.TempDir(), "large-sparse-partition.img")
+	partition, err := os.Create(partitionPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = partition.Truncate(disk.Size() - partitionStart*sectorSize); err != nil {
+		partition.Close()
+		t.Fatal(err)
+	}
+	err = disk.forEachMetadataSector(func(sector int64, data []byte) error {
+		if sector < partitionStart {
+			return nil
+		}
+		_, writeErr := partition.WriteAt(data, (sector-partitionStart)*sectorSize)
+		return writeErr
+	})
+	if closeErr := partition.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command(fsck, "-n", partitionPath)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("independent fsck rejected sparse large-volume splits: %v\n%s", err, output)
+	}
 }
 
 func TestCompactMetadataIdentityChangesWithFATLayout(t *testing.T) {

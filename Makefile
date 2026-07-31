@@ -14,6 +14,7 @@ all: test server
 test:
 	go test ./server/... ./pi/... ./shared/... ./tests/... \
 	  ./scripts/synthetic-wbfs ./scripts/gamecube-volume ./scripts/gamecube-saves
+	./tests/truenas/runtime-identity-test.sh
 
 static: server
 	go vet ./server/... ./pi/... ./shared/... ./tests/... \
