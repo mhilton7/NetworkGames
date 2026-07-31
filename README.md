@@ -52,6 +52,11 @@ without copying or rewriting them. GameCube mode is isolated behind a separate
 export profile and synthesizes a Nintendont-compatible FAT32 disk whose file
 extents read through to the original sources. Wii remains the startup default.
 
+Large Wii volumes use 32 KiB clusters, exact primary/backup FSInfo values, and
+USB Loader GX's `4 GiB - 32 KiB` virtual split boundary. WBFS directory entries
+carry archive attribute `0x20`, never DOS read-only `0x01`; immutability is
+enforced by the read-only NBD export and USB LUN.
+
 ## Requirements
 
 - TrueNAS Community Edition with Custom Apps / **Install via YAML**, or a
@@ -262,6 +267,10 @@ must be recorded using the
 | Authentication fails | `WIIBRIDGE_ADMIN_TOKEN` length/value and browser credentials |
 | Pi cannot connect | Port 10809 firewall, client certificate, CA chain, clock, export name |
 | Wii cannot see USB | Direct data cable, correct gadget port, Pi power, NBD connected before attach |
+| Loader remains on `Initializing USB devices` | Verify the live image revision, 32 KiB geometry, and exact non-sentinel primary/backup FSInfo before changing cIOS or networking |
+| Loader remains on `Loading resources` | Compare Pi NBD counters over the same interval; a finite traversal followed by fixed counters is post-enumeration guest-side state, not proof of a network bottleneck |
+| Animated banner is blank | Verify live WBFS archive `0x20`, read-only clear, safe split sizes, and whether selection triggers new NBD/source reads |
+| Game freezes after its menu | Correlate Wii time, USB commands, Pi NBD counters, Host source counters, and split-boundary reads; a configured gadget alone does not prove progress |
 | `/dev/nbd0` is busy | Detach USB first, disconnect cleanly, inspect stale NBD ownership |
 | Game is missing | Read permissions, supported extension, valid header, scan rejection reason |
 | GameCube title is not playable | Finish and validate its cache; do not expose partial imports |

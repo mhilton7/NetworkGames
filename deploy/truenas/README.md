@@ -67,6 +67,14 @@ container health check because it remains HTTP 503 until the Wii export is
 safe. Increasing `start_period` cannot correct a listener that was opened too
 late.
 
+After every deployment, run `verify-runtime-identity.sh` with the expected
+digest-pinned image, 40-character revision, actual container name, HTTPS URL,
+and trusted CA path. The check fails if the configured and running digests
+differ, the OCI/API/binary revisions differ, the binary is dirty, readiness
+fails, or the live binary lacks the exact-FSInfo/safe-split FAT32 capability.
+It reads the administrator token from container configuration into a private
+temporary curl configuration and never prints it.
+
 The supplied Compose configuration limits the container to 512 MiB and sets
 Go's managed-heap target to 384 MiB. The Wii FAT is generated sector-by-sector
 from compact cluster-chain descriptors, so its RAM use no longer grows with

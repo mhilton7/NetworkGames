@@ -33,6 +33,7 @@ const (
 	CapDiagnosticStatus           = "diagnostic-status-v1"
 	CapRuntimeMetrics             = "runtime-metrics-v1"
 	CapSourceOfflineStatus        = "source-offline-status-v1"
+	CapWiiFAT32ExactFSInfoSplit   = "wii-fat32-exact-fsinfo-split-v1"
 )
 
 var capabilityPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*-v[1-9][0-9]*$`)
@@ -106,7 +107,7 @@ func HostCapabilities() []string {
 	return []string{
 		CapDiagnosticStatus, CapGameCubePhysicalMemoryCard, CapGameCubeSaveOverlay,
 		CapGameCubeSchema2, CapRuntimeMetrics, CapSourceOfflineStatus,
-		CapStartupReadiness, CapWiiReadOnly,
+		CapStartupReadiness, CapWiiFAT32ExactFSInfoSplit, CapWiiReadOnly,
 	}
 }
 
