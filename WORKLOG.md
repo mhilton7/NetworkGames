@@ -56,11 +56,11 @@
 ## 2026-07-24 — GitHub publisher diagnostics
 
 - Diagnosed a failed publication as an invalid active GitHub CLI token for
-  `OWNER`; no upload was claimed.
+  the configured account; no upload was claimed.
 - Updated `scripts/publish_github.py` to retain command stderr in failures and
   derive an explicit `OWNER/REPO` selector from the configured Git remote.
 - Passed Python bytecode compilation and verified that the current `origin`
-  resolves to `OWNER/WiiBridge`. A live upload was not attempted because
+  resolves to the configured GitHub repository. A live upload was not attempted because
   GitHub CLI authentication must first be renewed.
 
 ## 2026-07-24 — GitHub Docker workflow
@@ -136,8 +136,8 @@
   tests, dnsmasq syntax validation, systemd verification, card identity
   preservation, and filesystem checks pass. Physical DHCP and HTTPS setup
   access remain pending.
-- The DHCP-runtime retest associated successfully but assigned the iPhone a
-  link-local `192.0.2.10` address. Persistent logs identified the remaining
+- The DHCP-runtime retest associated successfully but assigned the client a
+  link-local address. Persistent logs identified the remaining
   failure precisely: the unprivileged dnsmasq process could not traverse the
   protected `/etc/wiibridge` credential directory to read its configuration.
 - Moved the non-secret DHCP configuration to the root-owned, world-readable
@@ -167,7 +167,7 @@
 - The rebuilt image passed FAT/ext4 inspection, board and boot metadata,
   service/package presence, secret/identity absence, ARM architecture, QEMU
   smoke, checksums, compressed-image expansion, SBOM, and provenance checks.
-  Flashed it to the confirmed removable `/dev/REMOVABLE_DEVICE` device.
+  Flashed it to the confirmed removable device (local path redacted).
 - A whole image-region hash differed because bmap intentionally leaves
   unallocated sparse ranges untouched on reused media. Direct post-write
   comparison of all 163 allocated bmap ranges passed. The flashed card then
@@ -229,13 +229,13 @@
 
 ## 2026-07-25 — TrueNAS TLS health-check repair
 
-- Confirmed the TrueNAS target at `192.0.2.10` is reachable and TCP ports
+- Confirmed the TrueNAS target at its private address is reachable and TCP ports
   8445 and 10809 accept connections. The deployed HTTPS health endpoint returns
   success, but strict certificate inspection proves that listener is still
   serving an older certificate that does not chain to the replacement CA.
 - Identified the repeat startup defect: the Compose health check connects to
   `127.0.0.1`, while the newly issued server certificate originally contained
-  only the external `192.0.2.10` IP subject alternative name.
+  only the external private IP subject alternative name.
 - Updated `scripts/tls-provision.sh` to issue server certificates for the
   requested DNS/IP identity plus loopback `127.0.0.1`, with bounded IPv4
   validation. Hostname, IPv4, loopback-only, and invalid-IPv4 generation checks
@@ -366,7 +366,7 @@
   `1fd587a2cf4e106575e8f13ddc2ab2ed34389fda`. Verified the remote manifest
   digest and anonymous pull access.
 - The operator deployed the new image on TrueNAS. Strict HTTPS validation with
-  the replacement CA passed against `192.0.2.10:8445`.
+  the replacement CA passed against the private TrueNAS endpoint.
 - Connected to the live export on port 10809 with the known-good client
   identity through a read-only libnbd FUSE client. The exported size was
   exactly 1,284,936,704 bytes.
@@ -623,7 +623,7 @@
   3,619,423,232-byte NBD export and independently confirmed it remains
   read-only. A read-only libnbd FUSE inspection showed archive `A` without
   read-only `R` on all four live WBFS entries, proving the replacement builder
-  is active. The Pi controller at `192.0.2.10:9443` was unreachable at that
+  is active. The Pi controller at its private address was unreachable at that
   point, so a clean Pi reconnect precedes the Wii banner/launch retest.
 - The repaired physical path passed. USB Loader GX now displays the 10 Minute
   Solution banner, and the game loads successfully through the Zero W bridge

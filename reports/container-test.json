@@ -14,7 +14,7 @@
   "mounts": [
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-22480/library",
+      "Source": "[redacted local path]/library",
       "Destination": "/library",
       "Mode": "ro",
       "RW": false,
@@ -22,7 +22,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-22480/config",
+      "Source": "[redacted local path]/config",
       "Destination": "/config",
       "Mode": "rw",
       "RW": true,
@@ -30,7 +30,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-22480/data",
+      "Source": "[redacted local path]/data",
       "Destination": "/data",
       "Mode": "rw",
       "RW": true,
@@ -38,7 +38,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-22480/certs",
+      "Source": "[redacted local path]/certs",
       "Destination": "/certs",
       "Mode": "ro",
       "RW": false,
@@ -46,7 +46,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-22480/logs",
+      "Source": "[redacted local path]/logs",
       "Destination": "/logs",
       "Mode": "rw",
       "RW": true,
@@ -54,7 +54,7 @@
     },
     {
       "Type": "bind",
-      "Source": "/redacted/local/NetworkGames-zero-w-boot-fix/build/container-test-22480/backups",
+      "Source": "[redacted local path]/backups",
       "Destination": "/backups",
       "Mode": "rw",
       "RW": true,

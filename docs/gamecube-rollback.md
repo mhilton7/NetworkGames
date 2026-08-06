@@ -4,7 +4,7 @@ The pre-feature source point is
 `64ff84b43700d96c0ba7ab495a006301a9ff2014`. The complete archive is:
 
 ```text
-/redacted/local/NetworkGames-zero-w-boot-fix-full-backup-20260726-202721.tar.zst
+[redacted local path]/pre-feature-archive.tar.zst
 SHA-256 18c0e7f2897c6f4b3afbc3a9947a4c28fab552f98f7483376849385505b8e332
 ```
 

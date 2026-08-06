@@ -12,7 +12,7 @@ services:
     environment:
       NETWORKGAMES_LIBRARY: "/library"
       NETWORKGAMES_DATA: "/data"
-      NETWORKGAMES_ADMIN_TOKEN: "REPLACE_WITH_A_NEW_RANDOM_VALUE"
+      NETWORKGAMES_ADMIN_TOKEN: "REPLACE_WITH_AT_LEAST_20_RANDOM_CHARACTERS"
       NETWORKGAMES_HTTPS_LISTEN: ":8445"
       NETWORKGAMES_NBD_LISTEN: ":10809"
       NETWORKGAMES_EXPORT: "all"
@@ -30,28 +30,28 @@ services:
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/POOL/apps/wiibridge/config
+        source: /mnt/POOL/apps/networkgames/config
         target: /config
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/POOL/apps/wiibridge/data
+        source: /mnt/POOL/apps/networkgames/data
         target: /data
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/POOL/apps/wiibridge/certs
+        source: /mnt/POOL/apps/networkgames/certs
         target: /certs
         read_only: true
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/POOL/apps/wiibridge/logs
+        source: /mnt/POOL/apps/networkgames/logs
         target: /logs
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/POOL/apps/wiibridge/backups
+        source: /mnt/POOL/apps/networkgames/backups
         target: /backups
         bind:
           create_host_path: false
