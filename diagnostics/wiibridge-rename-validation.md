@@ -8,7 +8,7 @@ Branch: `refactor/wiibridge-rename`
 - Project text: `WiiBridge`
 - Go module and runtime identifiers: `wiibridge`
 - Environment prefix: `WIIBRIDGE_`
-- GHCR image: `ghcr.io/mhilton7/wiibridge-host`
+- GHCR image: `ghcr.io/OWNER/wiibridge-host`
 - Host binary: `wiibridge-host`
 - Pi controller/helper/provisioning files and systemd services
 - Pi runtime, state, configuration, cache, and log paths
@@ -21,8 +21,8 @@ Branch: `refactor/wiibridge-rename`
 
 - Signed/generated reports under `reports/firmware` retain the names of the
   artifacts they actually describe.
-- Baseline, rollback, and repair reports retain old immutable image references
-  and backup paths so recovery commands remain valid.
+- Baseline, rollback, and repair reports retain old immutable image digests;
+  account names and local backup paths are redacted.
 - The USB serial remains `NG-<machine-id>` to preserve the identity of the
   already deployed physical device. Manufacturer and configuration strings
   now say WiiBridge.

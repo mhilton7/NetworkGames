@@ -8,6 +8,7 @@ cache=${GOCACHE:-/tmp/wiibridge-go-cache}
 gopath=${GOPATH:-/tmp/wiibridge-gopath}
 commit=$(git rev-parse HEAD)
 created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+source=${OCI_SOURCE:-https://github.com/OWNER/WiiBridge}
 if [ -z "$(git status --porcelain --untracked-files=normal)" ]; then
   dirty=false
 else
@@ -28,11 +29,11 @@ tar --sort=name --mtime='UTC 2026-07-24' --owner=568 --group=568 \
 layer_digest=$(sha256sum "$layer_tmp" | cut -d' ' -f1)
 layer_size=$(wc -c < "$layer_tmp")
 mv "$layer_tmp" "$out/blobs/sha256/$layer_digest"
-printf '{"architecture":"amd64","os":"linux","created":"%s","config":{"User":"568:568","Entrypoint":["/wiibridge-host"],"ExposedPorts":{"8445/tcp":{},"10809/tcp":{}},"Env":["PATH=/"],"Labels":{"org.opencontainers.image.revision":"%s","org.opencontainers.image.version":"%s","org.opencontainers.image.created":"%s","org.opencontainers.image.source":"https://github.com/mhilton7/WiiBridge"}},"rootfs":{"type":"layers","diff_ids":["sha256:%s"]},"history":[{"created":"%s","created_by":"wiibridge OCI builder"}]}' "$created" "$commit" "$version" "$created" "$layer_digest" "$created" > "$config_tmp"
+printf '{"architecture":"amd64","os":"linux","created":"%s","config":{"User":"568:568","Entrypoint":["/wiibridge-host"],"ExposedPorts":{"8445/tcp":{},"10809/tcp":{}},"Env":["PATH=/"],"Labels":{"org.opencontainers.image.revision":"%s","org.opencontainers.image.version":"%s","org.opencontainers.image.created":"%s","org.opencontainers.image.source":"%s"}},"rootfs":{"type":"layers","diff_ids":["sha256:%s"]},"history":[{"created":"%s","created_by":"wiibridge OCI builder"}]}' "$created" "$commit" "$version" "$created" "$source" "$layer_digest" "$created" > "$config_tmp"
 config_digest=$(sha256sum "$config_tmp" | cut -d' ' -f1)
 config_size=$(wc -c < "$config_tmp")
 mv "$config_tmp" "$out/blobs/sha256/$config_digest"
-printf '{"schemaVersion":2,"mediaType":"application/vnd.oci.image.manifest.v1+json","config":{"mediaType":"application/vnd.oci.image.config.v1+json","digest":"sha256:%s","size":%s},"layers":[{"mediaType":"application/vnd.oci.image.layer.v1.tar","digest":"sha256:%s","size":%s}],"annotations":{"org.opencontainers.image.title":"wiibridge-host","org.opencontainers.image.version":"%s","org.opencontainers.image.revision":"%s","org.opencontainers.image.created":"%s","org.opencontainers.image.source":"https://github.com/mhilton7/WiiBridge"}}' "$config_digest" "$config_size" "$layer_digest" "$layer_size" "$version" "$commit" "$created" > "$manifest_tmp"
+printf '{"schemaVersion":2,"mediaType":"application/vnd.oci.image.manifest.v1+json","config":{"mediaType":"application/vnd.oci.image.config.v1+json","digest":"sha256:%s","size":%s},"layers":[{"mediaType":"application/vnd.oci.image.layer.v1.tar","digest":"sha256:%s","size":%s}],"annotations":{"org.opencontainers.image.title":"wiibridge-host","org.opencontainers.image.version":"%s","org.opencontainers.image.revision":"%s","org.opencontainers.image.created":"%s","org.opencontainers.image.source":"%s"}}' "$config_digest" "$config_size" "$layer_digest" "$layer_size" "$version" "$commit" "$created" "$source" > "$manifest_tmp"
 manifest_digest=$(sha256sum "$manifest_tmp" | cut -d' ' -f1)
 manifest_size=$(wc -c < "$manifest_tmp")
 mv "$manifest_tmp" "$out/blobs/sha256/$manifest_digest"

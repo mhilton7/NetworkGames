@@ -4,7 +4,7 @@ The pre-feature source point is
 `64ff84b43700d96c0ba7ab495a006301a9ff2014`. The complete archive is:
 
 ```text
-/home/tvos/NetworkGames-zero-w-boot-fix-full-backup-20260726-202721.tar.zst
+[redacted local path]/pre-feature-archive.tar.zst
 SHA-256 18c0e7f2897c6f4b3afbc3a9947a4c28fab552f98f7483376849385505b8e332
 ```
 
@@ -13,7 +13,7 @@ Rollback is operational, not a history rewrite:
 1. Detach the USB gadget and disconnect NBD.
 2. Preserve any new `.raw` card with `gamecube-saves backup`.
 3. Restore the prior TrueNAS immutable image digest:
-   `ghcr.io/mhilton7/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc`.
+   `ghcr.io/OWNER/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc`.
 4. Restore the preserved pre-feature Pi SD card, or its verified image.
 5. Keep `/data/gamecube` quarantined but do not delete it until saves are
    recovered. The old host ignores it.

@@ -45,7 +45,7 @@ Do not use random production USB identifiers belonging to another vendor.
 
 The next GitHub workflow change should publish:
 
-  ghcr.io/mhilton7/wiibridge-host
+  ghcr.io/OWNER/wiibridge-host
 
 The workflow will require:
 
@@ -58,7 +58,7 @@ image.
 
 After publication, note the immutable digest:
 
-  ghcr.io/mhilton7/wiibridge-host:0.1.0-rc.1@sha256:...
+  ghcr.io/OWNER/wiibridge-host:0.1.0-rc.1@sha256:...
 
 Use the digest-pinned reference in TrueNAS. Do not rely only on "latest".
 
@@ -207,7 +207,7 @@ Resolve these values before pasting it into TrueNAS:
 
 The most important value will be:
 
-  WIIBRIDGE_IMAGE=ghcr.io/mhilton7/wiibridge-host:0.1.0-rc.1@sha256:YOUR_DIGEST
+  WIIBRIDGE_IMAGE=ghcr.io/OWNER/wiibridge-host:0.1.0-rc.1@sha256:YOUR_DIGEST
 
 The library mount must remain:
 
@@ -267,7 +267,7 @@ fails. Correct the certificate hostname, CA, or client credentials instead.
 
 Download the image from:
 
-  https://github.com/mhilton7/WiiBridge/releases/tag/v0.1.0-rc.1
+  https://github.com/OWNER/WiiBridge/releases/tag/v0.1.0-rc.1
 
 Choose exactly one:
 

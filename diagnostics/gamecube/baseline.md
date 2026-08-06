@@ -4,13 +4,12 @@ Captured 2026-07-26 PDT before GameCube source edits.
 
 ## Source and rollback
 
-- Historical checkout path at capture: `/home/tvos/NetworkGames-zero-w-boot-fix`
+- Historical checkout path at capture: `[redacted local path]`
 - Starting branch: `fix/squeakquel-and-io-performance`
 - Starting commit: `64ff84b43700d96c0ba7ab495a006301a9ff2014`
 - Feature branch: `feature/gamecube-support`
 - Known-working production ancestor: `f3a2cb2158819b640936d050ba3529bad4ddb7c1`
-- Full pre-feature archive:
-  `/home/tvos/NetworkGames-zero-w-boot-fix-full-backup-20260726-202721.tar.zst`
+- Full pre-feature archive: `[redacted local path]`
 - Archive SHA-256:
   `18c0e7f2897c6f4b3afbc3a9947a4c28fab552f98f7483376849385505b8e332`
 - Archive integrity: `zstd -t` and `sha256sum -c` passed.
@@ -27,7 +26,7 @@ M reports/firmware/zero-w-armhf/networkgames-hostbridge-0.1.0-rc.1-zero-w-armhf.
 ## Running production path
 
 - TrueNAS host image:
-  `ghcr.io/mhilton7/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc`
+  `ghcr.io/OWNER/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc`
 - Host health: `{"status":"healthy","version":"0.1.0-rc.1"}`
 - Pi target: `zero-w-armhf`
 - Detected board: `Raspberry Pi Zero W Rev 1.1`
@@ -58,12 +57,12 @@ M reports/firmware/zero-w-armhf/networkgames-hostbridge-0.1.0-rc.1-zero-w-armhf.
 ## Baseline commands and results
 
 ```sh
-sha256sum -c /home/tvos/NetworkGames-zero-w-boot-fix-full-backup-20260726-202721.tar.zst.sha256
+sha256sum -c /path/to/pre-feature-archive.tar.zst.sha256
 make test
 make static
 ./deploy/truenas/validate-compose.sh
-curl -sk https://192.168.0.181:9443/healthz
-curl --cacert /path/to/ca.crt https://192.168.0.175:8445/healthz
+curl -sk https://pi.example.invalid:9443/healthz
+curl --cacert /path/to/ca.crt https://storage.example.invalid:8445/healthz
 ```
 
 Results:
@@ -75,7 +74,8 @@ Results:
 - Pi and TrueNAS health: pass.
 
 An initial accidental invocation of `make test`, `make static`, and Compose
-validation from `/home/tvos` failed because no project Makefile exists there.
+validation from the checkout's parent directory failed because no project
+Makefile exists there.
 The commands were immediately rerun from the checkout and passed; no source
 or system state was changed by the mistaken invocation.
 

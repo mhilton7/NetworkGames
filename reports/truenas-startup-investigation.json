@@ -9,7 +9,7 @@
     "both_are_ancestors_of_source_base": true
   },
   "last_container_identity_provided_by_operator": {
-    "image_reference": "ghcr.io/mhilton7/wiibridge-host:sha-4a5ba332cd2c7caf4a16ee8eee05f60067f9d7c4",
+    "image_reference": "ghcr.io/OWNER/wiibridge-host:sha-4a5ba332cd2c7caf4a16ee8eee05f60067f9d7c4",
     "image_id": "sha256:1ebeaa015f6998f9993a2b45492c8cde4d3c5650db5a2213415fdba944375bcb",
     "registry_digest": "sha256:1eb7ecb2954f1edac53e8abcbe255174533dbcbcc0d0ca2bf7db2f95e61ecd64",
     "binary_version_output": "0.1.0-rc.1",
@@ -24,7 +24,7 @@
     "contains_early_startup_page_revision": false
   },
   "newer_registry_image_inspected": {
-    "image_reference": "ghcr.io/mhilton7/wiibridge-host:sha-43ccb384961097b1f82ed1735d0c711f72d77740",
+    "image_reference": "ghcr.io/OWNER/wiibridge-host:sha-43ccb384961097b1f82ed1735d0c711f72d77740",
     "image_id": "sha256:a2b364d08bbb62921e90d40afbee5c3eb3118a112e6c273b0ccb96a7987cc028",
     "registry_digest": "sha256:e2c9e1ce08c62a336396f39eef9f3186802f0560b1ed14729d2d44874d4f14df",
     "binary_version_output": "0.1.0-rc.1",
@@ -67,7 +67,7 @@
     "gamecube_disabled_until_receipt_current": true
   },
   "published_image": {
-    "image_reference": "ghcr.io/mhilton7/wiibridge-host:sha-a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
+    "image_reference": "ghcr.io/OWNER/wiibridge-host:sha-a6b7c670c722cecf501d8a89a20e72e7b1a2b15e",
     "registry_digest": "sha256:f11c6aed6cd576caeff737100ed4a7254a4dce44960833fece817abe2d78bd11",
     "local_image_id_after_registry_pull": "sha256:f32a2838249775ed3b9cc4a2b66545637950f9cfeac812ba03d73848a2f7f6d2",
     "architecture": "amd64",

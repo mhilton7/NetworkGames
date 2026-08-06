@@ -1,6 +1,6 @@
 services:
   networkgames-host:
-    image: ghcr.io/mhilton7/networkgames-host:0.1.0-rc.1@sha256:97de3bb60b71bcd55c85346aff3f665d16da18018400bd053242243bc506553c
+    image: ghcr.io/OWNER/networkgames-host:0.1.0-rc.1@sha256:97de3bb60b71bcd55c85346aff3f665d16da18018400bd053242243bc506553c
     user: "568:568"
     restart: "unless-stopped"
     read_only: true
@@ -12,7 +12,7 @@ services:
     environment:
       NETWORKGAMES_LIBRARY: "/library"
       NETWORKGAMES_DATA: "/data"
-      NETWORKGAMES_ADMIN_TOKEN: "899f560175d91a19304c0067d1195ac92c70b3a301267932"
+      NETWORKGAMES_ADMIN_TOKEN: "REPLACE_WITH_AT_LEAST_20_RANDOM_CHARACTERS"
       NETWORKGAMES_HTTPS_LISTEN: ":8445"
       NETWORKGAMES_NBD_LISTEN: ":10809"
       NETWORKGAMES_EXPORT: "all"
@@ -20,38 +20,38 @@ services:
       NETWORKGAMES_TLS_KEY: "/certs/server.key"
       NETWORKGAMES_TLS_CLIENT_CA: "/certs/clients-ca.crt"
     ports:
-      - "192.168.0.175:8445:8445/tcp"
-      - "192.168.0.175:10809:10809/tcp"
+      - "192.0.2.10:8445:8445/tcp"
+      - "192.0.2.10:10809:10809/tcp"
     volumes:
       - type: bind
-        source: /mnt/Storage/Games
+        source: /mnt/POOL/WII_DATASET
         target: /library
         read_only: true
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/config
+        source: /mnt/POOL/apps/networkgames/config
         target: /config
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/data
+        source: /mnt/POOL/apps/networkgames/data
         target: /data
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/certs
+        source: /mnt/POOL/apps/networkgames/certs
         target: /certs
         read_only: true
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/logs
+        source: /mnt/POOL/apps/networkgames/logs
         target: /logs
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/backups
+        source: /mnt/POOL/apps/networkgames/backups
         target: /backups
         bind:
           create_host_path: false

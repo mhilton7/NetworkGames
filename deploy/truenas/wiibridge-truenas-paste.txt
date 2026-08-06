@@ -1,6 +1,6 @@
 services:
   wiibridge-host:
-    image: "ghcr.io/mhilton7/wiibridge-host:sha-a6b7c670c722cecf501d8a89a20e72e7b1a2b15e@sha256:f11c6aed6cd576caeff737100ed4a7254a4dce44960833fece817abe2d78bd11"
+    image: "ghcr.io/OWNER/wiibridge-host:sha-COMMIT@sha256:IMAGE_DIGEST"
     user: "568:568"
     restart: "unless-stopped"
     read_only: true
@@ -45,38 +45,38 @@ services:
       WIIBRIDGE_PI_ADMIN_TOKEN: ""
       WIIBRIDGE_PI_CERT: ""
     ports:
-      - "192.168.0.175:8445:8445/tcp"
-      - "192.168.0.175:10809:10809/tcp"
+      - "192.0.2.10:8445:8445/tcp"
+      - "192.0.2.10:10809:10809/tcp"
     volumes:
       - type: bind
-        source: /mnt/Storage/Games
+        source: /mnt/POOL/WII_DATASET
         target: /library
         read_only: true
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/config
+        source: /mnt/POOL/apps/wiibridge/config
         target: /config
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/data
+        source: /mnt/POOL/apps/wiibridge/data
         target: /data
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/certs
+        source: /mnt/POOL/apps/wiibridge/certs
         target: /certs
         read_only: true
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/logs
+        source: /mnt/POOL/apps/wiibridge/logs
         target: /logs
         bind:
           create_host_path: false
       - type: bind
-        source: /mnt/Apps/Apps/Apps_Data/networkgames/backups
+        source: /mnt/POOL/apps/wiibridge/backups
         target: /backups
         bind:
           create_host_path: false

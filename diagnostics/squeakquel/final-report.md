@@ -137,7 +137,7 @@ OCI manifest identity:
 `networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc`.
 The exact manifest was copied to GHCR with digest preservation and an
 independent registry inspection returned the same digest:
-`ghcr.io/mhilton7/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc`.
+`ghcr.io/OWNER/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc`.
 Debian's signed `skopeo` package was installed on the development host for
 the OCI transfer and digest verification.
 
@@ -145,7 +145,7 @@ After detaching the Wii/Pi gadget and snapshotting TrueNAS config/data, the
 deployment command is:
 
 ```sh
-NETWORKGAMES_IMAGE='ghcr.io/mhilton7/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc' \
+NETWORKGAMES_IMAGE='ghcr.io/OWNER/networkgames-host:0.1.0-rc.1-squeakquel-io@sha256:ded61132346b902b8e74e966bb1a97fe5b428a8ffce68d9f9e050faabaf14bbc' \
   docker compose --env-file deploy/truenas/.env \
   -f deploy/truenas/compose.yaml up -d --no-deps --wait wiibridge-host
 ```
@@ -156,11 +156,11 @@ strict health and read-only NBD/media checks passed.
 ## 13. Exact rollback command
 
 The prior physically verified compatibility image is:
-`ghcr.io/mhilton7/wiibridge-host:0.1.0-rc.1-wbfsattrfix.1@sha256:37d94d0c3f11ae8c33f96490fe9c0902b6b417907afd56a14d8dd370f4b2fe80`.
+`ghcr.io/OWNER/wiibridge-host:0.1.0-rc.1-wbfsattrfix.1@sha256:37d94d0c3f11ae8c33f96490fe9c0902b6b417907afd56a14d8dd370f4b2fe80`.
 With the Wii/Pi gadget detached:
 
 ```sh
-WIIBRIDGE_IMAGE='ghcr.io/mhilton7/wiibridge-host:0.1.0-rc.1-wbfsattrfix.1@sha256:37d94d0c3f11ae8c33f96490fe9c0902b6b417907afd56a14d8dd370f4b2fe80' \
+WIIBRIDGE_IMAGE='ghcr.io/OWNER/wiibridge-host:0.1.0-rc.1-wbfsattrfix.1@sha256:37d94d0c3f11ae8c33f96490fe9c0902b6b417907afd56a14d8dd370f4b2fe80' \
   docker compose --env-file deploy/truenas/.env \
   -f deploy/truenas/compose.yaml up -d --no-deps --wait wiibridge-host
 ```

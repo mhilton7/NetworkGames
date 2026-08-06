@@ -8,7 +8,7 @@ post-correction physical acceptance pending.
 - Repository base: `8e8ec4014e9d2bf0e85d63cad3241f4e39613c33`.
 - Repair branch: `agent/diagnose-physical-regressions`.
 - Initially published/live image:
-  `ghcr.io/mhilton7/wiibridge-host@sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`.
+  `ghcr.io/OWNER/wiibridge-host@sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`.
 - Live Host binary revision: `8e8ec4014e9d2bf0e85d63cad3241f4e39613c33`;
   build time `2026-07-30T03:39:38Z`; `/healthz` healthy and `/readyz` ready.
 - Corrected image/revision/digest: `PENDING_CLEAN_PUBLICATION`.
@@ -123,7 +123,7 @@ physical matrix passes.
 
 ## Focused benchmarks
 
-Host: AMD Ryzen 9 9950X3D, Linux amd64, Go 1.25.12. Three samples unless noted.
+Host hardware: redacted. Linux amd64, Go 1.25.12. Three samples unless noted.
 
 - 512 GiB FAT synthesis: 244–250 µs/op; about 288 KB/op; 2,134 allocs/op.
 - On-demand FAT-sector read: 640–664 ns/op; 771–800 MB/s; one bounded
@@ -150,7 +150,7 @@ and split sizes, then detach/reconnect NBD and USB in order.
 
 If readiness, live metadata, or physical acceptance fails: detach USB,
 disconnect NBD, restore
-`ghcr.io/mhilton7/wiibridge-host@sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`,
+`ghcr.io/OWNER/wiibridge-host@sha256:aa1a5a6db11320c504daed2c8b198b1fb8bc6836c3a5ef90fb5b4c4adc44707f`,
 restore the prior YAML/configuration and active snapshot if required, recreate
 the app, verify readiness, reconnect the unchanged Pi identity, and retain the
 failed candidate evidence.

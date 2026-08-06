@@ -64,6 +64,6 @@ the rollback SD card.
 
 ## GitHub repository setting
 
-The source files and workflow publish `ghcr.io/mhilton7/wiibridge-host`.
+The source files and workflow publish `ghcr.io/OWNER/wiibridge-host`.
 Renaming the GitHub repository itself is an external repository-setting action
 and is intentionally not performed by this source edit.

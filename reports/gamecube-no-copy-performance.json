@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "measured_utc": "2026-07-27T23:39:37Z",
-  "host_cpu": "AMD Ryzen 9 9950X3D 16-Core Processor",
+  "host_cpu": "redacted",
   "goos": "linux",
   "goarch": "amd64",
   "cache_limit": 32,
