@@ -16,7 +16,7 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | Server/container package | PASS | `dist/wiibridge-host-0.1.0-rc.1.oci` |
 | Hardened unprivileged container | PASS | `reports/container-test.json` |
 | TrueNAS Compose validation | PASS | independent Docker Compose parser |
-| TrueNAS external/loopback TLS health-check compatibility | PASS | Reissued same-CA server certificate covers `192.0.2.10` and `127.0.0.1`; the packaged host's built-in health-check command passed against a local instance using the replacement bundle |
+| TrueNAS external/loopback TLS health-check compatibility | PASS | Reissued same-CA server certificate covers the private TrueNAS address and `127.0.0.1`; the packaged host's built-in health-check command passed against a local instance using the replacement bundle |
 | TrueNAS live deployment | PASS | Strict HTTPS verification accepts the replacement CA/IP certificate, and the live NBD export accepts the generated client identity, reports read-only, and returns a 1,284,936,704-byte virtual disk |
 | Zero W original image offline validation | PASS | `reports/firmware/zero-w-armhf/`; offline checks did not detect the later physical setup failures |
 | Zero W repaired source/card offline validation | PASS | `make test`, `make static`, ARMv6 QEMU smoke, live-card service-identity/controller/detach checks |
@@ -29,7 +29,7 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | Physical Zero W initial boot | FAIL | Original rc.1 boot exposed failed recovery service and missing setup AP |
 | Physical Zero W first repaired-card retest | FAIL | Recovery/controller passed; NetworkManager/wpa_supplicant AP failed to install WPA key on BCM43430 |
 | Physical Zero W hostapd-card retest | FAIL | WPA2 handshake passed; dnsmasq lease file was blocked by service filesystem hardening |
-| Physical Zero W DHCP-runtime repair retest | FAIL | WPA2 association passed, but dnsmasq could not read its configuration inside the protected credential directory; iPhone received `192.0.2.10` |
+| Physical Zero W DHCP-runtime repair retest | FAIL | WPA2 association passed, but dnsmasq could not read its configuration inside the protected credential directory; the client received a link-local address |
 | Physical Zero W DHCP-config-permission repair retest | PASS | iPhone received DHCP and loaded the controller HTTPS login page |
 | Physical Zero W fresh-image first boot | PASS | Root expansion and identity generation completed; recovery, AP, hostapd, dnsmasq, and controller started; hostapd reached `AP-ENABLED` and dnsmasq opened the `10.77.0.20`-`10.77.0.100` DHCP range |
 | Physical Zero W 12-character management-login retest | PASS | The authenticated network-setup form was reached and submitted with the fresh image's 12-character management credential |
@@ -39,7 +39,7 @@ Status values are `PENDING`, `PASS`, `FAIL`, `BLOCKED_EXTERNAL`, and
 | NBD boot-preload sandbox repair source validation | PASS | Actual v6 image contains matching `nbd.ko.xz`; boot preload/module options, protected helper checks, systemd ordering, unit/static tests, and strengthened firmware validation pass |
 | Physical Zero W NBD boot-preload repair card installation | PASS | Matching v6 `nbd.ko.xz`, preload/options, helper, and service graph verified on the physical card; credentials, Wi-Fi, TLS, bridge state, and machine identity preserved; post-repair filesystems clean |
 | Physical Zero W NBD boot-preload repair retest | PASS | Rebooted Pi advanced through NBD setup to TLS negotiation without the prior module error |
-| Generated client identity against live TrueNAS NBD | PASS | Local known-good Pi bundle completes mutual TLS to `192.0.2.10:10809`, export `all` is read-only and reports 1,284,936,704 bytes |
+| Generated client identity against live TrueNAS NBD | PASS | Local known-good Pi bundle completes mutual TLS to the private TrueNAS endpoint, export `all` is read-only and reports 1,284,936,704 bytes |
 | Physical Zero W installed client credential load | FAIL | Pi `nbd-client` reports that `/etc/wiibridge/client.crt` or `client.key` cannot be loaded; direct known-good file replacement is pending |
 | Physical Zero W client TLS and safe-poweroff repair installation | PASS | All three prior Pi TLS files were zero bytes; exact live-verified bundle, stronger provisioning helper, ARMv6 controller, typed safe-poweroff action, and restricted sudo rule installed; unrelated state preserved and filesystems clean |
 | Physical Zero W repaired client TLS retest | PASS | Pi loaded the repaired credential, completed TLS negotiation, and received the expected 1,225 MB export size |

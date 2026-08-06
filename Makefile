@@ -15,11 +15,12 @@ test:
 	go test ./server/... ./pi/... ./shared/... ./tests/... \
 	  ./scripts/synthetic-wbfs ./scripts/gamecube-volume ./scripts/gamecube-saves
 	./tests/truenas/runtime-identity-test.sh
+	./tests/security/public-tree-privacy-test.sh
 
 static: server
 	go vet ./server/... ./pi/... ./shared/... ./tests/... \
 	  ./scripts/synthetic-wbfs ./scripts/gamecube-volume ./scripts/gamecube-saves
-	shellcheck scripts/*.sh deploy/truenas/*.sh tests/truenas/*.sh tests/firmware/offline/*.sh
+	shellcheck scripts/*.sh deploy/truenas/*.sh tests/truenas/*.sh tests/firmware/offline/*.sh tests/security/*.sh
 	./scripts/validate-pi-static.sh
 
 server:

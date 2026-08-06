@@ -1,9 +1,5 @@
 # WiiBridge
 
-[![Docker Image CI](https://github.com/OWNER/WiiBridge/actions/workflows/docker.yml/badge.svg)](https://github.com/OWNER/WiiBridge/actions/workflows/docker.yml)
-[![Go version](https://img.shields.io/github/go-mod/go-version/OWNER/WiiBridge)](go.mod)
-[![License](https://img.shields.io/github/license/OWNER/WiiBridge)](LICENSE)
-
 WiiBridge turns a Raspberry Pi Zero W into a direct USB storage bridge for a
 Nintendo Wii. The host indexes a read-only game library, publishes it over
 mutual-TLS NBD, and the Pi presents the selected storage profile to the Wii

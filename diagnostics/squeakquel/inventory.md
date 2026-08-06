@@ -4,20 +4,18 @@ Captured 2026-07-26 PDT before source edits.
 
 ## Repository and rollback baseline
 
-- Historical active checkout: `/redacted/local/NetworkGames-zero-w-boot-fix`
+- Historical active checkout: `[redacted local path]`
 - Starting branch: `agent/fix-pi-provisioning-nbd-idle`
 - Starting commit: `f3a2cb2158819b640936d050ba3529bad4ddb7c1`
 - Working branch: `fix/squeakquel-and-io-performance`
-- Known-working source/backup: commit `f3a2cb2` and
-  `/redacted/local/WiiBridge-pre-ethernet-20260725T091858Z`
-- Pre-restore archive retained at
-  `/redacted/local/networkgames-before-restore-20260726-154457`; SHA-256
+- Known-working source/backup: commit `f3a2cb2` and a verified local backup
+- Pre-restore archive retained at `[redacted local path]`; SHA-256
   `73c34f9a553112474cbcc6180545ba564ba9a77d9e02076a1db104cc0b72c0a3`.
 - Existing user changes were present before this task and are excluded from
   every task commit: two modified Zero W report JSON files plus untracked
   `CODEX_HOST_RESTORE_REPORT.md` and `deploy/truenas/compose.ghcr.yaml`.
 - Remote `origin` is a locally mounted backup checkout, not GitHub.
-- Available space at capture: 37 GiB on `/dev/REMOVABLE_DEVICE`.
+- Available space at capture: 37 GiB; local device details redacted.
 
 ## Actual data path
 
@@ -33,8 +31,8 @@ read-only block device rather than a userspace FunctionFS SCSI target.
 
 ## Host and live service
 
-- Host: redacted local runtime.12.96+deb13-amd64`.
-- Live TrueNAS endpoint: `192.0.2.10`.
+- Local validation-host details: redacted.
+- Live TrueNAS endpoint: private address redacted.
 - Strict TLS health at port 8445 returned
   `{"status":"healthy","version":"0.1.0-rc.1"}`.
 - Mutual-TLS NBD at port 10809 exported `all`, read-only, with stable size
@@ -46,7 +44,8 @@ read-only block device rather than a userspace FunctionFS SCSI target.
 
 ## Pi media and firmware
 
-The Pi was not running: its SD card was attached to this host as `/dev/REMOVABLE_DEVICE`,
+The Pi was not running: its SD card was attached to this host as a confirmed
+removable device (local device path redacted),
 so live `uname`, `systemctl`, `journalctl`, `dmesg`, `vcgencmd`, `lsusb -t`
 and runtime throttling data could not be collected.
 

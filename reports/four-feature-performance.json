@@ -4,7 +4,7 @@
   "host": {
     "os": "linux",
     "architecture": "amd64",
-    "cpu": "redacted host CPU",
+    "cpu": "redacted",
     "go_benchmark_procs": 8
   },
   "method": {

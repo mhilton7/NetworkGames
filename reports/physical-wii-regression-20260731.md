@@ -123,7 +123,7 @@ physical matrix passes.
 
 ## Focused benchmarks
 
-Host: redacted host CPU, Linux amd64, Go 1.25.12. Three samples unless noted.
+Host hardware: redacted. Linux amd64, Go 1.25.12. Three samples unless noted.
 
 - 512 GiB FAT synthesis: 244–250 µs/op; about 288 KB/op; 2,134 allocs/op.
 - On-demand FAT-sector read: 640–664 ns/op; 771–800 MB/s; one bounded
